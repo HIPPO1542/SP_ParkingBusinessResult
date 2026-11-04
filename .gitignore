@@ -1,0 +1,6 @@
+﻿**/bin/
+**/obj/
+.dotnet/
+.templateengine/
+.vs/
+*.user
