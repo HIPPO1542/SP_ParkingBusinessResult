@@ -4,3 +4,5 @@
 .templateengine/
 .vs/
 *.user
+database/sqlite/*.db
+database/sqlite/*.db-*
