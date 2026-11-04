@@ -16,3 +16,5 @@ Cần chốt nguồn dữ liệu cho các chỉ số, quy tắc kỳ báo cáo, 
 Chạy `dotnet build SP_ParkingBusinessResult.sln` và `dotnet run --project src/ParkingBusinessResult.Api`. Chưa đăng ký endpoint nghiệp vụ, kết nối CSDL, MediatR, Swagger hoặc kiểm thử tích hợp.
 
 Mô hình kết quả kinh doanh sử dụng tổng số lượt xe hoàn tất (một xe vào rồi ra là một lượt). Doanh thu và số lượt không được âm. Phép tổng hợp tính doanh thu bình quân từ tổng doanh thu chia tổng số lượt, làm tròn hai chữ số; khi không có lượt xe, giá trị bằng 0 theo LLD UC 3.4. Kiểm tra các quy tắc này bằng `dotnet run --project tests/RevenueMetrics.Checks`.
+
+Kho dữ liệu tạm `InMemoryBusinessResultRepository` hỗ trợ thêm, lấy chi tiết, liệt kê, cập nhật và xóa, đồng thời từ chối hai bản ghi có cùng bãi xe và cùng chuỗi kỳ báo cáo. Đây là thành phần phục vụ phát triển: dữ liệu mất khi tiến trình dừng và chưa được đăng ký vào API. Quy tắc chuẩn hóa chuỗi kỳ và tích hợp CSDL sẽ cần được xác định trước khi dùng thật.

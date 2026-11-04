@@ -6,6 +6,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/ParkingBusinessResult.Application/ParkingBusinessResult.Application.csproj" />
+    <ProjectReference Include="../../src/ParkingBusinessResult.Infrastructure/ParkingBusinessResult.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
