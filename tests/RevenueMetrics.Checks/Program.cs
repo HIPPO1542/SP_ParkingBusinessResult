@@ -1,6 +1,7 @@
 ﻿using ParkingBusinessResult.Domain;
 using ParkingBusinessResult.Application.Features.BusinessReports;
 using ParkingBusinessResult.Infrastructure;
+using Microsoft.Data.Sqlite;
 
 Check(2_450_000_000m, 112_500, 21_777.78m);
 Check(100m, 0, 0m);
@@ -83,4 +84,45 @@ if (repository.FindById(firstResult.Id)?.Revenue != 100m ||
 }
 
 Console.WriteLine("In-memory repository checks passed.");
+
+string databasePath = Path.Combine(Path.GetTempPath(), $"parking-business-{Guid.NewGuid():N}.db");
+try
+{
+    SQLitePCL.Batteries_V2.Init();
+    using (var connection = new SqliteConnection($"Data Source={databasePath}"))
+    {
+        connection.Open();
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = File.ReadAllText("database/sqlite/001_create_business_result.sql");
+        command.ExecuteNonQuery();
+    }
+
+    var sqliteRepository = new SqliteBusinessResultRepository(databasePath);
+    var persistentResult = new ParkingBusinessResultRecord(Guid.NewGuid(), Guid.NewGuid(), "2026-10", 123.45m, 4, "Test");
+    if (!sqliteRepository.TryAdd(persistentResult) || sqliteRepository.TryAdd(persistentResult))
+    {
+        throw new InvalidOperationException("SQLite insert or duplicate detection failed.");
+    }
+
+    var reopenedRepository = new SqliteBusinessResultRepository(databasePath);
+    if (reopenedRepository.FindById(persistentResult.Id)?.Revenue != 123.45m ||
+        reopenedRepository.List().Count != 1 ||
+        !reopenedRepository.TryUpdate(persistentResult.Id, 500m, 5, null) ||
+        reopenedRepository.FindById(persistentResult.Id)?.CompletedVehicleCount != 5 ||
+        !reopenedRepository.TryDelete(persistentResult.Id) ||
+        reopenedRepository.FindById(persistentResult.Id) is not null)
+    {
+        throw new InvalidOperationException("SQLite persistence or CRUD operations failed.");
+    }
+
+    Console.WriteLine("SQLite repository checks passed.");
+}
+finally
+{
+    SqliteConnection.ClearAllPools();
+    if (File.Exists(databasePath))
+    {
+        File.Delete(databasePath);
+    }
+}
 
