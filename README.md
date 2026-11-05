@@ -56,6 +56,8 @@ Các endpoint `GET/POST /dev/business-results` và `GET/PUT/DELETE /dev/business
 
 Để chạy API thử nghiệm, cấu hình `Authentication:Issuer`, `Authentication:Audience` và `Authentication:SigningKey` (ít nhất 32 byte) qua biến môi trường hoặc nguồn cấu hình bí mật. Không đưa khóa ký thật vào Git. Ứng dụng sẽ không khởi động ở Development nếu thiếu cấu hình. Có thể thay đổi đường dẫn database bằng cấu hình `ParkingBusinessResult:DatabasePath`. Trường `doanhThu` dùng kiểu REAL theo kiểu double của sheet; cần thống nhất lại cách lưu số tiền chính xác trước khi dùng nghiệp vụ thật. Chạy `dotnet run --project tests/RevenueMetrics.Checks` và `powershell -NoProfile -ExecutionPolicy Bypass -File tests/api_sqlite_checks.ps1` để kiểm tra; bài kiểm tra HTTP sử dụng database tạm riêng.
 
+Collection và hướng dẫn kiểm thử bằng Postman nằm trong thư mục [`postman/`](postman/README.md).
+
 ### Tài khoản cục bộ cho Development
 
 Khi chạy lần đầu, đặt `Authentication:BootstrapUsername` và `Authentication:BootstrapPassword` trong cấu hình bí mật hoặc biến môi trường; mật khẩu có từ 12 đến 256 ký tự. Nếu bảng `dev_auth_users` chưa có tài khoản, ứng dụng tạo một `ROLE_ADMIN`; cấu hình bootstrap không thay đổi tài khoản đã tồn tại. Mật khẩu được lưu dưới dạng băm bằng ASP.NET Core Identity PasswordHasher. Bảng tài khoản cục bộ được tạo trong SQLite khi ứng dụng khởi động ở Development.

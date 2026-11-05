@@ -1,0 +1,123 @@
+{
+  "info": {
+    "name": "Parking Business Result - Development",
+    "description": "Kiểm thử các API Development hiện có. Đăng nhập trước; token và ID kết quả được lưu tự động trong biến collection. Cần bãi xe đã tồn tại trong SQLite trước khi tạo kết quả. API trả code 0 khi thành công, code 7 khi lỗi nghiệp vụ.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5069", "type": "string" },
+    { "key": "adminUsername", "value": "", "type": "string" },
+    { "key": "adminPassword", "value": "", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "parkingLotId", "value": "00000000-0000-4000-8000-000000000002", "type": "string" },
+    { "key": "reportingPeriod", "value": "2026-10", "type": "string" },
+    { "key": "resultId", "value": "", "type": "string" },
+    { "key": "operatorUsername", "value": "", "type": "string" },
+    { "key": "operatorPassword", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Xác thực",
+      "item": [
+        {
+          "name": "Đăng nhập quản trị viên",
+          "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+            "pm.request.body.update(JSON.stringify({ username: pm.variables.get('adminUsername') || '', password: pm.variables.get('adminPassword') || '' }));"
+          ] } }, { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.collectionVariables.unset('accessToken');",
+            "const response = pm.response.json();",
+            "pm.test('HTTP 200 và đăng nhập thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); pm.expect(response.data.accessToken).to.be.a('string').and.not.empty; });",
+            "if (response.code === 0 && response.data && response.data.accessToken) pm.collectionVariables.set('accessToken', response.data.accessToken);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}" },
+            "url": "{{baseUrl}}/dev/auth/login",
+            "description": "Nhập tài khoản quản trị đã khởi tạo vào biến adminUsername và adminPassword. Token hết hạn sau 30 phút."
+          }
+        },
+        {
+          "name": "Tạo tài khoản vận hành (không bắt buộc)",
+          "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+            "pm.request.body.update(JSON.stringify({ username: pm.variables.get('operatorUsername') || '', password: pm.variables.get('operatorPassword') || '', role: 'ROLE_PARKING_OPERATOR', parkingLotId: pm.variables.get('parkingLotId') || '' }));"
+          ] } }, { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const response = pm.response.json();",
+            "pm.test('HTTP 200 và tạo tài khoản thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{operatorUsername}}\",\n  \"password\": \"{{operatorPassword}}\",\n  \"role\": \"ROLE_PARKING_OPERATOR\",\n  \"parkingLotId\": \"{{parkingLotId}}\"\n}" },
+            "url": "{{baseUrl}}/dev/auth/users",
+            "description": "Cần token quản trị. Đặt operatorUsername và operatorPassword, mật khẩu từ 12 đến 256 ký tự; mỗi tên chỉ tạo một lần."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Kết quả kinh doanh",
+      "item": [
+        {
+          "name": "Danh sách kết quả",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const response = pm.response.json();",
+            "pm.test('HTTP 200 và lấy danh sách thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); pm.expect(response.data).to.be.an('array'); });"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/dev/business-results" }
+        },
+        {
+          "name": "Thêm kết quả",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.collectionVariables.unset('resultId');",
+            "const response = pm.response.json();",
+            "pm.test('HTTP 200 và thêm thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); pm.expect(response.data.id).to.be.a('string').and.not.empty; });",
+            "if (response.code === 0 && response.data && response.data.id) pm.collectionVariables.set('resultId', response.data.id);"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"parkingLotId\": \"{{parkingLotId}}\",\n  \"reportingPeriod\": \"{{reportingPeriod}}\",\n  \"revenue\": 2500000,\n  \"completedVehicleCount\": 125,\n  \"note\": \"Dữ liệu thử Postman\"\n}" },
+            "url": "{{baseUrl}}/dev/business-results",
+            "description": "Cần bãi xe có thật trong database. Một bãi xe chỉ có một bản ghi cho cùng kỳ báo cáo."
+          }
+        },
+        {
+          "name": "Xem chi tiết",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const response = pm.response.json();",
+            "pm.test('HTTP 200 và xem chi tiết thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/dev/business-results/{{resultId}}", "description": "Chạy Thêm kết quả trước hoặc tự điền resultId." }
+        },
+        {
+          "name": "Cập nhật kết quả",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const response = pm.response.json();",
+            "pm.test('HTTP 200 và cập nhật thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+          ] } }],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"revenue\": 3000000,\n  \"completedVehicleCount\": 150,\n  \"note\": \"Đã cập nhật bằng Postman\"\n}" },
+            "url": "{{baseUrl}}/dev/business-results/{{resultId}}"
+          }
+        },
+        {
+          "name": "Xóa kết quả (xóa dữ liệu thật)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const response = pm.response.json();",
+            "pm.test('HTTP 200 và xóa thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
+            "if (response.code === 0) pm.collectionVariables.unset('resultId');"
+          ] } }],
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/dev/business-results/{{resultId}}", "description": "Xóa bản ghi có ID trong biến resultId khỏi database được kết nối. Chỉ chạy khi muốn xóa bản ghi đó." }
+        }
+      ]
+    }
+  ]
+}
