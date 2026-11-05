@@ -81,6 +81,8 @@ try {
     if ($districtEmpty.data.totalRevenue -ne 0) { throw 'District filter returned unrelated results.' }
     $summary = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11" -Headers $headers
     if ($summary.data.totalRevenue -ne 2775000 -or $summary.data.totalVehicleCount -ne 150 -or $summary.data.averageRevenuePerVehicle -ne 18500) { throw 'Unexpected report summary.' }
+    if ($summary.data.averageDailyRevenue -ne 92500 -or $null -ne $summary.data.growthRate) { throw 'Unexpected daily average or growth rate.' }
+    if (@($summary.data.revenueByDistrict).Count -ne 1 -or $summary.data.revenueByDistrict[0].district -ne $null -or $summary.data.revenueByDistrict[0].parkingLotsCount -ne 5 -or $summary.data.revenueByDistrict[0].revenue -ne 2775000) { throw 'Unexpected district summary.' }
     if ($summary.data.reportingPeriod -ne '2026-11' -or @($summary.data.topRevenueParkingLots).Count -ne 5) { throw 'Expected five top parking lots.' }
     foreach ($topLot in $summary.data.topRevenueParkingLots) {
         if ($topLot.revenue -ne 555000 -or $topLot.vehicleCount -ne 30 -or $topLot.percentage -ne 20 -or -not $topLot.parkingLot.name -or -not $topLot.parkingLot.code) { throw 'Unexpected top parking lot details.' }
