@@ -24,3 +24,9 @@ Nếu dùng **Collection Runner**, bỏ chọn request tạo tài khoản tùy c
 Các request **Đối chiếu route/body tài liệu** cho thấy route ví dụ chưa triển khai và API thử nghiệm từ chối body chưa hỗ trợ thay vì âm thầm ghi sai dữ liệu. Các kiểm tra đó **không có nghĩa API đã khớp ApiSpec**. Chi tiết khác biệt được ghi trong `docs/API_CONTRACT_REVIEW.md`.
 
 API và tài khoản trong collection hiện chỉ dành cho môi trường Development. Các lỗi nghiệp vụ vẫn trả HTTP 200; kiểm tra trường `code` (`0`: thành công, `7`: lỗi). Token hết hạn sau 30 phút; đăng nhập lại khi cần.
+
+## Import và báo cáo theo từng lượt xe
+
+Import thêm collection `ParkingVisits.postman_collection.json`. Điền tài khoản quản trị ở tab Variables và chạy **Đăng nhập**. Tại request **Import file lượt xe**, chọn file trong ô `file` (mẫu tại `outputs/parking-import/mau-luot-xe.xlsx`); các dòng hợp lệ sẽ được lưu thật vào SQLite. Sau import, collection tự lưu ID lượt đầu tiên để thử đối chiếu giá. Chỉnh `reportingPeriod` theo tháng xe ra, chạy request thống kê hoặc chọn **Send and Download** ở request xuất file. Đây là collection riêng cho dữ liệu lượt xe import; dữ liệu tổng hợp mẫu cũ không tự cộng vào kết quả.
+
+Trước khi import, database cần bảng `parking_visit`; trên database mới chạy `python database/sqlite/apply_parking_visit_migration.py` sau các migration cơ sở. Xem đầy đủ giới hạn file, quy tắc cập nhật và cách dùng tại [hướng dẫn import](../docs/PARKING_VISIT_IMPORT_DESIGN.md).

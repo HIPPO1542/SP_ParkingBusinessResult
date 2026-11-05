@@ -14,6 +14,24 @@ SQLITE = ROOT / "database/sqlite"
 
 
 class PostmanCollectionTests(unittest.TestCase):
+    def test_visit_collection_requests_and_scripts(self):
+        collection = json.loads((POSTMAN / 'ParkingVisits.postman_collection.json').read_text(encoding='utf-8'))
+        self.assertEqual(collection['info']['schema'], 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json')
+        requests = collection['item']
+        routes = {(item['request']['method'], item['request']['url'].split('?')[0]) for item in requests}
+        self.assertEqual(routes, {
+            ('POST', '{{baseUrl}}/dev/auth/login'),
+            ('POST', '{{baseUrl}}/dev/parking-visits/import'),
+            ('GET', '{{baseUrl}}/dev/parking-visits/summary'),
+            ('GET', '{{baseUrl}}/dev/parking-visits/{{visitId}}/tariff-comparison'),
+            ('POST', '{{baseUrl}}/dev/parking-visits/export'),
+        })
+        for item in requests:
+            for event in item.get('event', []):
+                script = '\n'.join(event['script']['exec'])
+                check = subprocess.run(['node', '--check'], input=script, text=True, encoding='utf-8', capture_output=True, check=False)
+                self.assertEqual(check.returncode, 0, f"{item['name']}: {check.stderr}")
+
     def test_collection_requests_and_scripts(self):
         collection = json.loads((POSTMAN / "ParkingBusinessResult.postman_collection.json").read_text(encoding="utf-8"))
         self.assertEqual(collection["info"]["schema"], "https://schema.getpostman.com/json/collection/v2.1.0/collection.json")
