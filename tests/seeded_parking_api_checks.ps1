@@ -5,6 +5,7 @@ $pythonPath = Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-ru
 $apiPath = Join-Path $root 'Backend/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll'
 $server = $null
 $exportPath = Join-Path ([IO.Path]::GetTempPath()) ("parking-report-" + [guid]::NewGuid().ToString('N') + '.xlsx')
+$pdfPath = Join-Path ([IO.Path]::GetTempPath()) ("parking-report-" + [guid]::NewGuid().ToString('N') + '.pdf')
 
 try {
     & $pythonPath (Join-Path $root 'tests/prepare_sqlite_fixture.py') $databasePath ([guid]::NewGuid().ToString())
@@ -57,7 +58,12 @@ try {
     Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
     & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 5 2775000
     if ($LASTEXITCODE -ne 0) { throw 'Excel report content verification failed.' }
-    $unsupportedBody = @{ fileFormat = 'PDF'; reportingPeriod = '2026-11' } | ConvertTo-Json
+    $pdfBody = @{ fileFormat = 'PDF'; reportingPeriod = '2026-11'; reportTitle = 'Báo cáo kết quả kinh doanh' } | ConvertTo-Json
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $pdfBody -OutFile $pdfPath
+    & $pythonPath (Join-Path $root 'tests/check_business_report_pdf.py') $pdfPath 5 '2,775,000.00'
+    if ($LASTEXITCODE -ne 0) { throw 'PDF report content verification failed.' }
+    if ($env:PARKING_REPORT_PDF_CAPTURE) { Copy-Item -LiteralPath $pdfPath -Destination $env:PARKING_REPORT_PDF_CAPTURE }
+    $unsupportedBody = @{ fileFormat = 'TXT'; reportingPeriod = '2026-11' } | ConvertTo-Json
     $unsupported = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $unsupportedBody
     if ($unsupported.code -ne 7) { throw 'Unsupported format should be rejected.' }
     $unknownBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; district = 'test' } | ConvertTo-Json
@@ -86,6 +92,9 @@ try {
     Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $districtHeaders -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
     & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 1 555000
     if ($LASTEXITCODE -ne 0) { throw 'Scoped Excel report verification failed.' }
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $districtHeaders -ContentType 'application/json' -Body $pdfBody -OutFile $pdfPath
+    & $pythonPath (Join-Path $root 'tests/check_business_report_pdf.py') $pdfPath 1 '555,000.00'
+    if ($LASTEXITCODE -ne 0) { throw 'Scoped PDF report verification failed.' }
     $deleted = Invoke-RestMethod -Method Delete -Uri "$baseUrl/dev/business-results/$($first.id)" -Headers $headers
     if ($deleted.code -ne 0) { throw 'Failed to soft-delete test record.' }
     $afterDelete = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11" -Headers $headers
@@ -100,6 +109,7 @@ finally {
     if ($null -ne $server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force; $server.WaitForExit() }
     if (Test-Path -LiteralPath $databasePath) { Remove-Item -LiteralPath $databasePath -Force }
     if (Test-Path -LiteralPath $exportPath) { Remove-Item -LiteralPath $exportPath -Force }
+    if (Test-Path -LiteralPath $pdfPath) { Remove-Item -LiteralPath $pdfPath -Force }
     $backupPattern = [IO.Path]::GetFileNameWithoutExtension($databasePath) + '.backup-demo-*.db'
     Get-ChildItem -LiteralPath ([IO.Path]::GetTempPath()) -Filter $backupPattern -File | Remove-Item -Force
 }

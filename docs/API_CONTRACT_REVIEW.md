@@ -9,7 +9,7 @@ Phạm vi: API thử nghiệm Development hiện có, đối chiếu ApiSpec/LLD
 | Body sửa | `totalCheckIn`, `totalCheckOut`, các tỷ lệ lấp đầy, `totalRevenue`, `cashRevenue`, `electronicRevenue`; có `operatingExpenses`, `notes` tùy chọn | `revenue`, `completedVehicleCount`, `note` | Chưa khớp. Body thiếu trường hoặc chứa trường không hỗ trợ bị từ chối với code 7. |
 | Dữ liệu trả về | ApiSpec đưa `parkingLot` dạng object, `periodType`, `periodValue`, doanh thu kỳ trước, tăng trưởng, nguồn dữ liệu và thông tin audit | Object phẳng gồm `id`, `parkingLotId`, `reportingPeriod`, `revenue`, `completedVehicleCount`, `note` | Chưa khớp. ApiSpec và LLD của chức năng xem theo thời gian cũng mô tả các cấu trúc khác nhau. |
 | Xem theo thời gian | Lọc, phân trang, kỳ và sắp xếp theo ApiSpec | Danh sách thử nghiệm chưa hỗ trợ các tham số đó | Chưa hoàn thành. |
-| Nhập file và báo cáo UC 3.4 | Import, danh sách báo cáo, xem tổng hợp và xuất Excel/PDF | Có danh sách, tổng hợp và xuất Excel thử nghiệm theo chuỗi kỳ; chưa có import và xuất PDF | Chưa hoàn thành; route, bộ lọc và response xuất file chưa khớp ApiSpec. |
+| Nhập file và báo cáo UC 3.4 | Import, danh sách báo cáo, xem tổng hợp và xuất Excel/PDF | Có danh sách, tổng hợp và xuất Excel/PDF thử nghiệm theo chuỗi kỳ; chưa có import | Chưa hoàn thành; route, bộ lọc và response xuất file chưa khớp ApiSpec. |
 | Quyền | Các tài liệu liệt kê các vai trò khác nhau, trong đó API xóa đề cập `ROLE_BUSINESS_MANAGER` | Môi trường Development hỗ trợ `ROLE_ADMIN`, `ROLE_DISTRICT_ADMIN`, `ROLE_PARKING_OPERATOR` và phạm vi bãi theo token | Chưa thể xem là khớp chính sách quyền chính thức. |
 | Xóa | LLD mô tả xóa vật lý | Theo yêu cầu mới của người dùng, API đánh dấu `daXoa = 1`, ẩn bản ghi và giữ lại dữ liệu | Đã thay đổi so với LLD theo yêu cầu trực tiếp; cần đồng bộ tài liệu khi chốt hợp đồng. |
 
@@ -36,4 +36,5 @@ Các bằng chứng trên chỉ áp dụng cho môi trường Development và c�
 | Đúng route, body và response ApiSpec/LLD | Route và các trường còn khác; thiếu nguồn dữ liệu cho nhiều trường | `[Blocked / Not Verified]` |
 | Danh sách và tổng hợp báo cáo Development theo kỳ và bãi | `tests/seeded_parking_api_checks.ps1`: tổng, lọc, quyền bãi và xóa mềm trên SQLite tạm | `[Verified]` cho phạm vi thử nghiệm; chưa khớp đầy đủ UC 3.4 |
 | Xuất Excel thử nghiệm theo kỳ và phạm vi bãi | `tests/seeded_parking_api_checks.ps1` kiểm tra file thực tế, quyền, số liệu và xóa mềm | `[Verified]` cho phạm vi Development; chưa khớp đầy đủ ApiSpec |
-| Import và xuất PDF UC 3.4 | Chưa được triển khai | `[Blocked / Not Verified]` |
+| Xuất PDF thử nghiệm theo kỳ và phạm vi bãi | `tests/seeded_parking_api_checks.ps1`: đọc nội dung file, số liệu và quyền theo bãi | `[Verified]` nội dung trên Windows; chưa kiểm tra trực quan hoặc khớp đầy đủ ApiSpec |
+| Import UC 1.5 | Chưa được triển khai | `[Blocked / Not Verified]` |
