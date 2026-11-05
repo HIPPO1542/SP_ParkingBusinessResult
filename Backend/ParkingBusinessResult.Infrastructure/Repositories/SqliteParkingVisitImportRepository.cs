@@ -58,10 +58,19 @@ public sealed class SqliteParkingVisitImportRepository(string databasePath) : IP
         return id;
     }
 
-    public Guid Upsert(ParkingVisitInput visit)
+    public ParkingVisitSaved Upsert(ParkingVisitInput visit)
     {
         using SqliteConnection connection = Open();
+        using SqliteTransaction transaction = connection.BeginTransaction();
+        using SqliteCommand lookup = connection.CreateCommand();
+        lookup.Transaction = transaction;
+        lookup.CommandText = "SELECT 1 FROM parking_visit WHERE parkingLotId = $lot AND licensePlate = $plate AND enteredAt = $entered";
+        lookup.Parameters.AddWithValue("$lot", visit.ParkingLotId.ToString());
+        lookup.Parameters.AddWithValue("$plate", visit.LicensePlate);
+        lookup.Parameters.AddWithValue("$entered", visit.EnteredAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+        bool duplicate = lookup.ExecuteScalar() is not null;
         using SqliteCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO parking_visit (id, parkingLotId, licensePlate, vehicleType, enteredAt, exitedAt, collectedAmount, paymentMethod, createdAt, updatedAt)
             VALUES ($id, $lot, $plate, $type, $entered, $exited, $amount, $method, $now, $now)
@@ -71,7 +80,7 @@ public sealed class SqliteParkingVisitImportRepository(string databasePath) : IP
                 collectedAmount = COALESCE(excluded.collectedAmount, parking_visit.collectedAmount),
                 paymentMethod = COALESCE(excluded.paymentMethod, parking_visit.paymentMethod),
                 updatedAt = excluded.updatedAt
-            RETURNING id
+            RETURNING id, licensePlate, vehicleType, enteredAt, exitedAt, collectedAmount, paymentMethod
             """;
         command.Parameters.AddWithValue("$id", Guid.NewGuid().ToString());
         command.Parameters.AddWithValue("$lot", visit.ParkingLotId.ToString());
@@ -82,7 +91,16 @@ public sealed class SqliteParkingVisitImportRepository(string databasePath) : IP
         command.Parameters.AddWithValue("$amount", (object?)visit.CollectedAmount?.ToString(CultureInfo.InvariantCulture) ?? DBNull.Value);
         command.Parameters.AddWithValue("$method", (object?)visit.PaymentMethod ?? DBNull.Value);
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture));
-        return Guid.Parse((string)command.ExecuteScalar()!);
+        using SqliteDataReader reader = command.ExecuteReader();
+        if (!reader.Read()) throw new InvalidOperationException("Could not save parking visit.");
+        var saved = new ParkingVisitSaved(Guid.Parse(reader.GetString(0)), reader.GetString(1), reader.GetString(2),
+            DateTime.ParseExact(reader.GetString(3), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+            reader.IsDBNull(4) ? null : DateTime.ParseExact(reader.GetString(4), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+            reader.IsDBNull(5) ? null : decimal.Parse(reader.GetString(5), CultureInfo.InvariantCulture),
+            reader.IsDBNull(6) ? null : reader.GetString(6), duplicate);
+        reader.Close();
+        transaction.Commit();
+        return saved;
     }
 
     private SqliteConnection Open()

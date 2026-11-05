@@ -12,7 +12,9 @@ public sealed class ImportParkingVisitsHandler(IParkingVisitSpreadsheetReader re
         IReadOnlyList<ParkingVisitRow> rows = reader.Read(command.Content, command.Extension);
         var errors = new List<ParkingVisitImportError>();
         var importedIds = new List<Guid>();
+        var importedRows = new List<ParkingVisitImportedRow>();
         int success = 0;
+        int duplicates = 0;
         foreach (ParkingVisitRow row in rows)
         {
             string?[] fields = row.Cells;
@@ -52,10 +54,13 @@ public sealed class ImportParkingVisitsHandler(IParkingVisitSpreadsheetReader re
                 errors.Add(new(row.RowNumber, parkingLotCode, "Phương thức thanh toán quá dài."));
                 continue;
             }
-            importedIds.Add(repository.Upsert(new ParkingVisitInput(lotId.Value, plate, type, entered, exited, amount, paymentMethod)));
+            ParkingVisitSaved saved = repository.Upsert(new ParkingVisitInput(lotId.Value, plate, type, entered, exited, amount, paymentMethod));
+            importedIds.Add(saved.Id);
+            importedRows.Add(new(row.RowNumber, parkingLotCode!, saved));
+            if (saved.IsDuplicate) duplicates++;
             success++;
         }
-        return new(rows.Count, success, errors.Count, importedIds, errors);
+        return new(rows.Count, success, errors.Count, importedIds, errors, duplicates, importedRows);
     }
 
     private static bool TryDate(string? text, out DateTime result) => DateTime.TryParseExact(text?.Trim(), DateFormats,

@@ -47,6 +47,7 @@ try {
     }
     $first = Import-File 'first.xlsx' $token
     if ($first.code -ne 0 -or $first.data.totalRows -ne 5 -or $first.data.successRows -ne 3 -or $first.data.errorRows -ne 2) { throw "Invalid initial import: $($first | ConvertTo-Json -Depth 5)" }
+    if ($first.data.duplicateRows -ne 0 -or @($first.data.importedRows).Count -ne 3 -or $first.data.importedRows[0].parkingLotCode -ne 'DEMO-01' -or $first.data.importedRows[0].visit.licensePlate -ne '59A-1') { throw 'Imported rows are incorrect.' }
     if ($first.data.errors[0].rowNumber -ne 5 -or $first.data.errors[0].parkingLotCode -ne 'NO-SUCH-LOT' -or -not $first.data.errors[0].errorMessage -or $first.data.errors[1].parkingLotCode -ne 'DEMO-01') { throw 'Import error details are incorrect.' }
     if (@($first.data.importedIds).Count -ne 3) { throw 'Import did not return the saved IDs.' }
     $headers = @{ Authorization = "Bearer $token" }
@@ -67,6 +68,7 @@ try {
         $result = Import-File $name $token
         if ($result.code -ne 0 -or $result.data.successRows -ne 1) { throw "Update failed: $name" }
         if ($result.data.importedIds[0] -ne $first.data.importedIds[0]) { throw 'Repeated import changed the visit ID.' }
+        if ($result.data.duplicateRows -ne 1 -or -not $result.data.importedRows[0].visit.isDuplicate -or $result.data.importedRows[0].visit.collectedAmount -ne 30000 -or -not $result.data.importedRows[0].visit.exitedAt) { throw 'Duplicate or saved values were not returned correctly.' }
     }
     $overnight = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/$($first.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
     if ($overnight.data.canCompare -or $null -ne $overnight.data.expectedAmount) { throw 'Overnight charge should not be guessed.' }
@@ -145,6 +147,8 @@ try {
         if ($xlsResult.code -ne 0 -or $xlsResult.data.successRows -ne 1) { throw 'XLS import failed.' }
         Write-Output 'Legacy XLS import passed.'
     } else { Write-Output 'Legacy XLS fixture not available; skipped.' }
+    $duplicateRows = Import-File 'duplicate_rows.xlsx' $token
+    if ($duplicateRows.code -ne 0 -or $duplicateRows.data.successRows -ne 2 -or $duplicateRows.data.duplicateRows -ne 1 -or $duplicateRows.data.importedRows[0].visit.isDuplicate -or -not $duplicateRows.data.importedRows[1].visit.isDuplicate -or $duplicateRows.data.importedIds[0] -ne $duplicateRows.data.importedIds[1]) { throw 'Duplicates within the same file were not counted correctly.' }
     Write-Output 'Excel import, updating, malformed data and access scope passed.'
 }
 finally {

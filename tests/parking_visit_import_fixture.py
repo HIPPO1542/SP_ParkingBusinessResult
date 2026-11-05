@@ -38,6 +38,10 @@ def make_fixtures(directory):
     write(directory / 'blank_update.xlsx', [
         ['DEMO-01', '59A-1', 'Ô tô', '2026-11-04 23:30', None, None, None],
     ])
+    write(directory / 'duplicate_rows.xlsx', [
+        ['DEMO-01', '59DUP-1', 'Ô tô', '2026-11-05 08:00', None, None, None],
+        ['DEMO-01', '59DUP-1', 'Ô tô', '2026-11-05 08:00', '2026-11-05 09:00', 10000, 'Tiền mặt'],
+    ])
     write(directory / 'fractional.xlsx', [
         ['DEMO-02', '59H-8', 'MOTORBIKE', '2026-11-05 08:00', '2026-11-05 09:30', 7000, 'Tiền mặt'],
     ])
