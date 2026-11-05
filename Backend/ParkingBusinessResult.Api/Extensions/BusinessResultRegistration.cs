@@ -27,6 +27,7 @@ public static class BusinessResultRegistration
         services.AddScoped<GetBusinessResultHandler>();
         services.AddScoped<ListBusinessResultsHandler>();
         services.AddScoped<ListBusinessReportHandler>();
+        services.AddScoped<BusinessReportListMapper>();
         services.AddScoped<GetBusinessReportSummaryHandler>();
         services.AddScoped<ExportBusinessReportHandler>();
         services.AddScoped<ImportParkingVisitsHandler>();

@@ -13,10 +13,10 @@ public sealed class ListBusinessReportHandler(IBusinessResultRepository reposito
             ? null : parkingLotSearch.FindMatchingLots(keyword, district);
         return repository.List()
             .Where(record => query.Access.CanAccess(record.ParkingLotId))
-            .Where(record => record.ReportingPeriod == query.ReportingPeriod)
+            .Where(record => query.ReportingPeriod is null || record.ReportingPeriod == query.ReportingPeriod)
             .Where(record => query.ParkingLotId is null || record.ParkingLotId == query.ParkingLotId)
             .Where(record => matchingLots is null || matchingLots.Contains(record.ParkingLotId))
-            .OrderBy(record => record.ParkingLotId)
+            .OrderByDescending(record => record.Revenue).ThenBy(record => record.ParkingLotId)
             .ToArray();
     }
 }

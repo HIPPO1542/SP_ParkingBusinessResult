@@ -52,6 +52,13 @@ try {
     }
     $report = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11" -Headers $headers
     if ($report.code -ne 0 -or @($report.data).Count -ne 5) { throw 'Expected five report records.' }
+    foreach ($item in $report.data) {
+        if (-not $item.id -or -not $item.parkingLot.id -or -not $item.parkingLot.code -or -not $item.parkingLot.name -or -not $item.parkingLot.address -or -not $item.operatorName) { throw 'Missing mapped report metadata.' }
+        if ($item.revenue -ne 555000 -or $item.vehicleCount -ne 30 -or $item.averageRevenuePerVehicle -ne 18500) { throw 'Incorrect report values.' }
+        foreach ($field in @('createdAt', 'createdBy', 'createdById', 'updatedAt', 'updatedBy', 'updatedById')) {
+            if ($null -eq $item.PSObject.Properties[$field]) { throw "Missing audit field: $field" }
+        }
+    }
     $nameSearch = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11&keyword=Bai%20xe%20gia%20lap%2001" -Headers $headers
     if ($nameSearch.code -ne 0 -or @($nameSearch.data).Count -ne 1) { throw 'Search by parking lot name failed.' }
     $addressSearch = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11&keyword=dia%20chi%20gia%20lap" -Headers $headers
@@ -103,10 +110,10 @@ try {
     Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $headers -ContentType 'application/json' -Body $districtExportBody -OutFile $exportPath
     & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 5 2775000
     if ($LASTEXITCODE -ne 0) { throw 'District Excel report verification failed.' }
-    $scoped = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11&parkingLotId=$($first.parkingLotId)" -Headers $headers
+    $scoped = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11&parkingLotId=$($first.parkingLot.id)" -Headers $headers
     if ($scoped.data.totalRevenue -ne 555000 -or $scoped.data.totalVehicleCount -ne 30) { throw 'Parking lot filter failed.' }
     if (@($scoped.data.topRevenueParkingLots).Count -ne 1 -or $scoped.data.topRevenueParkingLots[0].percentage -ne 100) { throw 'Scoped ranking failed.' }
-    $account = @{ username = 'report-operator'; password = 'report-password-only'; role = 'ROLE_PARKING_OPERATOR'; parkingLotId = $first.parkingLotId } | ConvertTo-Json
+    $account = @{ username = 'report-operator'; password = 'report-password-only'; role = 'ROLE_PARKING_OPERATOR'; parkingLotId = $first.parkingLot.id } | ConvertTo-Json
     $created = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/users" -Headers $headers -ContentType 'application/json' -Body $account
     if ($created.code -ne 0) { throw 'Could not create scoped account.' }
     $operatorBody = @{ username = 'report-operator'; password = 'report-password-only' } | ConvertTo-Json
@@ -115,13 +122,13 @@ try {
     $operatorExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $operatorHeaders -ContentType 'application/json' -Body $exportBody
     if ($operatorExport.code -ne 7) { throw 'Operator must not export reports.' }
     $operatorReport = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11" -Headers $operatorHeaders
-    if (@($operatorReport.data).Count -ne 1 -or $operatorReport.data[0].parkingLotId -ne $first.parkingLotId) { throw 'Operator report scope failed.' }
+    if (@($operatorReport.data).Count -ne 1 -or $operatorReport.data[0].parkingLot.id -ne $first.parkingLot.id) { throw 'Operator report scope failed.' }
     $operatorSearch = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11&keyword=dia%20chi%20gia%20lap" -Headers $operatorHeaders
-    if (@($operatorSearch.data).Count -ne 1 -or $operatorSearch.data[0].parkingLotId -ne $first.parkingLotId) { throw 'Search exposed results outside operator scope.' }
-    $forbiddenLot = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11&parkingLotId=$($second.parkingLotId)" -Headers $operatorHeaders
+    if (@($operatorSearch.data).Count -ne 1 -or $operatorSearch.data[0].parkingLot.id -ne $first.parkingLot.id) { throw 'Search exposed results outside operator scope.' }
+    $forbiddenLot = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11&parkingLotId=$($second.parkingLot.id)" -Headers $operatorHeaders
     if ($forbiddenLot.data.totalRevenue -ne 0) { throw 'Operator accessed another parking lot.' }
     if (@($forbiddenLot.data.topRevenueParkingLots).Count -ne 0) { throw 'Operator accessed another parking lot ranking.' }
-    $districtBody = @{ username = 'report-district'; password = 'report-password-only'; role = 'ROLE_DISTRICT_ADMIN'; parkingLotId = $first.parkingLotId } | ConvertTo-Json
+    $districtBody = @{ username = 'report-district'; password = 'report-password-only'; role = 'ROLE_DISTRICT_ADMIN'; parkingLotId = $first.parkingLot.id } | ConvertTo-Json
     $districtCreated = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/users" -Headers $headers -ContentType 'application/json' -Body $districtBody
     if ($districtCreated.code -ne 0) { throw 'Could not create district account.' }
     $districtLoginBody = @{ username = 'report-district'; password = 'report-password-only' } | ConvertTo-Json
@@ -144,7 +151,7 @@ try {
     $updated = Invoke-RestMethod -Method Put -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation/$($second.id)" -Headers $headers -ContentType 'application/json' -Body $updatedBody
     if ($updated.code -ne 0) { throw 'Could not prepare ranking test.' }
     $ranked = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11" -Headers $headers
-    if ($ranked.data.topRevenueParkingLots[0].parkingLot.id -ne $second.parkingLotId -or $ranked.data.topRevenueParkingLots[0].percentage -ne 29.6) { throw 'Ranking order or percentage incorrect.' }
+    if ($ranked.data.topRevenueParkingLots[0].parkingLot.id -ne $second.parkingLot.id -or $ranked.data.topRevenueParkingLots[0].percentage -ne 29.6) { throw 'Ranking order or percentage incorrect.' }
     Write-Output 'Seeded API returned five matching business results.'
     Write-Output 'Report list, summary, period and lot filters, access scope, and soft delete checks passed.'
 }
