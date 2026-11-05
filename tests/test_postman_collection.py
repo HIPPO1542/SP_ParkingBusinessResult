@@ -22,6 +22,7 @@ class PostmanCollectionTests(unittest.TestCase):
         self.assertEqual(routes, {
             ('POST', '{{baseUrl}}/dev/auth/login'),
             ('POST', '{{baseUrl}}/dev/parking-visits/import'),
+            ('GET', '{{baseUrl}}/dev/parking-visits'),
             ('GET', '{{baseUrl}}/dev/parking-visits/summary'),
             ('GET', '{{baseUrl}}/dev/parking-visits/{{visitId}}/tariff-comparison'),
             ('POST', '{{baseUrl}}/dev/parking-visits/export'),

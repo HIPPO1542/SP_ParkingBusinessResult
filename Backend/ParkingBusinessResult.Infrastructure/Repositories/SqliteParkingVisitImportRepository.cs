@@ -5,8 +5,26 @@ using ParkingBusinessResult.Application.Features.ParkingVisits.Common;
 
 namespace ParkingBusinessResult.Infrastructure.Repositories;
 
-public sealed class SqliteParkingVisitImportRepository(string databasePath) : IParkingVisitImportRepository, IParkingVisitSummaryRepository
+public sealed class SqliteParkingVisitImportRepository(string databasePath) : IParkingVisitImportRepository, IParkingVisitSummaryRepository, IParkingVisitListRepository
 {
+    public IReadOnlyList<ParkingVisitItem> List()
+    {
+        using SqliteConnection connection = Open();
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT id, parkingLotId, licensePlate, vehicleType, enteredAt, exitedAt, collectedAmount, paymentMethod FROM parking_visit";
+        using SqliteDataReader reader = command.ExecuteReader();
+        var visits = new List<ParkingVisitItem>();
+        while (reader.Read())
+        {
+            visits.Add(new(Guid.Parse(reader.GetString(0)), Guid.Parse(reader.GetString(1)), reader.GetString(2), reader.GetString(3),
+                DateTime.ParseExact(reader.GetString(4), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                reader.IsDBNull(5) ? null : DateTime.ParseExact(reader.GetString(5), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                reader.IsDBNull(6) ? null : decimal.Parse(reader.GetString(6), CultureInfo.InvariantCulture),
+                reader.IsDBNull(7) ? null : reader.GetString(7)));
+        }
+        return visits;
+    }
+
     public IReadOnlyList<CompletedParkingVisit> ListCompleted(DateTime fromInclusive, DateTime toExclusive)
     {
         using SqliteConnection connection = Open();

@@ -47,6 +47,11 @@ try {
     if ($first.code -ne 0 -or $first.data.totalRows -ne 5 -or $first.data.successRows -ne 3 -or $first.data.errorRows -ne 2) { throw "Invalid initial import: $($first | ConvertTo-Json -Depth 5)" }
     if (@($first.data.importedIds).Count -ne 3) { throw 'Import did not return the saved IDs.' }
     $headers = @{ Authorization = "Bearer $token" }
+    $parked = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits?status=PARKED" -Headers $headers
+    $completed = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits?status=COMPLETED&pageSize=1" -Headers $headers
+    if ($parked.data.totalCount -ne 1 -or $parked.data.items[0].licensePlate -ne '59A-1' -or $completed.data.totalCount -ne 2 -or @($completed.data.items).Count -ne 1) { throw 'Visit list status or paging failed.' }
+    $invalidList = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits?status=unknown" -Headers $headers
+    if ($invalidList.code -ne 7) { throw 'Invalid visit status was accepted.' }
     $validComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($first.data.importedIds[1])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
     if (-not $validComparison.data.canCompare -or $validComparison.data.expectedAmount -ne 5000 -or $validComparison.data.difference -ne 0) { throw 'Tariff comparison was incorrect.' }
     $openComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($first.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
@@ -88,6 +93,8 @@ try {
     $scoped = Import-File 'scoped.xlsx' $operator.data.accessToken
     if ($scoped.code -ne 0 -or $scoped.data.successRows -ne 2 -or $scoped.data.errorRows -ne 1) { throw 'Import scope failed.' }
     $operatorHeaders = @{ Authorization = "Bearer $($operator.data.accessToken)" }
+    $operatorList = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits" -Headers $operatorHeaders
+    if ($operatorList.data.totalCount -ne 3 -or @($operatorList.data.items | Where-Object { $_.parkingLotId -ne $lotId }).Count -ne 0) { throw 'Visit list access scope failed.' }
     $forbiddenComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($first.data.importedIds[1])/tariff-comparison?dayType=WEEKDAY" -Headers $operatorHeaders
     if ($forbiddenComparison.data.canCompare -or $null -ne $forbiddenComparison.data.collectedAmount) { throw 'Tariff comparison exposed another parking lot.' }
     $operatorSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11" -Headers $operatorHeaders

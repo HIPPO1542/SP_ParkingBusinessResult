@@ -34,6 +34,8 @@
       ] } }],
       "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": [] }] }, "url": "{{baseUrl}}/dev/parking-visits/import", "description": "Chọn file .xlsx, .xls hoặc .csv theo mẫu. Dữ liệu hợp lệ sẽ được lưu vào database; nhập lại cùng bãi, biển số và giờ vào sẽ cập nhật lượt cũ." }
     },
+    { "name": "Danh sách lượt đang trong bãi", "request": { "method": "GET", "url": "{{baseUrl}}/dev/parking-visits?status=PARKED&pageNumber=1&pageSize=10" } },
+    { "name": "Danh sách lượt đã ra", "request": { "method": "GET", "url": "{{baseUrl}}/dev/parking-visits?status=COMPLETED&pageNumber=1&pageSize=10" } },
     { "name": "Thống kê theo tháng", "request": { "method": "GET", "url": "{{baseUrl}}/dev/parking-visits/summary?reportingPeriod={{reportingPeriod}}", "description": "Tính theo ngày xe ra; missingAmountCount cho biết số lượt hoàn tất chưa có tiền thực thu." } },
     { "name": "Thống kê theo khoảng ngày", "request": { "method": "GET", "url": "{{baseUrl}}/dev/parking-visits/summary?fromDate=2026-11-01&toDate=2026-11-30" } },
     { "name": "Đối chiếu bảng giá", "request": { "method": "GET", "url": "{{baseUrl}}/dev/parking-visits/{{visitId}}/tariff-comparison?dayType={{dayType}}", "description": "Chọn WEEKDAY, WEEKEND hoặc HOLIDAY; một số trường hợp chưa đủ quy tắc sẽ không tính." } },

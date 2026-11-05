@@ -23,6 +23,7 @@ public static class EndpointRegistration
 
         RouteGroupBuilder parkingVisits = app.MapGroup("/dev/parking-visits").RequireAuthorization("BusinessResultAccess");
         ImportParkingVisitsEndpoint.Map(parkingVisits);
+        ListParkingVisitsEndpoint.Map(parkingVisits);
         GetParkingVisitSummaryEndpoint.Map(parkingVisits);
         ExportParkingVisitReportEndpoint.Map(parkingVisits);
         CompareParkingVisitTariffEndpoint.Map(parkingVisits);
