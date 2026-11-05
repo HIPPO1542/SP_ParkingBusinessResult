@@ -46,6 +46,16 @@ try {
     }
     $report = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11" -Headers $headers
     if ($report.code -ne 0 -or @($report.data).Count -ne 5) { throw 'Expected five report records.' }
+    $page1 = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&pageNumber=1&pageSize=2" -Headers $headers
+    $page2 = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&pageNumber=2&pageSize=2" -Headers $headers
+    $page3 = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&pageNumber=3&pageSize=2" -Headers $headers
+    if (@($page1.data).Count -ne 2 -or @($page2.data).Count -ne 2 -or @($page3.data).Count -ne 1 -or $page1.data[0].id -eq $page2.data[0].id) { throw 'Report pagination failed.' }
+    foreach ($query in @('pageNumber=0', 'pageSize=101', 'pageSize=invalid', 'district=unsupported')) {
+        $invalid = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&$query" -Headers $headers
+        if ($invalid.code -ne 7) { throw "Invalid or unsupported query was not rejected: $query" }
+    }
+    $unsupportedSummary = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11&district=unsupported" -Headers $headers
+    if ($unsupportedSummary.code -ne 7) { throw 'Unsupported summary filter was not rejected.' }
     $summary = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11" -Headers $headers
     if ($summary.data.totalRevenue -ne 2775000 -or $summary.data.totalVehicleCount -ne 150 -or $summary.data.averageRevenuePerVehicle -ne 18500) { throw 'Unexpected report summary.' }
     $missingPeriod = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary" -Headers $headers

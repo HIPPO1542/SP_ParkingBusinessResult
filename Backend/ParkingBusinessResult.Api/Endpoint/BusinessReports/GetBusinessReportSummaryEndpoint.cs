@@ -9,10 +9,14 @@ public static class GetBusinessReportSummaryEndpoint
 {
     public static void Map(RouteGroupBuilder routes) => routes.MapGet("/summary", Handle);
 
-    private static IResult Handle(string? reportingPeriod, Guid? parkingLotId, ClaimsPrincipal user, GetBusinessReportSummaryHandler handler)
+    private static IResult Handle(string? reportingPeriod, Guid? parkingLotId, HttpRequest request,
+        ClaimsPrincipal user, GetBusinessReportSummaryHandler handler)
     {
         if (string.IsNullOrWhiteSpace(reportingPeriod))
             return Results.Ok(ApiResponse<object>.BusinessError("Cần cung cấp kỳ báo cáo."));
+        string[] allowedParameters = ["reportingPeriod", "parkingLotId"];
+        if (request.Query.Keys.Any(key => !allowedParameters.Contains(key, StringComparer.OrdinalIgnoreCase)))
+            return Results.Ok(ApiResponse<object>.BusinessError("Bộ lọc báo cáo chưa được hỗ trợ."));
 
         BusinessSummary summary = handler.Handle(
             new GetBusinessReportSummaryQuery(reportingPeriod.Trim(), parkingLotId, EndpointSupport.GetAccess(user)));
