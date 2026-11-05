@@ -7,3 +7,4 @@
 database/sqlite/*.db
 database/sqlite/*.db-*
 App_Data/exports/
+~$*.xlsx
