@@ -45,13 +45,23 @@ try {
     }
     $first = Import-File 'first.xlsx' $token
     if ($first.code -ne 0 -or $first.data.totalRows -ne 5 -or $first.data.successRows -ne 3 -or $first.data.errorRows -ne 2) { throw "Invalid initial import: $($first | ConvertTo-Json -Depth 5)" }
+    if (@($first.data.importedIds).Count -ne 3) { throw 'Import did not return the saved IDs.' }
     $headers = @{ Authorization = "Bearer $token" }
+    $validComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($first.data.importedIds[1])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
+    if (-not $validComparison.data.canCompare -or $validComparison.data.expectedAmount -ne 5000 -or $validComparison.data.difference -ne 0) { throw 'Tariff comparison was incorrect.' }
+    $openComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($first.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
+    if ($openComparison.data.canCompare -or $null -ne $openComparison.data.expectedAmount) { throw 'Open visit should not be compared.' }
+    $holidayComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($first.data.importedIds[1])/tariff-comparison?dayType=HOLIDAY" -Headers $headers
+    if ($holidayComparison.data.canCompare) { throw 'Missing holiday tariff should not be guessed.' }
     $initialSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11" -Headers $headers
     if ($initialSummary.data.completedVehicleCount -ne 1 -or $initialSummary.data.collectedRevenue -ne 5000 -or $initialSummary.data.missingAmountCount -ne 0) { throw 'Initial visit summary is incorrect.' }
     foreach ($name in @('update.xlsx', 'blank_update.xlsx')) {
         $result = Import-File $name $token
         if ($result.code -ne 0 -or $result.data.successRows -ne 1) { throw "Update failed: $name" }
+        if ($result.data.importedIds[0] -ne $first.data.importedIds[0]) { throw 'Repeated import changed the visit ID.' }
     }
+    $overnight = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($first.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
+    if ($overnight.data.canCompare -or $null -ne $overnight.data.expectedAmount) { throw 'Overnight charge should not be guessed.' }
     $bad = Import-File 'invalid.xlsx' $token
     if ($bad.code -ne 7) { throw 'Invalid file was not rejected.' }
     $updatedSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11" -Headers $headers
@@ -78,6 +88,8 @@ try {
     $scoped = Import-File 'scoped.xlsx' $operator.data.accessToken
     if ($scoped.code -ne 0 -or $scoped.data.successRows -ne 2 -or $scoped.data.errorRows -ne 1) { throw 'Import scope failed.' }
     $operatorHeaders = @{ Authorization = "Bearer $($operator.data.accessToken)" }
+    $forbiddenComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($first.data.importedIds[1])/tariff-comparison?dayType=WEEKDAY" -Headers $operatorHeaders
+    if ($forbiddenComparison.data.canCompare -or $null -ne $forbiddenComparison.data.collectedAmount) { throw 'Tariff comparison exposed another parking lot.' }
     $operatorSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11" -Headers $operatorHeaders
     if ($operatorSummary.data.completedVehicleCount -ne 2 -or $operatorSummary.data.collectedRevenue -ne 30000 -or $operatorSummary.data.missingAmountCount -ne 1 -or $null -ne $operatorSummary.data.averageDailyRevenue) { throw 'Visit summary access scope or missing amount count failed.' }
     $incompleteExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json' -Body $exportBody
@@ -86,6 +98,9 @@ try {
     if ($operatorExport.code -ne 7) { throw 'Operator should not be permitted to export.' }
     & $pythonPath -X utf8 (Join-Path $root 'tests/parking_visit_import_fixture.py') check $databasePath
     if ($LASTEXITCODE -ne 0) { throw 'SQLite visit data incorrect.' }
+    $fractional = Import-File 'fractional.xlsx' $token
+    $fractionalComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($fractional.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
+    if ($fractionalComparison.data.canCompare -or $null -ne $fractionalComparison.data.expectedAmount) { throw 'Partial-hour charge should not be guessed.' }
     Write-Output 'Excel import, updating, malformed data and access scope passed.'
 }
 finally {

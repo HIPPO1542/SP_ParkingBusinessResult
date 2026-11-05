@@ -25,6 +25,7 @@ public static class EndpointRegistration
         ImportParkingVisitsEndpoint.Map(parkingVisits);
         GetParkingVisitSummaryEndpoint.Map(parkingVisits);
         ExportParkingVisitReportEndpoint.Map(parkingVisits);
+        CompareParkingVisitTariffEndpoint.Map(parkingVisits);
 
         RouteGroupBuilder accounts = app.MapGroup("/dev/auth");
         LoginEndpoint.Map(accounts);

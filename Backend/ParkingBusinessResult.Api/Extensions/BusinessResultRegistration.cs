@@ -5,6 +5,7 @@ using ParkingBusinessResult.Application.Features.BusinessReports.Queries.Summary
 using ParkingBusinessResult.Application.Features.ParkingVisits.Commands.Import;
 using ParkingBusinessResult.Application.Features.ParkingVisits.Queries.Summary;
 using ParkingBusinessResult.Application.Features.ParkingVisits.Queries.Export;
+using ParkingBusinessResult.Application.Features.ParkingVisits.Queries.CompareTariff;
 using ParkingBusinessResult.Application.Features.BusinessResults.Commands.Delete;
 using ParkingBusinessResult.Application.Features.BusinessResults.Commands.Update;
 using ParkingBusinessResult.Application.Features.BusinessResults.Queries.GetById;
@@ -30,6 +31,7 @@ public static class BusinessResultRegistration
         services.AddScoped<ImportParkingVisitsHandler>();
         services.AddScoped<GetParkingVisitSummaryHandler>();
         services.AddScoped<ExportParkingVisitReportHandler>();
+        services.AddScoped<CompareParkingVisitTariffHandler>();
         services.AddSingleton<BootstrapAdministratorHandler>();
         services.AddSingleton<CreateAccountHandler>();
         services.AddSingleton<SignInHandler>();

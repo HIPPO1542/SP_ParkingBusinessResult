@@ -24,6 +24,7 @@ public static class DevelopmentSetup
         var visitRepository = new SqliteParkingVisitImportRepository(databasePath);
         builder.Services.AddSingleton<IParkingVisitImportRepository>(visitRepository);
         builder.Services.AddSingleton<IParkingVisitSummaryRepository>(visitRepository);
+        builder.Services.AddSingleton<IParkingVisitTariffRepository>(new SqliteParkingVisitTariffRepository(databasePath));
         builder.Services.AddSingleton<IDevelopmentAccountRepository>(new SqliteDevelopmentAccountRepository(databasePath));
         builder.Services.AddSingleton<IDevelopmentCredentials, DevelopmentCredentials>();
     }

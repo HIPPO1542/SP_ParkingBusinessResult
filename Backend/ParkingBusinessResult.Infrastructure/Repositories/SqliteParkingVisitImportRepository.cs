@@ -34,7 +34,7 @@ public sealed class SqliteParkingVisitImportRepository(string databasePath) : IP
         return id;
     }
 
-    public void Upsert(ParkingVisitInput visit)
+    public Guid Upsert(ParkingVisitInput visit)
     {
         using SqliteConnection connection = Open();
         using SqliteCommand command = connection.CreateCommand();
@@ -47,6 +47,7 @@ public sealed class SqliteParkingVisitImportRepository(string databasePath) : IP
                 collectedAmount = COALESCE(excluded.collectedAmount, parking_visit.collectedAmount),
                 paymentMethod = COALESCE(excluded.paymentMethod, parking_visit.paymentMethod),
                 updatedAt = excluded.updatedAt
+            RETURNING id
             """;
         command.Parameters.AddWithValue("$id", Guid.NewGuid().ToString());
         command.Parameters.AddWithValue("$lot", visit.ParkingLotId.ToString());
@@ -57,7 +58,7 @@ public sealed class SqliteParkingVisitImportRepository(string databasePath) : IP
         command.Parameters.AddWithValue("$amount", (object?)visit.CollectedAmount?.ToString(CultureInfo.InvariantCulture) ?? DBNull.Value);
         command.Parameters.AddWithValue("$method", (object?)visit.PaymentMethod ?? DBNull.Value);
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture));
-        command.ExecuteNonQuery();
+        return Guid.Parse((string)command.ExecuteScalar()!);
     }
 
     private SqliteConnection Open()

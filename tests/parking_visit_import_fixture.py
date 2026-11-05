@@ -20,7 +20,7 @@ def write(path, rows):
 def make_fixtures(directory):
     write(directory / 'first.xlsx', [
         ['DEMO-01', '59A-1', 'Ô tô', '2026-11-04 23:30', None, None, None],
-        ['DEMO-02', '59B-2', 'Xe máy', datetime(2026, 11, 5, 8, 0), datetime(2026, 11, 5, 9, 0), 5000, 'Tiền mặt'],
+        ['DEMO-02', '59B-2', 'MOTORBIKE', datetime(2026, 11, 5, 8, 0), datetime(2026, 11, 5, 9, 0), 5000, 'Tiền mặt'],
         ['DEMO-02', '59Z-9', 'Xe máy', '2026-10-05 08:00', '2026-10-05 09:00', 10000, 'Tiền mặt'],
         ['NO-SUCH-LOT', '59C-3', 'Xe máy', '2026-11-05 08:00', None, None, None],
         ['DEMO-01', '59D-4', 'Xe máy', '2026-11-05 10:00', '2026-11-05 09:00', 0, None],
@@ -35,6 +35,9 @@ def make_fixtures(directory):
     ])
     write(directory / 'blank_update.xlsx', [
         ['DEMO-01', '59A-1', 'Ô tô', '2026-11-04 23:30', None, None, None],
+    ])
+    write(directory / 'fractional.xlsx', [
+        ['DEMO-02', '59H-8', 'MOTORBIKE', '2026-11-05 08:00', '2026-11-05 09:30', 7000, 'Tiền mặt'],
     ])
     (directory / 'invalid.xlsx').write_bytes(b'not an Excel workbook')
 
