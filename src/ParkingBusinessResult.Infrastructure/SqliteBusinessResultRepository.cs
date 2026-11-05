@@ -15,7 +15,8 @@ public sealed class SqliteBusinessResultRepository : IBusinessResultRepository
         connectionString = new SqliteConnectionStringBuilder
         {
             DataSource = databasePath,
-            Mode = SqliteOpenMode.ReadWrite
+            Mode = SqliteOpenMode.ReadWrite,
+            ForeignKeys = true
         }.ToString();
     }
 
@@ -41,6 +42,10 @@ public sealed class SqliteBusinessResultRepository : IBusinessResultRepository
         catch (SqliteException exception) when (exception.SqliteExtendedErrorCode is 1555 or 2067)
         {
             return false;
+        }
+        catch (SqliteException exception) when (exception.SqliteExtendedErrorCode == 787)
+        {
+            throw new ParkingLotNotFoundException();
         }
     }
 

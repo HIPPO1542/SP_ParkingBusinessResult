@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $databasePath = Join-Path ([System.IO.Path]::GetTempPath()) ("parking-api-" + [guid]::NewGuid().ToString('N') + '.db')
-$schemaPath = Join-Path $repositoryRoot 'database/sqlite/001_create_business_result.sql'
+$fixturePath = Join-Path $repositoryRoot 'tests/prepare_sqlite_fixture.py'
 $apiPath = Join-Path $repositoryRoot 'src/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll'
 $pythonPath = Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'
 $previousEnvironment = $env:ASPNETCORE_ENVIRONMENT
@@ -12,6 +12,7 @@ $previousSigningKey = $env:Authentication__SigningKey
 $previousBootstrapUsername = $env:Authentication__BootstrapUsername
 $previousBootstrapPassword = $env:Authentication__BootstrapPassword
 $server = $null
+$lotId = [guid]::NewGuid().ToString()
 
 function New-TestToken([string] $role, [string] $lotId = '', [int] $minutes = 5) {
     $header = @{ alg = 'HS256'; typ = 'JWT' } | ConvertTo-Json -Compress
@@ -27,7 +28,7 @@ function New-TestToken([string] $role, [string] $lotId = '', [int] $minutes = 5)
 }
 
 try {
-    & $pythonPath -c 'import pathlib,sqlite3,sys; sqlite3.connect(sys.argv[1]).executescript(pathlib.Path(sys.argv[2]).read_bytes().decode())' $databasePath $schemaPath
+    & $pythonPath $fixturePath $databasePath $lotId
     if ($LASTEXITCODE -ne 0) { throw 'Failed to initialize test database.' }
 
     $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
@@ -65,7 +66,6 @@ try {
     $badRoleHeaders = @{ Authorization = "Bearer $(New-TestToken 'ROLE_VIEWER')" }
     if ((Invoke-RestMethod -Uri $baseUrl -Headers $badRoleHeaders).code -ne 7) { throw 'An invalid role was accepted.' }
     $headers = @{ Authorization = "Bearer $($login.data.accessToken)" }
-    $lotId = [guid]::NewGuid().ToString()
     $account = @{ username = 'test-operator'; password = 'operator-password-test'; role = 'ROLE_PARKING_OPERATOR'; parkingLotId = $lotId } | ConvertTo-Json
     if ((Invoke-RestMethod -Method Post -Uri "$authBaseUrl/users" -Headers $headers -ContentType 'application/json' -Body $account).code -ne 0) { throw 'Operator creation failed.' }
     $operatorLogin = @{ username = 'test-operator'; password = 'operator-password-test' } | ConvertTo-Json
@@ -74,6 +74,8 @@ try {
     $operatorHeaders = @{ Authorization = "Bearer $($operatorToken.data.accessToken)" }
     if ((Invoke-RestMethod -Method Post -Uri "$authBaseUrl/users" -Headers $operatorHeaders -ContentType 'application/json' -Body $account).code -ne 7) { throw 'Operator was allowed to create users.' }
     $request = @{ parkingLotId = $lotId; reportingPeriod = '2026-10'; revenue = 200; completedVehicleCount = 2; note = 'Test' } | ConvertTo-Json
+    $unknownLotRequest = @{ parkingLotId = [guid]::NewGuid().ToString(); reportingPeriod = '2026-10'; revenue = 200; completedVehicleCount = 2; note = 'Test' } | ConvertTo-Json
+    if ((Invoke-RestMethod -Method Post -Uri $baseUrl -Headers $headers -ContentType 'application/json' -Body $unknownLotRequest).code -ne 7) { throw 'Unknown parking lot was accepted.' }
     $created = Invoke-RestMethod -Method Post -Uri $baseUrl -Headers $headers -ContentType 'application/json' -Body $request
     if ($created.code -ne 0 -or $created.data.revenue -ne 200) { throw 'Create failed.' }
     $id = $created.data.id

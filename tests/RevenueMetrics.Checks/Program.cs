@@ -86,6 +86,7 @@ if (repository.FindById(firstResult.Id)?.Revenue != 100m ||
 Console.WriteLine("In-memory repository checks passed.");
 
 string databasePath = Path.Combine(Path.GetTempPath(), $"parking-business-{Guid.NewGuid():N}.db");
+Guid testLotId = Guid.NewGuid();
 try
 {
     SQLitePCL.Batteries_V2.Init();
@@ -95,10 +96,18 @@ try
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = File.ReadAllText("database/sqlite/001_create_business_result.sql");
         command.ExecuteNonQuery();
+        command.CommandText = File.ReadAllText("database/sqlite/002_business_reference_tables.sql");
+        command.ExecuteNonQuery();
+        command.CommandText = """
+            INSERT INTO "SP_donViKinhDoanhQuanLy" (id, tenDonVi, diaChi, nguoiLienHe) VALUES ('unit', 'Unit', 'Address', 'Contact');
+            INSERT INTO "DL_KTHT_baiDoXe" (Id, quyHoachId, donViQuanLyId, geo, dienTichThucTe) VALUES ($lot, 'plan', 'unit', '{}', 1);
+            """;
+        command.Parameters.AddWithValue("$lot", testLotId.ToString());
+        command.ExecuteNonQuery();
     }
 
     var sqliteRepository = new SqliteBusinessResultRepository(databasePath);
-    var persistentResult = new ParkingBusinessResultRecord(Guid.NewGuid(), Guid.NewGuid(), "2026-10", 123.45m, 4, "Test");
+    var persistentResult = new ParkingBusinessResultRecord(Guid.NewGuid(), testLotId, "2026-10", 123.45m, 4, "Test");
     if (!sqliteRepository.TryAdd(persistentResult) || sqliteRepository.TryAdd(persistentResult))
     {
         throw new InvalidOperationException("SQLite insert or duplicate detection failed.");
@@ -113,6 +122,16 @@ try
         reopenedRepository.FindById(persistentResult.Id) is not null)
     {
         throw new InvalidOperationException("SQLite persistence or CRUD operations failed.");
+    }
+
+    try
+    {
+        sqliteRepository.TryAdd(new ParkingBusinessResultRecord(Guid.NewGuid(), Guid.NewGuid(), "2026-10", 1m, 1, null));
+        throw new InvalidOperationException("A result for an unknown parking lot was accepted.");
+    }
+    catch (ParkingLotNotFoundException)
+    {
+        // The foreign key must reject results whose parking lot does not exist.
     }
 
     Console.WriteLine("SQLite repository checks passed.");

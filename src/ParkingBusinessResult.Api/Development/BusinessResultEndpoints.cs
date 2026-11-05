@@ -38,6 +38,10 @@ public static class BusinessResultEndpoints
             {
                 return Error("Dữ liệu kết quả kinh doanh không hợp lệ.");
             }
+            catch (ParkingLotNotFoundException)
+            {
+                return Error("Không tìm thấy bãi đỗ xe.");
+            }
         });
 
         routes.MapPut("/{id:guid}", (Guid id, UpdateBusinessResultRequest request, ClaimsPrincipal user, IBusinessResultRepository repository) =>
