@@ -7,7 +7,7 @@ public sealed record ParkingVisitInput(Guid ParkingLotId, string LicensePlate, s
     DateTime EnteredAt, DateTime? ExitedAt, decimal? CollectedAmount, string? PaymentMethod);
 public sealed record ParkingVisitImportError(int RowNumber, string? ParkingLotCode, string ErrorMessage);
 public sealed record ParkingVisitSaved(Guid Id, string LicensePlate, string VehicleType, DateTime EnteredAt,
-    DateTime? ExitedAt, decimal? CollectedAmount, string? PaymentMethod, bool IsDuplicate);
+    DateTime? ExitedAt, decimal? CollectedAmount, string? PaymentMethod);
 public sealed record ParkingVisitImportedRow(int RowNumber, string ParkingLotCode, ParkingVisitSaved Visit);
 public sealed record ParkingVisitImportResult(int TotalRows, int SuccessRows, int ErrorRows,
     IReadOnlyList<Guid> ImportedIds, IReadOnlyList<ParkingVisitImportError> Errors,
@@ -21,5 +21,5 @@ public interface IParkingVisitSpreadsheetReader
 public interface IParkingVisitImportRepository
 {
     Guid? FindAccessibleParkingLot(string code, BusinessAccess access);
-    ParkingVisitSaved Upsert(ParkingVisitInput visit);
+    ParkingVisitSaved? TryInsert(ParkingVisitInput visit);
 }

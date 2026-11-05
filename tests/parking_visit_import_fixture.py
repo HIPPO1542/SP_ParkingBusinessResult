@@ -86,5 +86,9 @@ elif sys.argv[1] == 'addresses':
     with sqlite3.connect(sys.argv[2]) as database:
         database.execute('UPDATE DL_KTHT_baiDoXe SET diaChi=? WHERE ma=?', ('1 Đường Mẫu, Quận 1, Thành phố Mẫu', 'DEMO-01'))
         database.execute('UPDATE DL_KTHT_baiDoXe SET diaChi=? WHERE ma=?', ('2 Đường Mẫu, Quận 2, Thành phố Mẫu', 'DEMO-02'))
+elif sys.argv[1] == 'complete':
+    with sqlite3.connect(sys.argv[2]) as database:
+        database.execute('UPDATE parking_visit SET exitedAt=?, collectedAmount=?, paymentMethod=? WHERE licensePlate=?',
+                         ('2026-11-05 01:00:00', '30000', 'Điện tử', '59A-1'))
 else:
     check(Path(sys.argv[2]))

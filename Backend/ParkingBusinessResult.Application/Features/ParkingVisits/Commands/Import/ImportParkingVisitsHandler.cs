@@ -54,10 +54,15 @@ public sealed class ImportParkingVisitsHandler(IParkingVisitSpreadsheetReader re
                 errors.Add(new(row.RowNumber, parkingLotCode, "Phương thức thanh toán quá dài."));
                 continue;
             }
-            ParkingVisitSaved saved = repository.Upsert(new ParkingVisitInput(lotId.Value, plate, type, entered, exited, amount, paymentMethod));
+            ParkingVisitSaved? saved = repository.TryInsert(new ParkingVisitInput(lotId.Value, plate, type, entered, exited, amount, paymentMethod));
+            if (saved is null)
+            {
+                duplicates++;
+                errors.Add(new(row.RowNumber, parkingLotCode, $"Lượt xe {plate} tại bãi {parkingLotCode} với giờ vào này đã tồn tại."));
+                continue;
+            }
             importedIds.Add(saved.Id);
             importedRows.Add(new(row.RowNumber, parkingLotCode!, saved));
-            if (saved.IsDuplicate) duplicates++;
             success++;
         }
         return new(rows.Count, success, errors.Count, importedIds, errors, duplicates, importedRows);

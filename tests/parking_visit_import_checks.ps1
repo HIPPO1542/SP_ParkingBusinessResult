@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $testDir = Join-Path ([IO.Path]::GetTempPath()) ('parking-import-test-' + [guid]::NewGuid().ToString('N'))
 $pythonPath = Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'
-$apiPath = Join-Path $root 'Backend/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll'
+$apiPath = if ($env:PARKING_API_DLL) { $env:PARKING_API_DLL } else { Join-Path $root 'Backend/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll' }
 $server = $null
 New-Item -ItemType Directory -Path $testDir | Out-Null
 $databasePath = Join-Path $testDir 'test.db'
@@ -66,10 +66,12 @@ try {
     if ($initialSummary.data.completedVehicleCount -ne 1 -or $initialSummary.data.collectedRevenue -ne 5000 -or $initialSummary.data.missingAmountCount -ne 0) { throw 'Initial visit summary is incorrect.' }
     foreach ($name in @('update.xlsx', 'blank_update.xlsx')) {
         $result = Import-File $name $token
-        if ($result.code -ne 0 -or $result.data.successRows -ne 1) { throw "Update failed: $name" }
-        if ($result.data.importedIds[0] -ne $first.data.importedIds[0]) { throw 'Repeated import changed the visit ID.' }
-        if ($result.data.duplicateRows -ne 1 -or -not $result.data.importedRows[0].visit.isDuplicate -or $result.data.importedRows[0].visit.collectedAmount -ne 30000 -or -not $result.data.importedRows[0].visit.exitedAt) { throw 'Duplicate or saved values were not returned correctly.' }
+        if ($result.code -ne 0 -or $result.data.successRows -ne 0 -or $result.data.errorRows -ne 1 -or $result.data.duplicateRows -ne 1 -or @($result.data.importedIds).Count -ne 0 -or -not $result.data.errors[0].errorMessage) { throw "Duplicate was not rejected: $name" }
     }
+    $afterDuplicate = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?status=PARKED" -Headers $headers
+    if ($afterDuplicate.data.totalCount -ne 1 -or $afterDuplicate.data.items[0].id -ne $first.data.importedIds[0] -or $null -ne $afterDuplicate.data.items[0].collectedAmount) { throw 'Duplicate import changed the existing visit.' }
+    & $pythonPath -X utf8 (Join-Path $root 'tests/parking_visit_import_fixture.py') complete $databasePath
+    if ($LASTEXITCODE -ne 0) { throw 'Could not prepare completed visit for report checks.' }
     $overnight = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/$($first.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
     if ($overnight.data.canCompare -or $null -ne $overnight.data.expectedAmount) { throw 'Overnight charge should not be guessed.' }
     $bad = Import-File 'invalid.xlsx' $token
@@ -148,8 +150,8 @@ try {
         Write-Output 'Legacy XLS import passed.'
     } else { Write-Output 'Legacy XLS fixture not available; skipped.' }
     $duplicateRows = Import-File 'duplicate_rows.xlsx' $token
-    if ($duplicateRows.code -ne 0 -or $duplicateRows.data.successRows -ne 2 -or $duplicateRows.data.duplicateRows -ne 1 -or $duplicateRows.data.importedRows[0].visit.isDuplicate -or -not $duplicateRows.data.importedRows[1].visit.isDuplicate -or $duplicateRows.data.importedIds[0] -ne $duplicateRows.data.importedIds[1]) { throw 'Duplicates within the same file were not counted correctly.' }
-    Write-Output 'Excel import, updating, malformed data and access scope passed.'
+    if ($duplicateRows.code -ne 0 -or $duplicateRows.data.successRows -ne 1 -or $duplicateRows.data.errorRows -ne 1 -or $duplicateRows.data.duplicateRows -ne 1 -or @($duplicateRows.data.importedIds).Count -ne 1 -or $duplicateRows.data.errors[0].rowNumber -ne 3) { throw 'Duplicates within the same file were not rejected correctly.' }
+    Write-Output 'Excel import, duplicate rejection, malformed data and access scope passed.'
 }
 finally {
     if ($null -ne $server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force; $server.WaitForExit() }

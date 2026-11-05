@@ -124,8 +124,8 @@ Gọi `POST /gdci/parking/parkingLot/businessOperation/import` dưới dạng `m
 1. Điền file theo [mẫu lượt xe](outputs/parking-import/mau-luot-xe.xlsx): mã bãi, biển số, loại xe, giờ vào, giờ ra, số tiền thực thu và phương thức thanh toán.
 2. API đọc `.xlsx`, `.xls` hoặc `.csv`, tối đa 10 MB và 50.000 dòng; tên và thứ tự cột phải theo mẫu.
 3. Hệ thống kiểm tra từng dòng: mã bãi và quyền truy cập, biển số, loại xe, giờ vào, giờ ra sau giờ vào, số tiền không âm. Dòng lỗi được báo theo số dòng.
-4. Dòng hợp lệ được lưu trong `parking_visit`. Nếu cùng **bãi + biển số + giờ vào** đã có, hệ thống cập nhật lượt cũ. Ô giờ ra, tiền hoặc phương thức để trống không xóa giá trị đã lưu.
-5. Kết quả trả số dòng thành công, số dòng lỗi, số dòng trùng đã cập nhật, ID và thông tin lượt đã lưu cùng danh sách lỗi. Giao diện hiển thị các dòng này và cho phép chọn tiếp file khác. Nếu xảy ra lỗi hệ thống khi đang ghi, một số dòng hợp lệ trước đó có thể đã được lưu.
+4. Dòng hợp lệ được lưu trong `parking_visit`. Nếu cùng **bãi + biển số + giờ vào** đã có, hệ thống báo lỗi trùng và không thay đổi lượt cũ.
+5. Kết quả trả số dòng thành công, số dòng lỗi, số dòng trùng, ID và thông tin lượt đã lưu cùng danh sách lỗi. Dòng trùng được tính vào số lỗi. Giao diện hiển thị các dòng này và cho phép chọn tiếp file khác. Nếu xảy ra lỗi hệ thống khi đang ghi, một số dòng hợp lệ trước đó có thể đã được lưu.
 
 Giờ vào và giờ ra phải có ngày/tháng/năm và giờ/phút, ví dụ `2026-11-05 08:30` hoặc `05/11/2026 08:30`. Excel cũng có thể chứa ô ngày giờ thực. Giờ ra để trống nếu xe chưa ra; số tiền có thể để trống nếu chưa có thông tin thu.
 

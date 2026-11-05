@@ -97,7 +97,7 @@
     try {
       const file = $('importFile').files[0]; if (!file) throw new Error('Vui lòng chọn file.');
       const data = new FormData(); data.append('file', file); const result = await jsonRequest(`${base}/businessOperation/import`, {method:'POST',body:data});
-      notify('importResult', `Tổng ${result.data.totalRows} dòng · Thành công ${result.data.successRows} · Trùng đã cập nhật ${result.data.duplicateRows} · Lỗi ${result.data.errorRows}`, result.data.errorRows ? '' : 'success');
+      notify('importResult', `Tổng ${result.data.totalRows} dòng · Thành công ${result.data.successRows} · Trùng ${result.data.duplicateRows} · Lỗi ${result.data.errorRows}`, result.data.errorRows ? 'error' : 'success');
       const body = $('importErrors'); body.replaceChildren(); (result.data.errors || []).forEach(error => addRow(body,[error.rowNumber,error.parkingLotCode,error.errorMessage]));
       $('importErrorsWrap').classList.toggle('hidden', !result.data.errors?.length);
       const imported = $('importedRows'); imported.replaceChildren();
@@ -106,7 +106,7 @@
         addRow(imported, [item.rowNumber, item.parkingLotCode, visit.licensePlate, visit.vehicleType,
           visit.enteredAt?.replace('T', ' '), visit.exitedAt?.replace('T', ' '),
           visit.collectedAmount == null ? null : `${number(visit.collectedAmount)} đ`, visit.paymentMethod,
-          visit.isDuplicate ? 'Trùng · đã cập nhật' : 'Đã thêm mới'], [6]);
+          'Đã thêm mới'], [6]);
       });
       $('importedRowsWrap').classList.toggle('hidden', !result.data.importedRows?.length);
       $('importFile').value = '';

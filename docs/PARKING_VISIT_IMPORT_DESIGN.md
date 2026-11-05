@@ -5,14 +5,14 @@ Trạng thái: có API import và thống kê lượt xe **thử nghiệm Develo
 Đã xác nhận với người dùng:
 
 - Một lượt xe hoàn tất khi đã vào rồi ra. Một dòng thể hiện một lượt.
-- Khi nhập lại lượt có cùng bãi, biển số và giờ vào, cập nhật lượt cũ, ví dụ bổ sung giờ ra và tiền thu.
+- Lượt có cùng bãi, biển số và giờ vào được coi là trùng; không lưu hoặc cập nhật, trả lỗi cho dòng đó.
 - Doanh thu báo cáo dùng số tiền thực thu trong file. Bảng giá dùng để đối chiếu, không tự thay thế số tiền thực thu.
 
 Lưu vào bảng SQLite riêng `parking_visit`, có ID, khóa ngoại bãi, biển số, loại xe, thời điểm vào/ra, số tiền thực thu và phương thức thanh toán; ràng buộc chống trùng theo bãi, biển số và giờ vào. Bảng này được bổ sung theo yêu cầu import từng lượt và không có trong Excel thiết kế. Bảng `dev_parking_sessions` hiện chỉ là dữ liệu giả lập, không được coi là bảng lượt xe vận hành.
 
-Migration `database/sqlite/apply_parking_visit_migration.py` tạo bản sao lưu trước khi cập nhật và từ chối chạy lại khi bảng đã tồn tại. API kiểm tra từng dòng, quyền đối với bãi, thời điểm ra sau thời điểm vào và báo rõ các dòng lỗi. Nhập lại cập nhật lượt có cùng bãi, biển số và giờ vào; ô giờ ra, số tiền và phương thức thanh toán để trống không xóa dữ liệu đã lưu. Các dòng hợp lệ được lưu, dòng lỗi được trả về riêng; lỗi hệ thống trong lúc ghi có thể dừng yêu cầu sau khi một số dòng đã được lưu.
+Migration `database/sqlite/apply_parking_visit_migration.py` tạo bản sao lưu trước khi cập nhật và từ chối chạy lại khi bảng đã tồn tại. API kiểm tra từng dòng, quyền đối với bãi, thời điểm ra sau thời điểm vào và báo rõ các dòng lỗi. Khi nhập trùng, dữ liệu lượt đã lưu không thay đổi. Các dòng hợp lệ được lưu, dòng lỗi được trả về riêng; lỗi hệ thống trong lúc ghi có thể dừng yêu cầu sau khi một số dòng đã được lưu.
 
-Gửi multipart `POST /gdci/parking/parkingLot/businessOperation/import`, trường file tên `file`, với Bearer token. Hỗ trợ `.xlsx`, `.xls`, `.csv` tối đa 10 MB và tối đa 50.000 dòng dữ liệu; cột phải đúng file mẫu. Đã kiểm thử cả ba định dạng trên file mẫu tạo riêng cho kiểm thử. Giờ nhập dạng `yyyy-MM-dd HH:mm` hoặc `dd/MM/yyyy HH:mm`, hoặc ô ngày giờ thực của Excel. Không nhập dấu phân cách hàng nghìn trong ô văn bản tiền. Kết quả trả số dòng thành công, ID và dữ liệu các lượt đã lưu, số dòng trùng đã cập nhật và danh sách dòng lỗi. Dòng trùng bao gồm lượt đã có trong database hoặc lặp lại trong cùng file; số thành công bao gồm các dòng trùng được cập nhật.
+Gửi multipart `POST /gdci/parking/parkingLot/businessOperation/import`, trường file tên `file`, với Bearer token. Hỗ trợ `.xlsx`, `.xls`, `.csv` tối đa 10 MB và tối đa 50.000 dòng dữ liệu; cột phải đúng file mẫu. Giờ nhập dạng `yyyy-MM-dd HH:mm` hoặc `dd/MM/yyyy HH:mm`, hoặc ô ngày giờ thực của Excel. Không nhập dấu phân cách hàng nghìn trong ô văn bản tiền. Kết quả trả số dòng thành công, ID và dữ liệu các lượt đã lưu, số dòng trùng và danh sách dòng lỗi. Dòng trùng bao gồm lượt đã có trong database hoặc lặp lại trong cùng file; dòng trùng được tính vào số lỗi, không tính vào số thành công.
 
 `GET /gdci/parking/parkingLot/parkingVisit` liệt kê lượt đã nhập trong phạm vi quyền, hỗ trợ `parkingLotId`, `status=PARKED` (chưa ra) hoặc `status=COMPLETED` (đã ra), `pageNumber` và `pageSize` (mặc định 1/10, tối đa 100 dòng mỗi trang). Kết quả có `items` và `totalCount` sau khi lọc quyền.
 
