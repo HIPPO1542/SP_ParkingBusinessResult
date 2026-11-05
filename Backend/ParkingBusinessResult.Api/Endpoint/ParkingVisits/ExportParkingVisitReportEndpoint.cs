@@ -11,7 +11,7 @@ namespace ParkingBusinessResult.Api.Endpoint.ParkingVisits;
 
 public static class ExportParkingVisitReportEndpoint
 {
-    public sealed record Request(string? FileFormat, string? ReportingPeriod, Guid? ParkingLotId, string? ReportTitle)
+    public sealed record Request(string? FileFormat, string? ReportingPeriod, Guid? ParkingLotId, string? ReportTitle, string? District)
     {
         [JsonExtensionData] public Dictionary<string, JsonElement>? ExtraFields { get; init; }
     }
@@ -31,7 +31,7 @@ public static class ExportParkingVisitReportEndpoint
         string title = string.IsNullOrWhiteSpace(request.ReportTitle) ? "Báo cáo từ lượt xe" : request.ReportTitle.Trim();
         try { XmlConvert.VerifyXmlChars(title); }
         catch (XmlException) { return Results.Ok(ApiResponse<object>.BusinessError("Tiêu đề chứa ký tự không hợp lệ.")); }
-        ParkingVisitExportResult result = handler.Handle(new ExportParkingVisitReportQuery(month, request.ParkingLotId, EndpointSupport.GetAccess(user)));
+        ParkingVisitExportResult result = handler.Handle(new ExportParkingVisitReportQuery(month, request.ParkingLotId, EndpointSupport.GetAccess(user), request.District));
         if (result.MissingAmountCount > 0)
             return Results.Ok(ApiResponse<object>.BusinessError($"Có {result.MissingAmountCount} lượt hoàn tất chưa có số tiền thực thu."));
         string period = month.ToString("yyyy-MM", CultureInfo.InvariantCulture);

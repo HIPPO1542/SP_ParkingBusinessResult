@@ -14,6 +14,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Failed to seed database.' }
     & $pythonPath (Join-Path $root 'database/sqlite/apply_parking_visit_migration.py') --database $databasePath
     if ($LASTEXITCODE -ne 0) { throw 'Failed to apply visits migration.' }
+    & $pythonPath -X utf8 (Join-Path $root 'tests/parking_visit_import_fixture.py') addresses $databasePath
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare parking lot addresses.' }
     & $pythonPath (Join-Path $root 'tests/parking_visit_import_fixture.py') make $testDir
     if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare Excel files.' }
     $lotId = & $pythonPath -c "import sqlite3,sys; print(sqlite3.connect(sys.argv[1]).execute('select Id from DL_KTHT_baiDoXe where ma = ?',('DEMO-01',)).fetchone()[0])" $databasePath
@@ -73,6 +75,9 @@ try {
     if ($updatedSummary.data.completedVehicleCount -ne 2 -or $updatedSummary.data.collectedRevenue -ne 35000 -or $updatedSummary.data.previousRevenue -ne 10000 -or $updatedSummary.data.growthRate -ne 250) { throw 'Updated visit summary or growth is incorrect.' }
     if ($updatedSummary.data.cashRevenue -ne 5000 -or $updatedSummary.data.electronicRevenue -ne 30000 -or $updatedSummary.data.unclassifiedRevenue -ne 0) { throw 'Payment method totals are incorrect.' }
     if (@($updatedSummary.data.topRevenueParkingLots).Count -ne 2 -or $updatedSummary.data.topRevenueParkingLots[0].parkingLot.code -ne 'DEMO-01' -or $updatedSummary.data.topRevenueParkingLots[0].percentage -ne 85.71) { throw 'Imported visit ranking incorrect.' }
+    if (@($updatedSummary.data.revenueByDistrict).Count -ne 2 -or $updatedSummary.data.revenueByDistrict[0].revenue -ne 30000 -or $updatedSummary.data.revenueByDistrict[0].parkingLotsCount -ne 1) { throw 'District revenue grouping failed.' }
+    $districtSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11&district=Qu%E1%BA%ADn%201" -Headers $headers
+    if ($districtSummary.data.completedVehicleCount -ne 1 -or $districtSummary.data.collectedRevenue -ne 30000) { throw 'Visit district filter failed.' }
     $daySummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?fromDate=2026-11-05&toDate=2026-11-05" -Headers $headers
     if ($daySummary.data.completedVehicleCount -ne 2 -or $daySummary.data.collectedRevenue -ne 35000) { throw 'Date range should include completed visits on the selected date.' }
     $invalidRange = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?fromDate=2026-11-06&toDate=2026-11-05" -Headers $headers
@@ -87,6 +92,10 @@ try {
     Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json' -Body $pdfBody -OutFile $pdfPath
     & $pythonPath -X utf8 (Join-Path $root 'tests/check_visit_export.py') $xlsxPath $pdfPath
     if ($LASTEXITCODE -ne 0) { throw 'Visit export content invalid.' }
+    $districtBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; district = [uri]::UnescapeDataString('Qu%E1%BA%ADn%201') } | ConvertTo-Json
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($districtBody)) -OutFile $xlsxPath
+    & $pythonPath (Join-Path $root 'tests/check_visit_district_export.py') $xlsxPath
+    if ($LASTEXITCODE -ne 0) { throw 'Visit district export incorrect.' }
     $account = @{ username = 'visit-operator'; password = 'visit-password-only'; role = 'ROLE_PARKING_OPERATOR'; parkingLotId = $lotId } | ConvertTo-Json
     $created = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/users" -Headers $headers -ContentType 'application/json' -Body $account
     if ($created.code -ne 0) { throw 'Could not create operator.' }
@@ -102,12 +111,18 @@ try {
     $operatorSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11" -Headers $operatorHeaders
     if ($operatorSummary.data.completedVehicleCount -ne 2 -or $operatorSummary.data.collectedRevenue -ne 30000 -or $operatorSummary.data.missingAmountCount -ne 1 -or $null -ne $operatorSummary.data.averageDailyRevenue) { throw 'Visit summary access scope or missing amount count failed.' }
     if ($null -ne $operatorSummary.data.topRevenueParkingLots) { throw 'Incomplete revenue should not produce a ranking.' }
+    if ($null -ne $operatorSummary.data.revenueByDistrict) { throw 'Incomplete revenue should not produce district grouping.' }
     $incompleteExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json' -Body $exportBody
     if ($incompleteExport.code -ne 7) { throw 'Export should reject completed visits without amounts.' }
     $operatorExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $operatorHeaders -ContentType 'application/json' -Body $exportBody
     if ($operatorExport.code -ne 7) { throw 'Operator should not be permitted to export.' }
     & $pythonPath -X utf8 (Join-Path $root 'tests/parking_visit_import_fixture.py') check $databasePath
     if ($LASTEXITCODE -ne 0) { throw 'SQLite visit data incorrect.' }
+    $unknownDistrict = Import-File 'unknown_district.xlsx' $token
+    if ($unknownDistrict.data.successRows -ne 1) { throw 'Unknown district fixture import failed.' }
+    $unknownLot = & $pythonPath -c "import sqlite3,sys; print(sqlite3.connect(sys.argv[1]).execute('select Id from DL_KTHT_baiDoXe where ma = ?',('DEMO-03',)).fetchone()[0])" $databasePath
+    $unknownSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11&parkingLotId=$unknownLot" -Headers $headers
+    if (@($unknownSummary.data.revenueByDistrict).Count -ne 1 -or $null -ne $unknownSummary.data.revenueByDistrict[0].district -or $unknownSummary.data.revenueByDistrict[0].revenue -ne 2000) { throw 'Unknown district should remain unclassified.' }
     $fractional = Import-File 'fractional.xlsx' $token
     $fractionalComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($fractional.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
     if ($fractionalComparison.data.canCompare -or $null -ne $fractionalComparison.data.expectedAmount) { throw 'Partial-hour charge should not be guessed.' }

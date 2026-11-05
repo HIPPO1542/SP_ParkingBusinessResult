@@ -44,6 +44,9 @@ def make_fixtures(directory):
     write(directory / 'unclassified.xlsx', [
         ['DEMO-02', '59J-8', 'MOTORBIKE', '2026-11-05 10:00', '2026-11-05 11:00', 9000, 'Khác'],
     ])
+    write(directory / 'unknown_district.xlsx', [
+        ['DEMO-03', '59M-1', 'MOTORBIKE', '2026-11-05 10:00', '2026-11-05 11:00', 2000, 'Tiền mặt'],
+    ])
     (directory / 'invalid.xlsx').write_bytes(b'not an Excel workbook')
     with (directory / 'visit.csv').open('w', encoding='utf-8-sig', newline='') as file:
         writer = csv.writer(file)
@@ -75,5 +78,9 @@ def check(database_path):
 
 if sys.argv[1] == 'make':
     make_fixtures(Path(sys.argv[2]))
+elif sys.argv[1] == 'addresses':
+    with sqlite3.connect(sys.argv[2]) as database:
+        database.execute('UPDATE DL_KTHT_baiDoXe SET diaChi=? WHERE ma=?', ('1 Đường Mẫu, Quận 1, Thành phố Mẫu', 'DEMO-01'))
+        database.execute('UPDATE DL_KTHT_baiDoXe SET diaChi=? WHERE ma=?', ('2 Đường Mẫu, Quận 2, Thành phố Mẫu', 'DEMO-02'))
 else:
     check(Path(sys.argv[2]))

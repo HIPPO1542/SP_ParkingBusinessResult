@@ -9,10 +9,10 @@ public static class GetParkingVisitSummaryEndpoint
 {
     public static void Map(RouteGroupBuilder routes) => routes.MapGet("/summary", Handle);
 
-    private static IResult Handle(string? reportingPeriod, string? fromDate, string? toDate, Guid? parkingLotId,
+    private static IResult Handle(string? reportingPeriod, string? fromDate, string? toDate, Guid? parkingLotId, string? district,
         HttpRequest request, ClaimsPrincipal user, GetParkingVisitSummaryHandler handler)
     {
-        string[] allowed = ["reportingPeriod", "fromDate", "toDate", "parkingLotId"];
+        string[] allowed = ["reportingPeriod", "fromDate", "toDate", "parkingLotId", "district"];
         if (request.Query.Keys.Any(key => !allowed.Contains(key, StringComparer.OrdinalIgnoreCase)))
             return Results.Ok(ApiResponse<object>.BusinessError("Bộ lọc chưa được hỗ trợ."));
         DateTime from;
@@ -42,7 +42,7 @@ public static class GetParkingVisitSummaryEndpoint
         {
             return Results.Ok(ApiResponse<object>.BusinessError("Cung cấp kỳ yyyy-MM hoặc khoảng fromDate và toDate hợp lệ (yyyy-MM-dd)."));
         }
-        ParkingVisitSummary summary = handler.Handle(new GetParkingVisitSummaryQuery(from, toExclusive, label, parkingLotId, EndpointSupport.GetAccess(user), isMonthly));
+        ParkingVisitSummary summary = handler.Handle(new GetParkingVisitSummaryQuery(from, toExclusive, label, parkingLotId, EndpointSupport.GetAccess(user), isMonthly, district));
         return Results.Ok(ApiResponse<ParkingVisitSummary>.Success(summary));
     }
 }
