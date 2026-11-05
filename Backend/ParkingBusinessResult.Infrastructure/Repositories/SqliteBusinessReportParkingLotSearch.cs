@@ -5,7 +5,7 @@ namespace ParkingBusinessResult.Infrastructure.Repositories;
 
 public sealed class SqliteBusinessReportParkingLotSearch(string databasePath) : IBusinessReportParkingLotSearch
 {
-    public IReadOnlySet<Guid> FindMatchingLots(string keyword)
+    public IReadOnlySet<Guid> FindMatchingLots(string? keyword, string? district)
     {
         var connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath, Mode = SqliteOpenMode.ReadWrite, ForeignKeys = true };
         using var connection = new SqliteConnection(connectionString.ToString());
@@ -18,7 +18,9 @@ public sealed class SqliteBusinessReportParkingLotSearch(string databasePath) : 
         {
             string name = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
             string address = reader.IsDBNull(2) ? string.Empty : reader.GetString(2);
-            if (name.Contains(keyword, StringComparison.OrdinalIgnoreCase) || address.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            bool matchesKeyword = keyword is null || name.Contains(keyword, StringComparison.OrdinalIgnoreCase) || address.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+            bool matchesDistrict = district is null || address.Contains(district, StringComparison.OrdinalIgnoreCase);
+            if (matchesKeyword && matchesDistrict)
                 matchingLots.Add(Guid.Parse(reader.GetString(0)));
         }
         return matchingLots;

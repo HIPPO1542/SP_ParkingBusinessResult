@@ -11,7 +11,7 @@ namespace ParkingBusinessResult.Api.Endpoint.BusinessReports;
 
 public static class ExportBusinessReportEndpoint
 {
-    public sealed record Request(string? FileFormat, string? ReportingPeriod, Guid? ParkingLotId, string? ReportTitle)
+    public sealed record Request(string? FileFormat, string? ReportingPeriod, Guid? ParkingLotId, string? ReportTitle, string? District)
     {
         [JsonExtensionData] public Dictionary<string, JsonElement>? ExtraFields { get; init; }
     }
@@ -36,7 +36,7 @@ public static class ExportBusinessReportEndpoint
         catch (XmlException) { return Results.Ok(ApiResponse<object>.BusinessError("Tiêu đề hoặc kỳ báo cáo chứa ký tự không hợp lệ.")); }
 
         IReadOnlyList<ParkingBusinessResultRecord> records = handler.Handle(
-            new ExportBusinessReportQuery(period, request.ParkingLotId, title, EndpointSupport.GetAccess(user)));
+            new ExportBusinessReportQuery(period, request.ParkingLotId, title, EndpointSupport.GetAccess(user), request.District));
         if (request.FileFormat == "PDF")
             return Results.File(BusinessReportPdfWriter.Write(title, period, records), "application/pdf", "bao-cao-kinh-doanh.pdf");
 

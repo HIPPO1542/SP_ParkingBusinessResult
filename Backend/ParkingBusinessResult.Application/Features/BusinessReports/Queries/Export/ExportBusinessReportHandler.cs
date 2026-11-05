@@ -6,5 +6,5 @@ namespace ParkingBusinessResult.Application.Features.BusinessReports.Queries.Exp
 public sealed class ExportBusinessReportHandler(ListBusinessReportHandler listHandler)
 {
     public IReadOnlyList<ParkingBusinessResultRecord> Handle(ExportBusinessReportQuery query) =>
-        listHandler.Handle(new ListBusinessReportQuery(query.ReportingPeriod, query.ParkingLotId, query.Access));
+        listHandler.Handle(new ListBusinessReportQuery(query.ReportingPeriod, query.ParkingLotId, query.Access, District: query.District));
 }

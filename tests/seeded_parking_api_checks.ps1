@@ -56,12 +56,16 @@ try {
     $page2 = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&pageNumber=2&pageSize=2" -Headers $headers
     $page3 = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&pageNumber=3&pageSize=2" -Headers $headers
     if (@($page1.data).Count -ne 2 -or @($page2.data).Count -ne 2 -or @($page3.data).Count -ne 1 -or $page1.data[0].id -eq $page2.data[0].id) { throw 'Report pagination failed.' }
-    foreach ($query in @('pageNumber=0', 'pageSize=101', 'pageSize=invalid', 'district=unsupported')) {
+    foreach ($query in @('pageNumber=0', 'pageSize=101', 'pageSize=invalid', 'fromDate=2026-11-01')) {
         $invalid = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&$query" -Headers $headers
         if ($invalid.code -ne 7) { throw "Invalid or unsupported query was not rejected: $query" }
     }
-    $unsupportedSummary = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11&district=unsupported" -Headers $headers
+    $unsupportedSummary = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11&fromDate=2026-11-01" -Headers $headers
     if ($unsupportedSummary.code -ne 7) { throw 'Unsupported summary filter was not rejected.' }
+    $districtReport = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&district=dia%20chi%20gia%20lap" -Headers $headers
+    if (@($districtReport.data).Count -ne 5) { throw 'District filter failed.' }
+    $districtEmpty = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11&district=not-found" -Headers $headers
+    if ($districtEmpty.data.totalRevenue -ne 0) { throw 'District filter returned unrelated results.' }
     $summary = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11" -Headers $headers
     if ($summary.data.totalRevenue -ne 2775000 -or $summary.data.totalVehicleCount -ne 150 -or $summary.data.averageRevenuePerVehicle -ne 18500) { throw 'Unexpected report summary.' }
     $missingPeriod = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary" -Headers $headers
@@ -82,9 +86,13 @@ try {
     $unsupportedBody = @{ fileFormat = 'TXT'; reportingPeriod = '2026-11' } | ConvertTo-Json
     $unsupported = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $unsupportedBody
     if ($unsupported.code -ne 7) { throw 'Unsupported format should be rejected.' }
-    $unknownBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; district = 'test' } | ConvertTo-Json
+    $unknownBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; fromDate = '2026-11-01' } | ConvertTo-Json
     $unknown = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $unknownBody
     if ($unknown.code -ne 7) { throw 'Unsupported filters should be rejected.' }
+    $districtExportBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; reportTitle = '=test formula is text'; district = 'dia chi gia lap' } | ConvertTo-Json
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $districtExportBody -OutFile $exportPath
+    & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 5 2775000
+    if ($LASTEXITCODE -ne 0) { throw 'District Excel report verification failed.' }
     $scoped = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11&parkingLotId=$($first.parkingLotId)" -Headers $headers
     if ($scoped.data.totalRevenue -ne 555000 -or $scoped.data.totalVehicleCount -ne 30) { throw 'Parking lot filter failed.' }
     $account = @{ username = 'report-operator'; password = 'report-password-only'; role = 'ROLE_PARKING_OPERATOR'; parkingLotId = $first.parkingLotId } | ConvertTo-Json

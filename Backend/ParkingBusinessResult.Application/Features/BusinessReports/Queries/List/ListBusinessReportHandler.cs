@@ -7,8 +7,10 @@ public sealed class ListBusinessReportHandler(IBusinessResultRepository reposito
 {
     public IReadOnlyList<ParkingBusinessResultRecord> Handle(ListBusinessReportQuery query)
     {
-        IReadOnlySet<Guid>? matchingLots = string.IsNullOrWhiteSpace(query.Keyword)
-            ? null : parkingLotSearch.FindMatchingLots(query.Keyword.Trim());
+        string? keyword = string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim();
+        string? district = string.IsNullOrWhiteSpace(query.District) ? null : query.District.Trim();
+        IReadOnlySet<Guid>? matchingLots = keyword is null && district is null
+            ? null : parkingLotSearch.FindMatchingLots(keyword, district);
         return repository.List()
             .Where(record => query.Access.CanAccess(record.ParkingLotId))
             .Where(record => record.ReportingPeriod == query.ReportingPeriod)

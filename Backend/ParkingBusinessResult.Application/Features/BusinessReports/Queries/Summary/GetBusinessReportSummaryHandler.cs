@@ -9,7 +9,7 @@ public sealed class GetBusinessReportSummaryHandler(ListBusinessReportHandler li
     public BusinessSummary Handle(GetBusinessReportSummaryQuery query)
     {
         IReadOnlyList<ParkingBusinessResultRecord> records = listHandler.Handle(
-            new ListBusinessReportQuery(query.ReportingPeriod, query.ParkingLotId, query.Access));
+            new ListBusinessReportQuery(query.ReportingPeriod, query.ParkingLotId, query.Access, District: query.District));
         return BusinessSummaryCalculator.Calculate(records.Select(record =>
             new BusinessSummaryEntry(record.Revenue, record.CompletedVehicleCount)));
     }
