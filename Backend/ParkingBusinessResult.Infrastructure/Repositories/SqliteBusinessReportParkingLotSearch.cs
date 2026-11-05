@@ -5,6 +5,26 @@ namespace ParkingBusinessResult.Infrastructure.Repositories;
 
 public sealed class SqliteBusinessReportParkingLotSearch(string databasePath) : IBusinessReportParkingLotSearch
 {
+    public IReadOnlyDictionary<Guid, ReportParkingLot> GetParkingLots(IReadOnlySet<Guid> ids)
+    {
+        if (ids.Count == 0) return new Dictionary<Guid, ReportParkingLot>();
+        var connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath, Mode = SqliteOpenMode.ReadWrite, ForeignKeys = true };
+        using var connection = new SqliteConnection(connectionString.ToString());
+        connection.Open();
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT \"Id\", \"ma\", \"ten\", \"diaChi\" FROM \"DL_KTHT_baiDoXe\"";
+        using SqliteDataReader reader = command.ExecuteReader();
+        var lots = new Dictionary<Guid, ReportParkingLot>();
+        while (reader.Read())
+        {
+            Guid id = Guid.Parse(reader.GetString(0));
+            if (!ids.Contains(id)) continue;
+            lots.Add(id, new ReportParkingLot(id, reader.IsDBNull(1) ? null : reader.GetString(1),
+                reader.IsDBNull(2) ? null : reader.GetString(2), reader.IsDBNull(3) ? null : reader.GetString(3)));
+        }
+        return lots;
+    }
+
     public IReadOnlySet<Guid> FindMatchingLots(string? keyword, string? district)
     {
         var connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath, Mode = SqliteOpenMode.ReadWrite, ForeignKeys = true };

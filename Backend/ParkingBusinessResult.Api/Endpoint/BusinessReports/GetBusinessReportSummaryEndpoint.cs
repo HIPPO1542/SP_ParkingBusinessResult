@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using ParkingBusinessResult.Api.Contracts;
-using ParkingBusinessResult.Application.Features.BusinessReports.Common;
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.Summary;
 
 namespace ParkingBusinessResult.Api.Endpoint.BusinessReports;
@@ -18,8 +17,8 @@ public static class GetBusinessReportSummaryEndpoint
         if (request.Query.Keys.Any(key => !allowedParameters.Contains(key, StringComparer.OrdinalIgnoreCase)))
             return Results.Ok(ApiResponse<object>.BusinessError("Bộ lọc báo cáo chưa được hỗ trợ."));
 
-        BusinessSummary summary = handler.Handle(
+        BusinessReportSummary summary = handler.Handle(
             new GetBusinessReportSummaryQuery(reportingPeriod.Trim(), parkingLotId, EndpointSupport.GetAccess(user), district));
-        return Results.Ok(ApiResponse<BusinessSummary>.Success(summary));
+        return Results.Ok(ApiResponse<BusinessReportSummary>.Success(summary));
     }
 }

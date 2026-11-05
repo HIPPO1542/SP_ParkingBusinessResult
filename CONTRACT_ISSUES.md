@@ -11,4 +11,4 @@ Phạm vi rà soát: kết quả kinh doanh bãi đỗ xe, UC 1.5 và UC 3.4. Ng
 
 Không suy diễn giá trị thiếu, tự bổ sung cột, hoặc coi tên bảng trong ví dụ SQL là schema vật lý đã xác minh.
 
-7. Người dùng làm rõ nhu cầu import Excel là **các lượt xe vào/ra**, trong khi ApiSpec import hiện mô tả các dòng số liệu đã tổng hợp theo kỳ. `dev_parking_sessions` chỉ là bảng dữ liệu giả lập, không phải bảng vận hành trong Excel thiết kế. Cần xác nhận mẫu file, định danh lượt, cách xử lý lượt chưa ra và nguồn phí trước khi lưu nhập hoặc tự tổng hợp doanh thu.
+7. Người dùng làm rõ nhu cầu import Excel là **các lượt xe vào/ra**, trong khi ApiSpec import hiện mô tả các dòng số liệu đã tổng hợp theo kỳ. Người dùng chọn tạo file mẫu gồm mã bãi, biển số, loại xe, giờ vào/ra, số tiền và phương thức thanh toán; dùng số tiền thực thu trong file để báo cáo, bảng giá để đối chiếu. `dev_parking_sessions` chỉ là bảng dữ liệu giả lập, không phải bảng vận hành trong Excel thiết kế. Cần xác định cách định danh lượt, xử lý lượt chưa ra và lưu dữ liệu vận hành trước khi hoàn thành import hoặc tự tổng hợp doanh thu.

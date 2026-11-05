@@ -68,6 +68,10 @@ try {
     if ($districtEmpty.data.totalRevenue -ne 0) { throw 'District filter returned unrelated results.' }
     $summary = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11" -Headers $headers
     if ($summary.data.totalRevenue -ne 2775000 -or $summary.data.totalVehicleCount -ne 150 -or $summary.data.averageRevenuePerVehicle -ne 18500) { throw 'Unexpected report summary.' }
+    if ($summary.data.reportingPeriod -ne '2026-11' -or @($summary.data.topRevenueParkingLots).Count -ne 5) { throw 'Expected five top parking lots.' }
+    foreach ($topLot in $summary.data.topRevenueParkingLots) {
+        if ($topLot.revenue -ne 555000 -or $topLot.vehicleCount -ne 30 -or $topLot.percentage -ne 20 -or -not $topLot.parkingLot.name -or -not $topLot.parkingLot.code) { throw 'Unexpected top parking lot details.' }
+    }
     $missingPeriod = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary" -Headers $headers
     if ($missingPeriod.code -ne 7) { throw 'A report period must be required.' }
     $emptyPeriod = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=other" -Headers $headers
@@ -95,6 +99,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'District Excel report verification failed.' }
     $scoped = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11&parkingLotId=$($first.parkingLotId)" -Headers $headers
     if ($scoped.data.totalRevenue -ne 555000 -or $scoped.data.totalVehicleCount -ne 30) { throw 'Parking lot filter failed.' }
+    if (@($scoped.data.topRevenueParkingLots).Count -ne 1 -or $scoped.data.topRevenueParkingLots[0].percentage -ne 100) { throw 'Scoped ranking failed.' }
     $account = @{ username = 'report-operator'; password = 'report-password-only'; role = 'ROLE_PARKING_OPERATOR'; parkingLotId = $first.parkingLotId } | ConvertTo-Json
     $created = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/users" -Headers $headers -ContentType 'application/json' -Body $account
     if ($created.code -ne 0) { throw 'Could not create scoped account.' }
@@ -109,6 +114,7 @@ try {
     if (@($operatorSearch.data).Count -ne 1 -or $operatorSearch.data[0].parkingLotId -ne $first.parkingLotId) { throw 'Search exposed results outside operator scope.' }
     $forbiddenLot = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11&parkingLotId=$($second.parkingLotId)" -Headers $operatorHeaders
     if ($forbiddenLot.data.totalRevenue -ne 0) { throw 'Operator accessed another parking lot.' }
+    if (@($forbiddenLot.data.topRevenueParkingLots).Count -ne 0) { throw 'Operator accessed another parking lot ranking.' }
     $districtBody = @{ username = 'report-district'; password = 'report-password-only'; role = 'ROLE_DISTRICT_ADMIN'; parkingLotId = $first.parkingLotId } | ConvertTo-Json
     $districtCreated = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/users" -Headers $headers -ContentType 'application/json' -Body $districtBody
     if ($districtCreated.code -ne 0) { throw 'Could not create district account.' }
@@ -128,6 +134,11 @@ try {
     Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
     & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 4 2220000
     if ($LASTEXITCODE -ne 0) { throw 'Soft-deleted record was exported.' }
+    $updatedBody = @{ revenue = 700000; completedVehicleCount = 30; note = 'ranking test' } | ConvertTo-Json
+    $updated = Invoke-RestMethod -Method Put -Uri "$baseUrl/dev/business-results/$($second.id)" -Headers $headers -ContentType 'application/json' -Body $updatedBody
+    if ($updated.code -ne 0) { throw 'Could not prepare ranking test.' }
+    $ranked = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11" -Headers $headers
+    if ($ranked.data.topRevenueParkingLots[0].parkingLot.id -ne $second.parkingLotId -or $ranked.data.topRevenueParkingLots[0].percentage -ne 29.6) { throw 'Ranking order or percentage incorrect.' }
     Write-Output 'Seeded API returned five matching business results.'
     Write-Output 'Report list, summary, period and lot filters, access scope, and soft delete checks passed.'
 }
