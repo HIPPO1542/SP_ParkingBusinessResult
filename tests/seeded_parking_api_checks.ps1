@@ -46,6 +46,12 @@ try {
     }
     $report = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11" -Headers $headers
     if ($report.code -ne 0 -or @($report.data).Count -ne 5) { throw 'Expected five report records.' }
+    $nameSearch = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&keyword=Bai%20xe%20gia%20lap%2001" -Headers $headers
+    if ($nameSearch.code -ne 0 -or @($nameSearch.data).Count -ne 1) { throw 'Search by parking lot name failed.' }
+    $addressSearch = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&keyword=dia%20chi%20gia%20lap" -Headers $headers
+    if ($addressSearch.code -ne 0 -or @($addressSearch.data).Count -ne 5) { throw 'Search by parking lot address failed.' }
+    $emptySearch = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&keyword=not-found" -Headers $headers
+    if ($emptySearch.code -ne 0 -or @($emptySearch.data).Count -ne 0) { throw 'Search should return no matching results.' }
     $page1 = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&pageNumber=1&pageSize=2" -Headers $headers
     $page2 = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&pageNumber=2&pageSize=2" -Headers $headers
     $page3 = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&pageNumber=3&pageSize=2" -Headers $headers
@@ -91,6 +97,8 @@ try {
     if ($operatorExport.code -ne 7) { throw 'Operator must not export reports.' }
     $operatorReport = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11" -Headers $operatorHeaders
     if (@($operatorReport.data).Count -ne 1 -or $operatorReport.data[0].parkingLotId -ne $first.parkingLotId) { throw 'Operator report scope failed.' }
+    $operatorSearch = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&keyword=dia%20chi%20gia%20lap" -Headers $operatorHeaders
+    if (@($operatorSearch.data).Count -ne 1 -or $operatorSearch.data[0].parkingLotId -ne $first.parkingLotId) { throw 'Search exposed results outside operator scope.' }
     $forbiddenLot = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11&parkingLotId=$($second.parkingLotId)" -Headers $operatorHeaders
     if ($forbiddenLot.data.totalRevenue -ne 0) { throw 'Operator accessed another parking lot.' }
     $districtBody = @{ username = 'report-district'; password = 'report-password-only'; role = 'ROLE_DISTRICT_ADMIN'; parkingLotId = $first.parkingLotId } | ConvertTo-Json

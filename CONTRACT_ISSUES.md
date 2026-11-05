@@ -10,3 +10,5 @@ Phạm vi rà soát: kết quả kinh doanh bãi đỗ xe, UC 1.5 và UC 3.4. Ng
 6. UC 3.4 cần kết nối dữ liệu bãi xe, đơn vị quản lý và nơi lưu tệp xuất; cần xác nhận nguồn tích hợp và cấu hình. Sheet thiết kế không thay thế schema và môi trường CSDL thực tế.
 
 Không suy diễn giá trị thiếu, tự bổ sung cột, hoặc coi tên bảng trong ví dụ SQL là schema vật lý đã xác minh.
+
+7. Người dùng làm rõ nhu cầu import Excel là **các lượt xe vào/ra**, trong khi ApiSpec import hiện mô tả các dòng số liệu đã tổng hợp theo kỳ. `dev_parking_sessions` chỉ là bảng dữ liệu giả lập, không phải bảng vận hành trong Excel thiết kế. Cần xác nhận mẫu file, định danh lượt, cách xử lý lượt chưa ra và nguồn phí trước khi lưu nhập hoặc tự tổng hợp doanh thu.
