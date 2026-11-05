@@ -71,6 +71,7 @@ try {
     if ($bad.code -ne 7) { throw 'Invalid file was not rejected.' }
     $updatedSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11" -Headers $headers
     if ($updatedSummary.data.completedVehicleCount -ne 2 -or $updatedSummary.data.collectedRevenue -ne 35000 -or $updatedSummary.data.previousRevenue -ne 10000 -or $updatedSummary.data.growthRate -ne 250) { throw 'Updated visit summary or growth is incorrect.' }
+    if ($updatedSummary.data.cashRevenue -ne 5000 -or $updatedSummary.data.electronicRevenue -ne 30000 -or $updatedSummary.data.unclassifiedRevenue -ne 0) { throw 'Payment method totals are incorrect.' }
     if (@($updatedSummary.data.topRevenueParkingLots).Count -ne 2 -or $updatedSummary.data.topRevenueParkingLots[0].parkingLot.code -ne 'DEMO-01' -or $updatedSummary.data.topRevenueParkingLots[0].percentage -ne 85.71) { throw 'Imported visit ranking incorrect.' }
     $daySummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?fromDate=2026-11-05&toDate=2026-11-05" -Headers $headers
     if ($daySummary.data.completedVehicleCount -ne 2 -or $daySummary.data.collectedRevenue -ne 35000) { throw 'Date range should include completed visits on the selected date.' }
@@ -110,6 +111,10 @@ try {
     $fractional = Import-File 'fractional.xlsx' $token
     $fractionalComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($fractional.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
     if ($fractionalComparison.data.canCompare -or $null -ne $fractionalComparison.data.expectedAmount) { throw 'Partial-hour charge should not be guessed.' }
+    $unclassified = Import-File 'unclassified.xlsx' $token
+    if ($unclassified.code -ne 0 -or $unclassified.data.successRows -ne 1) { throw 'Unclassified payment import failed.' }
+    $paymentSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11" -Headers $headers
+    if ($paymentSummary.data.unclassifiedRevenue -ne 9000 -or $paymentSummary.data.unclassifiedPaymentCount -ne 1) { throw 'Unknown payment method should be reported separately.' }
     $csvResult = Import-File 'visit.csv' $token
     if ($csvResult.code -ne 0 -or $csvResult.data.successRows -ne 1) { throw 'CSV import failed.' }
     if (Test-Path -LiteralPath (Join-Path $testDir 'visit.xls')) {

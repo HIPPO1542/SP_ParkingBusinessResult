@@ -41,6 +41,9 @@ def make_fixtures(directory):
     write(directory / 'fractional.xlsx', [
         ['DEMO-02', '59H-8', 'MOTORBIKE', '2026-11-05 08:00', '2026-11-05 09:30', 7000, 'Tiền mặt'],
     ])
+    write(directory / 'unclassified.xlsx', [
+        ['DEMO-02', '59J-8', 'MOTORBIKE', '2026-11-05 10:00', '2026-11-05 11:00', 9000, 'Khác'],
+    ])
     (directory / 'invalid.xlsx').write_bytes(b'not an Excel workbook')
     with (directory / 'visit.csv').open('w', encoding='utf-8-sig', newline='') as file:
         writer = csv.writer(file)

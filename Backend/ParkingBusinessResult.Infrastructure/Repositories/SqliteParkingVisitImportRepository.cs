@@ -30,7 +30,7 @@ public sealed class SqliteParkingVisitImportRepository(string databasePath) : IP
         using SqliteConnection connection = Open();
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = """
-            SELECT v.parkingLotId, v.collectedAmount, p.ma, p.ten, p.diaChi
+            SELECT v.parkingLotId, v.collectedAmount, v.paymentMethod, p.ma, p.ten, p.diaChi
             FROM parking_visit v JOIN "DL_KTHT_baiDoXe" p ON p.Id = v.parkingLotId
             WHERE v.exitedAt >= $from AND v.exitedAt < $to
             """;
@@ -40,7 +40,8 @@ public sealed class SqliteParkingVisitImportRepository(string databasePath) : IP
         var visits = new List<CompletedParkingVisit>();
         while (reader.Read())
             visits.Add(new(Guid.Parse(reader.GetString(0)), reader.IsDBNull(1) ? null : decimal.Parse(reader.GetString(1), CultureInfo.InvariantCulture),
-                reader.IsDBNull(2) ? null : reader.GetString(2), reader.IsDBNull(3) ? null : reader.GetString(3), reader.IsDBNull(4) ? null : reader.GetString(4)));
+                reader.IsDBNull(2) ? null : reader.GetString(2), reader.IsDBNull(3) ? null : reader.GetString(3),
+                reader.IsDBNull(4) ? null : reader.GetString(4), reader.IsDBNull(5) ? null : reader.GetString(5)));
         return visits;
     }
 

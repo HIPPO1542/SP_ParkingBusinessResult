@@ -6,7 +6,8 @@ public sealed record ParkingVisitSummaryLot(Guid Id, string? Code, string? Name,
 public sealed record ParkingVisitTopLot(ParkingVisitSummaryLot ParkingLot, decimal Revenue, int VehicleCount, decimal Percentage);
 public sealed record ParkingVisitSummary(string ReportingPeriod, long CompletedVehicleCount,
     decimal CollectedRevenue, long MissingAmountCount, decimal? PreviousRevenue, decimal? GrowthRate,
-    decimal? AverageDailyRevenue, IReadOnlyList<ParkingVisitTopLot>? TopRevenueParkingLots);
+    decimal? AverageDailyRevenue, IReadOnlyList<ParkingVisitTopLot>? TopRevenueParkingLots,
+    decimal CashRevenue, decimal ElectronicRevenue, decimal UnclassifiedRevenue, long UnclassifiedPaymentCount);
 
 public sealed class GetParkingVisitSummaryHandler(IParkingVisitSummaryRepository repository)
 {
@@ -16,6 +17,24 @@ public sealed class GetParkingVisitSummaryHandler(IParkingVisitSummaryRepository
         CompletedParkingVisit[] permitted = Filter(visits, query);
         decimal collected = permitted.Where(visit => visit.CollectedAmount.HasValue).Sum(visit => visit.CollectedAmount!.Value);
         long missing = permitted.LongCount(visit => visit.CollectedAmount is null);
+        decimal cash = 0;
+        decimal electronic = 0;
+        decimal unclassified = 0;
+        long unclassifiedCount = 0;
+        foreach (CompletedParkingVisit visit in permitted.Where(visit => visit.CollectedAmount.HasValue))
+        {
+            string method = visit.PaymentMethod?.Trim() ?? "";
+            decimal amount = visit.CollectedAmount!.Value;
+            if (method.Equals("CASH", StringComparison.OrdinalIgnoreCase) || method.Equals("Tiền mặt", StringComparison.OrdinalIgnoreCase))
+                cash += amount;
+            else if (method.Equals("ELECTRONIC", StringComparison.OrdinalIgnoreCase) || method.Equals("Điện tử", StringComparison.OrdinalIgnoreCase))
+                electronic += amount;
+            else
+            {
+                unclassified += amount;
+                unclassifiedCount++;
+            }
+        }
         decimal? previousRevenue = null;
         decimal? growth = null;
         if (query.IsMonthly && query.FromInclusive > DateTime.MinValue)
@@ -42,7 +61,8 @@ public sealed class GetParkingVisitSummaryHandler(IParkingVisitSummaryRepository
             }).OrderByDescending(lot => lot.Revenue).ThenBy(lot => lot.ParkingLot.Id).Take(5).ToArray();
         }
         return new(query.PeriodLabel,
-            permitted.LongLength, collected, missing, previousRevenue, growth, averageDailyRevenue, topLots);
+            permitted.LongLength, collected, missing, previousRevenue, growth, averageDailyRevenue, topLots,
+            cash, electronic, unclassified, unclassifiedCount);
     }
 
     private static CompletedParkingVisit[] Filter(IEnumerable<CompletedParkingVisit> visits, GetParkingVisitSummaryQuery query) =>
