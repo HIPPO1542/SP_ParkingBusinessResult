@@ -6,5 +6,5 @@ public interface IBusinessResultRepository
     ParkingBusinessResultRecord? FindById(Guid id);
     IReadOnlyList<ParkingBusinessResultRecord> List();
     bool TryUpdate(Guid id, decimal revenue, int completedVehicleCount, string? note);
-    bool TryDelete(Guid id);
+    bool TrySoftDelete(Guid id);
 }

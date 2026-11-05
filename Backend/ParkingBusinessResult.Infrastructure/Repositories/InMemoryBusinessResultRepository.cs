@@ -7,6 +7,7 @@ public sealed class InMemoryBusinessResultRepository : IBusinessResultRepository
 {
     private readonly Lock sync = new();
     private readonly Dictionary<Guid, ParkingBusinessResultRecord> records = new();
+    private readonly HashSet<Guid> deletedIds = new();
 
     public bool TryAdd(ParkingBusinessResultRecord businessResult)
     {
@@ -14,7 +15,7 @@ public sealed class InMemoryBusinessResultRepository : IBusinessResultRepository
         lock (sync)
         {
             if (records.ContainsKey(businessResult.Id) || records.Values.Any(existing =>
-                existing.ParkingLotId == businessResult.ParkingLotId &&
+                !deletedIds.Contains(existing.Id) && existing.ParkingLotId == businessResult.ParkingLotId &&
                 existing.ReportingPeriod == businessResult.ReportingPeriod))
             {
                 return false;
@@ -29,7 +30,7 @@ public sealed class InMemoryBusinessResultRepository : IBusinessResultRepository
     {
         lock (sync)
         {
-            return records.TryGetValue(id, out ParkingBusinessResultRecord? businessResult)
+            return !deletedIds.Contains(id) && records.TryGetValue(id, out ParkingBusinessResultRecord? businessResult)
                 ? Copy(businessResult)
                 : null;
         }
@@ -39,7 +40,7 @@ public sealed class InMemoryBusinessResultRepository : IBusinessResultRepository
     {
         lock (sync)
         {
-            return records.Values.Select(Copy).ToArray();
+            return records.Values.Where(record => !deletedIds.Contains(record.Id)).Select(Copy).ToArray();
         }
     }
 
@@ -47,7 +48,7 @@ public sealed class InMemoryBusinessResultRepository : IBusinessResultRepository
     {
         lock (sync)
         {
-            if (!records.TryGetValue(id, out ParkingBusinessResultRecord? businessResult))
+            if (deletedIds.Contains(id) || !records.TryGetValue(id, out ParkingBusinessResultRecord? businessResult))
             {
                 return false;
             }
@@ -57,11 +58,11 @@ public sealed class InMemoryBusinessResultRepository : IBusinessResultRepository
         }
     }
 
-    public bool TryDelete(Guid id)
+    public bool TrySoftDelete(Guid id)
     {
         lock (sync)
         {
-            return records.Remove(id);
+            return records.ContainsKey(id) && deletedIds.Add(id);
         }
     }
 

@@ -6,7 +6,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 database_path, parking_lot_id = sys.argv[1:]
 with sqlite3.connect(database_path) as database:
-    for name in ("001_create_business_result.sql", "002_business_reference_tables.sql"):
+    for name in ("001_create_business_result.sql", "002_business_reference_tables.sql", "003_soft_delete_business_result.sql"):
         database.executescript((root / "database/sqlite" / name).read_text(encoding="utf-8"))
     database.execute(
         'INSERT INTO "SP_donViKinhDoanhQuanLy" (id, tenDonVi, diaChi, nguoiLienHe) VALUES (?, ?, ?, ?)',

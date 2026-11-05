@@ -77,10 +77,16 @@ saved.Update(888m, 8, null);
 if (repository.FindById(firstResult.Id)?.Revenue != 100m ||
     !repository.TryUpdate(firstResult.Id, 300m, 3, "Revised") ||
     repository.FindById(firstResult.Id)?.Revenue != 300m ||
-    !repository.TryDelete(firstResult.Id) || repository.TryDelete(firstResult.Id) ||
+    !repository.TrySoftDelete(firstResult.Id) || repository.TrySoftDelete(firstResult.Id) ||
     repository.FindById(firstResult.Id) is not null || repository.List().Count != 0)
 {
     throw new InvalidOperationException("Repository update, delete, or copy isolation failed.");
+}
+
+if (repository.TryUpdate(firstResult.Id, 1m, 1, null) ||
+    !repository.TryAdd(new ParkingBusinessResultRecord(Guid.NewGuid(), parkingLotId, "2026-10", 100m, 2, null)))
+{
+    throw new InvalidOperationException("A deleted record was updated or its period was not reusable.");
 }
 
 Console.WriteLine("In-memory repository checks passed.");
@@ -97,6 +103,8 @@ try
         command.CommandText = File.ReadAllText("database/sqlite/001_create_business_result.sql");
         command.ExecuteNonQuery();
         command.CommandText = File.ReadAllText("database/sqlite/002_business_reference_tables.sql");
+        command.ExecuteNonQuery();
+        command.CommandText = File.ReadAllText("database/sqlite/003_soft_delete_business_result.sql");
         command.ExecuteNonQuery();
         command.CommandText = """
             INSERT INTO "SP_donViKinhDoanhQuanLy" (id, tenDonVi, diaChi, nguoiLienHe) VALUES ('unit', 'Unit', 'Address', 'Contact');
@@ -118,11 +126,31 @@ try
         reopenedRepository.List().Count != 1 ||
         !reopenedRepository.TryUpdate(persistentResult.Id, 500m, 5, null) ||
         reopenedRepository.FindById(persistentResult.Id)?.CompletedVehicleCount != 5 ||
-        !reopenedRepository.TryDelete(persistentResult.Id) ||
+        !reopenedRepository.TrySoftDelete(persistentResult.Id) ||
         reopenedRepository.FindById(persistentResult.Id) is not null)
     {
         throw new InvalidOperationException("SQLite persistence or CRUD operations failed.");
     }
+
+    if (reopenedRepository.TrySoftDelete(persistentResult.Id) ||
+        reopenedRepository.TryUpdate(persistentResult.Id, 1m, 1, null) || reopenedRepository.List().Count != 0)
+    {
+        throw new InvalidOperationException("A soft-deleted SQLite result remained active.");
+    }
+
+    using (var connection = new SqliteConnection($"Data Source={databasePath}"))
+    {
+        connection.Open();
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT daXoa, doanhThu, soLuotXe FROM SP_ketQuaKinhDoanhBaiDoXe WHERE id = $id";
+        command.Parameters.AddWithValue("$id", persistentResult.Id.ToString());
+        using SqliteDataReader reader = command.ExecuteReader();
+        if (!reader.Read() || reader.GetInt32(0) != 1 || reader.GetDouble(1) != 500 || reader.GetInt32(2) != 5)
+            throw new InvalidOperationException("Soft delete did not preserve the original SQLite record.");
+    }
+
+    if (!reopenedRepository.TryAdd(new ParkingBusinessResultRecord(Guid.NewGuid(), testLotId, "2026-10", 200m, 2, null)))
+        throw new InvalidOperationException("The period of a soft-deleted SQLite record could not be reused.");
 
     try
     {

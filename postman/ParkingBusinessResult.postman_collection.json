@@ -16,6 +16,7 @@
     { "key": "parkingLotId", "value": "00000000-0000-4000-8000-000000000002", "type": "string" },
     { "key": "reportingPeriod", "value": "2026-10", "type": "string" },
     { "key": "resultId", "value": "", "type": "string" },
+    { "key": "deletedResultId", "value": "", "type": "string" },
     { "key": "operatorUsername", "value": "", "type": "string" },
     { "key": "operatorPassword", "value": "", "type": "string" }
   ],
@@ -64,12 +65,33 @@
       "name": "2. Kết quả kinh doanh",
       "item": [
         {
+          "name": "Đối chiếu route tài liệu (chưa triển khai)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('Route ví dụ trong tài liệu chưa được triển khai', function () { pm.response.to.have.status(404); });"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation", "description": "Route tài liệu dùng module ví dụ parking. HTTP 404 cho thấy route này chưa có; đây không phải là kiểm thử đạt hợp đồng API." }
+        },
+        {
           "name": "Danh sách kết quả",
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
             "const response = pm.response.json();",
             "pm.test('HTTP 200 và lấy danh sách thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); pm.expect(response.data).to.be.an('array'); });"
           ] } }],
           "request": { "method": "GET", "url": "{{baseUrl}}/dev/business-results" }
+        },
+        {
+          "name": "Đối chiếu body thêm theo tài liệu (chưa hỗ trợ)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const response = pm.response.json();",
+            "pm.test('API thử nghiệm từ chối body tài liệu chưa hỗ trợ', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(7); });"
+          ] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"parkingLotId\": \"{{parkingLotId}}\",\n  \"reportDate\": \"2026-10-01\",\n  \"periodType\": \"MONTHLY\",\n  \"totalCheckIn\": 125,\n  \"totalCheckOut\": 125,\n  \"averageOccupancyRate\": 50,\n  \"peakOccupancyRate\": 60,\n  \"totalRevenue\": 2500000,\n  \"cashRevenue\": 1000000,\n  \"electronicRevenue\": 1500000,\n  \"operatingExpenses\": 0,\n  \"notes\": \"Body theo ApiSpec\"\n}" },
+            "url": "{{baseUrl}}/dev/business-results",
+            "description": "Kiểm tra sự khác biệt với ApiSpec. code 7 ở đây xác nhận API hiện tại CHƯA hỗ trợ body tài liệu, không có nghĩa là đã khớp tài liệu."
+          }
         },
         {
           "name": "Thêm kết quả",
@@ -96,6 +118,20 @@
           "request": { "method": "GET", "url": "{{baseUrl}}/dev/business-results/{{resultId}}", "description": "Chạy Thêm kết quả trước hoặc tự điền resultId." }
         },
         {
+          "name": "Đối chiếu body sửa theo tài liệu (chưa hỗ trợ)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const response = pm.response.json();",
+            "pm.test('API thử nghiệm từ chối body tài liệu chưa hỗ trợ', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(7); });"
+          ] } }],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"totalCheckIn\": 125,\n  \"totalCheckOut\": 125,\n  \"averageOccupancyRate\": 50,\n  \"peakOccupancyRate\": 60,\n  \"totalRevenue\": 2500000,\n  \"cashRevenue\": 1000000,\n  \"electronicRevenue\": 1500000,\n  \"operatingExpenses\": 0,\n  \"notes\": \"Body theo ApiSpec\"\n}" },
+            "url": "{{baseUrl}}/dev/business-results/{{resultId}}",
+            "description": "Body theo ApiSpec chưa được API thử nghiệm hỗ trợ; phải từ chối và giữ nguyên bản ghi."
+          }
+        },
+        {
           "name": "Cập nhật kết quả",
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
             "const response = pm.response.json();",
@@ -109,13 +145,21 @@
           }
         },
         {
-          "name": "Xóa kết quả (xóa dữ liệu thật)",
+          "name": "Xóa mềm kết quả",
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
             "const response = pm.response.json();",
             "pm.test('HTTP 200 và xóa thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
-            "if (response.code === 0) pm.collectionVariables.unset('resultId');"
+            "if (response.code === 0 && response.data && response.data.id) { pm.collectionVariables.set('deletedResultId', response.data.id); pm.collectionVariables.unset('resultId'); }"
           ] } }],
-          "request": { "method": "DELETE", "url": "{{baseUrl}}/dev/business-results/{{resultId}}", "description": "Xóa bản ghi có ID trong biến resultId khỏi database được kết nối. Chỉ chạy khi muốn xóa bản ghi đó." }
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/dev/business-results/{{resultId}}", "description": "Đánh dấu bản ghi đã xóa và ẩn khỏi API; dữ liệu vẫn còn trong SQLite. Chỉ chạy khi muốn xóa mềm bản ghi đó." }
+        },
+        {
+          "name": "Kiểm tra bản ghi đã xóa mềm",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const response = pm.response.json();",
+            "pm.test('Bản ghi đã xóa mềm không còn hiển thị qua API', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(7); });"
+          ] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/dev/business-results/{{deletedResultId}}", "description": "Chạy sau request xóa mềm; ID được lưu tự động vào deletedResultId." }
         }
       ]
     }

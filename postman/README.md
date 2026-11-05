@@ -17,8 +17,10 @@
 
    Script thêm một đơn vị và một bãi xe mẫu với ID mặc định trong collection. Script không xóa hoặc ghi đè dữ liệu; chạy lại sẽ báo lỗi nếu dữ liệu mẫu đã tồn tại. `quyHoachId` trong dữ liệu mẫu chỉ là giá trị thử, chưa có khóa ngoại quy hoạch. Không dùng dữ liệu này cho production.
 5. Chạy lần lượt **Thêm kết quả**, **Xem chi tiết**, **Cập nhật kết quả**. ID được lưu tự động sau khi thêm. Có thể xem danh sách bất kỳ lúc nào. Nếu đã có kết quả cùng bãi và kỳ, đổi `reportingPeriod` trước khi thêm.
-6. Chỉ chạy **Xóa kết quả** nếu bạn muốn xóa bản ghi đang được chọn trong `resultId`; request này xóa dữ liệu trong database đang kết nối. Request tạo tài khoản vận hành là tùy chọn và cần điền `operatorUsername`, `operatorPassword`.
+6. Chỉ chạy **Xóa mềm kết quả** nếu bạn muốn ẩn bản ghi đang được chọn trong `resultId`; bản ghi vẫn được giữ trong database với trạng thái đã xóa. Request tạo tài khoản vận hành là tùy chọn và cần điền `operatorUsername`, `operatorPassword`.
 
-Nếu dùng **Collection Runner**, bỏ chọn request tạo tài khoản tùy chọn khi chưa cấu hình tài khoản và bỏ chọn request xóa nếu muốn giữ dữ liệu thử.
+Nếu dùng **Collection Runner**, bỏ chọn request tạo tài khoản tùy chọn khi chưa cấu hình tài khoản. Nếu muốn giữ dữ liệu thử, bỏ chọn cả request xóa mềm và request kiểm tra bản ghi đã xóa.
+
+Các request **Đối chiếu route/body tài liệu** cho thấy route ví dụ chưa triển khai và API thử nghiệm từ chối body chưa hỗ trợ thay vì âm thầm ghi sai dữ liệu. Các kiểm tra đó **không có nghĩa API đã khớp ApiSpec**. Chi tiết khác biệt được ghi trong `docs/API_CONTRACT_REVIEW.md`.
 
 API và tài khoản trong collection hiện chỉ dành cho môi trường Development. Các lỗi nghiệp vụ vẫn trả HTTP 200; kiểm tra trường `code` (`0`: thành công, `7`: lỗi). Token hết hạn sau 30 phút; đăng nhập lại khi cần.

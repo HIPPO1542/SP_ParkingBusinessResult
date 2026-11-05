@@ -22,11 +22,13 @@ class PostmanCollectionTests(unittest.TestCase):
         self.assertEqual(routes, {
             ("POST", "{{baseUrl}}/dev/auth/login"),
             ("POST", "{{baseUrl}}/dev/auth/users"),
+            ("GET", "{{baseUrl}}/gdci/parking/parkingLot/businessOperation"),
             ("GET", "{{baseUrl}}/dev/business-results"),
             ("POST", "{{baseUrl}}/dev/business-results"),
             ("GET", "{{baseUrl}}/dev/business-results/{{resultId}}"),
             ("PUT", "{{baseUrl}}/dev/business-results/{{resultId}}"),
             ("DELETE", "{{baseUrl}}/dev/business-results/{{resultId}}"),
+            ("GET", "{{baseUrl}}/dev/business-results/{{deletedResultId}}"),
         })
         for item in requests:
             for event in item.get("event", []):
@@ -37,7 +39,7 @@ class PostmanCollectionTests(unittest.TestCase):
     def test_seed_creates_related_rows_and_rolls_back_on_repeat(self):
         connection = sqlite3.connect(":memory:")
         try:
-            for name in ("001_create_business_result.sql", "002_business_reference_tables.sql"):
+            for name in ("001_create_business_result.sql", "002_business_reference_tables.sql", "003_soft_delete_business_result.sql"):
                 connection.executescript((SQLITE / name).read_text(encoding="utf-8"))
             seed = (POSTMAN / "seed-demo-parking-lot.sql").read_text(encoding="utf-8")
             connection.executescript(seed)
@@ -60,7 +62,7 @@ class PostmanCollectionTests(unittest.TestCase):
                 (root / "postman" / filename).write_bytes((POSTMAN / filename).read_bytes())
             database_path = root / "database/sqlite/parking_business_result.db"
             with closing(sqlite3.connect(database_path)) as database:
-                for name in ("001_create_business_result.sql", "002_business_reference_tables.sql"):
+                for name in ("001_create_business_result.sql", "002_business_reference_tables.sql", "003_soft_delete_business_result.sql"):
                     database.executescript((SQLITE / name).read_text(encoding="utf-8"))
             command = [sys.executable, str(root / "postman/seed_demo.py")]
             first_run = subprocess.run(command, capture_output=True, encoding="utf-8", check=False)

@@ -22,4 +22,7 @@ internal static class EndpointSupport
         outcome.Error is null
             ? Results.Ok(ApiResponse<ParkingBusinessResultRecord>.Success(outcome.Data!))
             : Results.Ok(ApiResponse<ParkingBusinessResultRecord>.BusinessError(outcome.Error));
+
+    public static IResult InvalidBody() =>
+        Results.Ok(ApiResponse<object>.BusinessError("Dữ liệu yêu cầu thiếu trường bắt buộc hoặc chứa trường không hỗ trợ."));
 }

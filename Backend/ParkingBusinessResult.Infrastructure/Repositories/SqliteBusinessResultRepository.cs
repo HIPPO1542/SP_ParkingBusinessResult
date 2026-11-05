@@ -53,7 +53,7 @@ public sealed class SqliteBusinessResultRepository : IBusinessResultRepository
     {
         using SqliteConnection connection = OpenConnection();
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = SelectColumns + " WHERE \"id\" = $id";
+        command.CommandText = SelectColumns + " WHERE \"id\" = $id AND \"daXoa\" = 0";
         command.Parameters.AddWithValue("$id", id.ToString());
         using SqliteDataReader reader = command.ExecuteReader();
         return reader.Read() ? ReadRecord(reader) : null;
@@ -63,7 +63,7 @@ public sealed class SqliteBusinessResultRepository : IBusinessResultRepository
     {
         using SqliteConnection connection = OpenConnection();
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = SelectColumns;
+        command.CommandText = SelectColumns + " WHERE \"daXoa\" = 0";
         using SqliteDataReader reader = command.ExecuteReader();
         var records = new List<ParkingBusinessResultRecord>();
         while (reader.Read())
@@ -82,18 +82,18 @@ public sealed class SqliteBusinessResultRepository : IBusinessResultRepository
         command.CommandText = """
             UPDATE "SP_ketQuaKinhDoanhBaiDoXe"
             SET "doanhThu" = $revenue, "soLuotXe" = $vehicles, "ghiChu" = $note
-            WHERE "id" = $id
+            WHERE "id" = $id AND "daXoa" = 0
             """;
         command.Parameters.AddWithValue("$id", id.ToString());
         SetValues(command, revenue, completedVehicleCount, note);
         return command.ExecuteNonQuery() != 0;
     }
 
-    public bool TryDelete(Guid id)
+    public bool TrySoftDelete(Guid id)
     {
         using SqliteConnection connection = OpenConnection();
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM \"SP_ketQuaKinhDoanhBaiDoXe\" WHERE \"id\" = $id";
+        command.CommandText = "UPDATE \"SP_ketQuaKinhDoanhBaiDoXe\" SET \"daXoa\" = 1 WHERE \"id\" = $id AND \"daXoa\" = 0";
         command.Parameters.AddWithValue("$id", id.ToString());
         return command.ExecuteNonQuery() != 0;
     }
