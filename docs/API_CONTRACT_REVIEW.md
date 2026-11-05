@@ -9,7 +9,7 @@ Phạm vi: API thử nghiệm Development hiện có, đối chiếu ApiSpec/LLD
 | Body sửa | `totalCheckIn`, `totalCheckOut`, các tỷ lệ lấp đầy, `totalRevenue`, `cashRevenue`, `electronicRevenue`; có `operatingExpenses`, `notes` tùy chọn | `revenue`, `completedVehicleCount`, `note` | Chưa khớp. Body thiếu trường hoặc chứa trường không hỗ trợ bị từ chối với code 7. |
 | Dữ liệu trả về | ApiSpec đưa `parkingLot` dạng object, `periodType`, `periodValue`, doanh thu kỳ trước, tăng trưởng, nguồn dữ liệu và thông tin audit | Object phẳng gồm `id`, `parkingLotId`, `reportingPeriod`, `revenue`, `completedVehicleCount`, `note` | Chưa khớp. ApiSpec và LLD của chức năng xem theo thời gian cũng mô tả các cấu trúc khác nhau. |
 | Xem theo thời gian | Lọc, phân trang, kỳ và sắp xếp theo ApiSpec | Danh sách thử nghiệm chưa hỗ trợ các tham số đó | Chưa hoàn thành. |
-| Nhập file và báo cáo UC 3.4 | Import, danh sách báo cáo, xem tổng hợp và xuất báo cáo | Chưa có các API tương ứng | Chưa hoàn thành. |
+| Nhập file và báo cáo UC 3.4 | Import, danh sách báo cáo, xem tổng hợp và xuất báo cáo | Có danh sách và tổng hợp thử nghiệm theo đúng chuỗi kỳ; chưa có import và xuất file | Chưa hoàn thành; route và dữ liệu báo cáo chưa khớp ApiSpec. |
 | Quyền | Các tài liệu liệt kê các vai trò khác nhau, trong đó API xóa đề cập `ROLE_BUSINESS_MANAGER` | Môi trường Development hỗ trợ `ROLE_ADMIN`, `ROLE_DISTRICT_ADMIN`, `ROLE_PARKING_OPERATOR` và phạm vi bãi theo token | Chưa thể xem là khớp chính sách quyền chính thức. |
 | Xóa | LLD mô tả xóa vật lý | Theo yêu cầu mới của người dùng, API đánh dấu `daXoa = 1`, ẩn bản ghi và giữ lại dữ liệu | Đã thay đổi so với LLD theo yêu cầu trực tiếp; cần đồng bộ tài liệu khi chốt hợp đồng. |
 
@@ -34,4 +34,5 @@ Các bằng chứng trên chỉ áp dụng cho môi trường Development và c�
 | Bảo toàn dữ liệu khi cập nhật schema | `tests/test_soft_delete_migration.py`: dữ liệu cũ, sao lưu, chặn khóa ngoại tham chiếu và chạy lại | `[Verified]` |
 | Không ghi 0 khi body thiếu trường hoặc dùng body tài liệu chưa hỗ trợ | Newman gửi PUT theo ApiSpec và body thiếu trường; xác nhận code 7 và dữ liệu gốc không đổi | `[Verified]` |
 | Đúng route, body và response ApiSpec/LLD | Route và các trường còn khác; thiếu nguồn dữ liệu cho nhiều trường | `[Blocked / Not Verified]` |
-| Import và báo cáo theo UC 3.4 | Endpoint chưa được triển khai | `[Blocked / Not Verified]` |
+| Danh sách và tổng hợp báo cáo Development theo kỳ và bãi | `tests/seeded_parking_api_checks.ps1`: tổng, lọc, quyền bãi và xóa mềm trên SQLite tạm | `[Verified]` cho phạm vi thử nghiệm; chưa khớp đầy đủ UC 3.4 |
+| Import và xuất báo cáo UC 3.4 | Endpoint chưa được triển khai | `[Blocked / Not Verified]` |
