@@ -160,7 +160,7 @@ Tiền tố: `/gdci/parking/parkingLot/parkingBusinessReport`.
 
 - `GET` danh sách: lọc theo chuỗi kỳ, bãi, từ khóa tên/địa chỉ, địa bàn theo địa chỉ và phân trang.
 - `GET /summary`: tính tổng doanh thu, lượt hoàn tất, doanh thu bình quân/lượt và top 5 bãi từ **bản tổng hợp đã lưu**.
-- `POST /export`: xuất trực tiếp Excel/PDF từ nguồn tổng hợp này. PDF thử nghiệm cần Windows và font Arial.
+- `POST /export`: tạo Excel/PDF từ nguồn tổng hợp này và trả JSON có `fileUrl`; gọi GET URL đó với token của người đã xuất để tải file. PDF thử nghiệm cần Windows và font Arial.
 
 Nhóm API này và nhóm thống kê theo lượt import có nguồn dữ liệu khác nhau như mục 3. API báo cáo tổng hợp hiện còn thiếu một số bộ lọc, chỉ số và cấu trúc response theo tài liệu.
 
@@ -231,7 +231,7 @@ Các bài kiểm tra HTTP này dùng database tạm. Kiểm thử XLS cần côn
 ## 7. Những phần chưa hoàn chỉnh
 
 - API chỉ được đăng ký ở Development; cơ chế định danh, phân quyền và cấu hình production chưa tích hợp.
-- Body/response của một số API chưa khớp ApiSpec. Import từng lượt xe là yêu cầu mới, trong khi tài liệu gốc mô tả file số liệu tổng hợp. Xuất file hiện trả file trực tiếp, tài liệu yêu cầu response có URL tải.
+- Body/response của một số API chưa khớp ApiSpec. Import từng lượt xe là yêu cầu mới, trong khi tài liệu gốc mô tả file số liệu tổng hợp.
 - Hai nguồn báo cáo chưa được tự đồng bộ; không nên cộng chúng với nhau. Một số bộ lọc và chỉ số của API tổng hợp cũ còn thiếu.
 - Chưa có nguồn dữ liệu chính thức đầy đủ cho chi phí vận hành và tỷ lệ lấp đầy; chưa thể coi các chỉ số đó là đã làm.
 - Đối chiếu giá chưa tính giờ lẻ, qua ngày hoặc tự xác định ngày lễ. Dữ liệu giá mẫu không phải giá thực tế; PDF thử nghiệm hiện cần Windows.

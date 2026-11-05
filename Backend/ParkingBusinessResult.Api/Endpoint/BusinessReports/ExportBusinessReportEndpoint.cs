@@ -12,6 +12,9 @@ namespace ParkingBusinessResult.Api.Endpoint.BusinessReports;
 
 public static class ExportBusinessReportEndpoint
 {
+    public sealed record Response(Guid Id, string FileUrl, string FileName, string FileFormat, long FileSize,
+        int RecordCount, string CreatedAt, string? CreatedBy, string CreatedById,
+        string UpdatedAt, string? UpdatedBy, string UpdatedById);
     public sealed record Request(string? FileFormat, string? ReportingPeriod, Guid? ParkingLotId, string? ReportTitle, string? District)
     {
         [JsonExtensionData] public Dictionary<string, JsonElement>? ExtraFields { get; init; }
@@ -19,10 +22,12 @@ public static class ExportBusinessReportEndpoint
 
     public static void Map(RouteGroupBuilder routes) => routes.MapPost("/export", Handle);
 
-    private static IResult Handle(Request request, ClaimsPrincipal user, ExportBusinessReportHandler handler)
+    private static IResult Handle(Request request, ClaimsPrincipal user, ExportBusinessReportHandler handler, BusinessReportExportStore store)
     {
         if (!user.IsInRole("ROLE_ADMIN") && !user.IsInRole("ROLE_DISTRICT_ADMIN"))
             return Results.Ok(ApiResponse<object>.BusinessError("Bạn không có quyền xuất báo cáo."));
+        if (!Guid.TryParse(user.FindFirst("sub")?.Value, out Guid userId))
+            return Results.Ok(ApiResponse<object>.BusinessError("Không xác định được người xuất báo cáo."));
         if (request.FileFormat is not ("EXCEL" or "PDF"))
             return Results.Ok(ApiResponse<object>.BusinessError("Định dạng hỗ trợ: EXCEL hoặc PDF."));
         if (request.FileFormat == "PDF" && !OperatingSystem.IsWindows())
@@ -40,10 +45,18 @@ public static class ExportBusinessReportEndpoint
             new ExportBusinessReportQuery(period, request.ParkingLotId, title, EndpointSupport.GetAccess(user), request.District));
         BusinessReportRow[] rows = records.Select(record => new BusinessReportRow(record.ParkingLotId, record.ReportingPeriod,
             record.Revenue, record.CompletedVehicleCount)).ToArray();
-        if (request.FileFormat == "PDF")
-            return Results.File(BusinessReportPdfWriter.Write(title, period, rows), "application/pdf", "bao-cao-kinh-doanh.pdf");
-
-        return Results.File(BusinessReportExcelWriter.Write(title, period, rows),
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "bao-cao-kinh-doanh.xlsx");
+        byte[] content = request.FileFormat == "PDF"
+            ? BusinessReportPdfWriter.Write(title, period, rows)
+            : BusinessReportExcelWriter.Write(title, period, rows);
+        Guid id = Guid.NewGuid();
+        DateTime now = DateTime.Now;
+        string extension = request.FileFormat == "PDF" ? ".pdf" : ".xlsx";
+        string fileName = $"BaoCao_KetQuaKinhDoanh_{now:yyyyMMdd_HHmmss}_{id:N}{extension}";
+        string? username = store.FindUsername(userId);
+        store.Save(userId, fileName, content);
+        string date = now.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        var response = new Response(id, $"/static/exports/{fileName}", fileName, request.FileFormat, content.LongLength,
+            records.Count, date, username, userId.ToString(), date, username, userId.ToString());
+        return Results.Ok(ApiResponse<Response>.Success(response));
     }
 }

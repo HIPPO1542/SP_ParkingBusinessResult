@@ -7,6 +7,7 @@ using ParkingBusinessResult.Application.Features.DevelopmentAccounts.Commands.Bo
 using ParkingBusinessResult.Domain;
 using ParkingBusinessResult.Infrastructure;
 using ParkingBusinessResult.Infrastructure.Repositories;
+using ParkingBusinessResult.Infrastructure.Reports;
 
 namespace ParkingBusinessResult.Api.Extensions;
 
@@ -20,6 +21,9 @@ public static class DevelopmentSetup
         string databasePath = builder.Configuration["ParkingBusinessResult:DatabasePath"]
             ?? Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "../../database/sqlite/parking_business_result.db"));
         builder.Services.AddSingleton<IBusinessResultRepository>(new SqliteBusinessResultRepository(databasePath));
+        string exportDirectory = builder.Configuration["ParkingBusinessResult:ExportDirectory"]
+            ?? Path.Combine(builder.Environment.ContentRootPath, "App_Data", "exports");
+        builder.Services.AddSingleton(new BusinessReportExportStore(databasePath, Path.GetFullPath(exportDirectory)));
         builder.Services.AddSingleton<IBusinessReportParkingLotSearch>(new SqliteBusinessReportParkingLotSearch(databasePath));
         builder.Services.AddSingleton<IBusinessReportMetadataReader>(new SqliteBusinessReportMetadataReader(databasePath));
         builder.Services.AddSingleton<IParkingVisitSpreadsheetReader, ExcelParkingVisitSpreadsheetReader>();

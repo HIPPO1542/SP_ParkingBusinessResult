@@ -2,6 +2,8 @@ using ParkingBusinessResult.Api.Endpoint.BusinessResults;
 using ParkingBusinessResult.Api.Endpoint.BusinessReports;
 using ParkingBusinessResult.Api.Endpoint.DevelopmentAccounts;
 using ParkingBusinessResult.Api.Endpoint.ParkingVisits;
+using ParkingBusinessResult.Infrastructure.Reports;
+using System.Security.Claims;
 
 namespace ParkingBusinessResult.Api.Endpoint;
 
@@ -21,6 +23,16 @@ public static class EndpointRegistration
         ListBusinessReportEndpoint.Map(businessReports);
         GetBusinessReportSummaryEndpoint.Map(businessReports);
         ExportBusinessReportEndpoint.Map(businessReports);
+
+        app.MapGet("/static/exports/{fileName}", (string fileName, ClaimsPrincipal user, BusinessReportExportStore store) =>
+        {
+            if (!Guid.TryParse(user.FindFirst("sub")?.Value, out Guid userId)) return Results.NotFound();
+            string? path = store.FindFile(userId, fileName);
+            if (path is null) return Results.NotFound();
+            string contentType = fileName.EndsWith(".pdf", StringComparison.Ordinal)
+                ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            return Results.File(path, contentType, fileName);
+        }).RequireAuthorization("BusinessResultAccess");
 
         RouteGroupBuilder parkingVisits = app.MapGroup("/gdci/parking/parkingLot/parkingVisit").RequireAuthorization("BusinessResultAccess");
         ListParkingVisitsEndpoint.Map(parkingVisits);

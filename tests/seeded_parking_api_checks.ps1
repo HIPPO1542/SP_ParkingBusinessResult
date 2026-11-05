@@ -6,6 +6,7 @@ $apiPath = Join-Path $root 'Backend/ParkingBusinessResult.Api/bin/Debug/net10.0/
 $server = $null
 $exportPath = Join-Path ([IO.Path]::GetTempPath()) ("parking-report-" + [guid]::NewGuid().ToString('N') + '.xlsx')
 $pdfPath = Join-Path ([IO.Path]::GetTempPath()) ("parking-report-" + [guid]::NewGuid().ToString('N') + '.pdf')
+$exportDirectory = Join-Path ([IO.Path]::GetTempPath()) ("parking-exports-" + [guid]::NewGuid().ToString('N'))
 
 try {
     & $pythonPath (Join-Path $root 'tests/prepare_sqlite_fixture.py') $databasePath ([guid]::NewGuid().ToString())
@@ -20,6 +21,7 @@ try {
     $baseUrl = "http://127.0.0.1:$port"
     $env:ASPNETCORE_ENVIRONMENT = 'Development'
     $env:ParkingBusinessResult__DatabasePath = $databasePath
+    $env:ParkingBusinessResult__ExportDirectory = $exportDirectory
     $env:Authentication__Issuer = 'seed-test-issuer'
     $env:Authentication__Audience = 'seed-test-audience'
     $env:Authentication__SigningKey = 'seed-test-key-only-for-local-integration-tests'
@@ -37,6 +39,16 @@ try {
     $login = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $body
     if ($login.code -ne 0 -or -not $login.data.accessToken) { throw 'Login failed.' }
     $headers = @{ Authorization = "Bearer $($login.data.accessToken)" }
+    function Save-BusinessExport($requestBody, $requestHeaders, $destination, $expectedCount) {
+        $result = Invoke-RestMethod -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $requestHeaders -ContentType 'application/json' -Body $requestBody
+        if ($result.code -ne 0 -or $result.data.recordCount -ne $expectedCount -or -not $result.data.id -or -not $result.data.fileUrl -or -not $result.data.createdById -or -not $result.data.createdBy) { throw 'Invalid export response.' }
+        foreach ($field in @('fileName', 'fileFormat', 'fileSize', 'createdAt', 'updatedAt', 'updatedBy', 'updatedById')) {
+            if ($null -eq $result.data.PSObject.Properties[$field]) { throw "Missing export field: $field" }
+        }
+        $script:lastExportUrl = $result.data.fileUrl
+        Invoke-WebRequest -Uri "$baseUrl$($result.data.fileUrl)" -Headers $requestHeaders -OutFile $destination
+        if ((Get-Item -LiteralPath $destination).Length -ne $result.data.fileSize) { throw 'Export size does not match the downloaded file.' }
+    }
     try {
         $null = Invoke-WebRequest -Uri "$baseUrl/dev/business-results" -Headers $headers -UseBasicParsing
         throw 'The old business-results route should not be mapped.'
@@ -94,11 +106,11 @@ try {
     $first = $report.data[0]
     $second = $report.data[1]
     $exportBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; reportTitle = '=test formula is text' } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $headers -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
+    Save-BusinessExport $exportBody $headers $exportPath 5
     & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 5 2775000
     if ($LASTEXITCODE -ne 0) { throw 'Excel report content verification failed.' }
     $pdfBody = @{ fileFormat = 'PDF'; reportingPeriod = '2026-11'; reportTitle = 'Báo cáo kết quả kinh doanh' } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $headers -ContentType 'application/json' -Body $pdfBody -OutFile $pdfPath
+    Save-BusinessExport $pdfBody $headers $pdfPath 5
     & $pythonPath (Join-Path $root 'tests/check_business_report_pdf.py') $pdfPath 5 '2,775,000.00'
     if ($LASTEXITCODE -ne 0) { throw 'PDF report content verification failed.' }
     if ($env:PARKING_REPORT_PDF_CAPTURE) { Copy-Item -LiteralPath $pdfPath -Destination $env:PARKING_REPORT_PDF_CAPTURE }
@@ -109,7 +121,7 @@ try {
     $unknown = Invoke-RestMethod -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $headers -ContentType 'application/json' -Body $unknownBody
     if ($unknown.code -ne 7) { throw 'Unsupported filters should be rejected.' }
     $districtExportBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; reportTitle = '=test formula is text'; district = 'dia chi gia lap' } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $headers -ContentType 'application/json' -Body $districtExportBody -OutFile $exportPath
+    Save-BusinessExport $districtExportBody $headers $exportPath 5
     & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 5 2775000
     if ($LASTEXITCODE -ne 0) { throw 'District Excel report verification failed.' }
     $scoped = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11&parkingLotId=$($first.parkingLot.id)" -Headers $headers
@@ -121,6 +133,12 @@ try {
     $operatorBody = @{ username = 'report-operator'; password = 'report-password-only' } | ConvertTo-Json
     $operator = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $operatorBody
     $operatorHeaders = @{ Authorization = "Bearer $($operator.data.accessToken)" }
+    try {
+        $null = Invoke-WebRequest -Uri "$baseUrl$script:lastExportUrl" -Headers $operatorHeaders -UseBasicParsing
+        throw 'Another user could download this report.'
+    } catch [System.Net.WebException] {
+        if ([int]$_.Exception.Response.StatusCode -ne 404) { throw }
+    }
     $operatorExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $operatorHeaders -ContentType 'application/json' -Body $exportBody
     if ($operatorExport.code -ne 7) { throw 'Operator must not export reports.' }
     $operatorReport = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11" -Headers $operatorHeaders
@@ -136,17 +154,17 @@ try {
     $districtLoginBody = @{ username = 'report-district'; password = 'report-password-only' } | ConvertTo-Json
     $district = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $districtLoginBody
     $districtHeaders = @{ Authorization = "Bearer $($district.data.accessToken)" }
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $districtHeaders -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
+    Save-BusinessExport $exportBody $districtHeaders $exportPath 1
     & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 1 555000
     if ($LASTEXITCODE -ne 0) { throw 'Scoped Excel report verification failed.' }
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $districtHeaders -ContentType 'application/json' -Body $pdfBody -OutFile $pdfPath
+    Save-BusinessExport $pdfBody $districtHeaders $pdfPath 1
     & $pythonPath (Join-Path $root 'tests/check_business_report_pdf.py') $pdfPath 1 '555,000.00'
     if ($LASTEXITCODE -ne 0) { throw 'Scoped PDF report verification failed.' }
     $deleted = Invoke-RestMethod -Method Delete -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation/$($first.id)" -Headers $headers
     if ($deleted.code -ne 0) { throw 'Failed to soft-delete test record.' }
     $afterDelete = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11" -Headers $headers
     if ($afterDelete.data.totalRevenue -ne 2220000 -or $afterDelete.data.totalVehicleCount -ne 120) { throw 'Deleted record was included in report.' }
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $headers -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
+    Save-BusinessExport $exportBody $headers $exportPath 4
     & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 4 2220000
     if ($LASTEXITCODE -ne 0) { throw 'Soft-deleted record was exported.' }
     $updatedBody = @{ revenue = 700000; completedVehicleCount = 30; note = 'ranking test' } | ConvertTo-Json
@@ -162,6 +180,12 @@ finally {
     if (Test-Path -LiteralPath $databasePath) { Remove-Item -LiteralPath $databasePath -Force }
     if (Test-Path -LiteralPath $exportPath) { Remove-Item -LiteralPath $exportPath -Force }
     if (Test-Path -LiteralPath $pdfPath) { Remove-Item -LiteralPath $pdfPath -Force }
+    if (Test-Path -LiteralPath $exportDirectory) {
+        $resolvedExportDirectory = (Resolve-Path -LiteralPath $exportDirectory).Path
+        $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+        if (-not $resolvedExportDirectory.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Export test directory is outside temp.' }
+        Remove-Item -LiteralPath $resolvedExportDirectory -Recurse -Force
+    }
     $backupPattern = [IO.Path]::GetFileNameWithoutExtension($databasePath) + '.backup-demo-*.db'
     Get-ChildItem -LiteralPath ([IO.Path]::GetTempPath()) -Filter $backupPattern -File | Remove-Item -Force
 }
