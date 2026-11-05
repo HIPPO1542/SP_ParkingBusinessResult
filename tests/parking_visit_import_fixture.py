@@ -1,5 +1,7 @@
 import sqlite3
 import sys
+import csv
+import importlib.util
 from datetime import datetime
 from pathlib import Path
 
@@ -40,6 +42,19 @@ def make_fixtures(directory):
         ['DEMO-02', '59H-8', 'MOTORBIKE', '2026-11-05 08:00', '2026-11-05 09:30', 7000, 'Tiền mặt'],
     ])
     (directory / 'invalid.xlsx').write_bytes(b'not an Excel workbook')
+    with (directory / 'visit.csv').open('w', encoding='utf-8-sig', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(HEADERS)
+        writer.writerow(['DEMO-02', '59K-9', 'MOTORBIKE', '2026-11-05 10:00', '2026-11-05 11:00', '5000', 'Tiền mặt'])
+    if importlib.util.find_spec('xlwt'):
+        import xlwt
+        workbook = xlwt.Workbook()
+        sheet = workbook.add_sheet('Luot xe')
+        for col, value in enumerate(HEADERS):
+            sheet.write(0, col, value)
+        for col, value in enumerate(['DEMO-02', '59L-0', 'MOTORBIKE', '2026-11-05 10:00', '2026-11-05 11:00', 5000, 'Tiền mặt']):
+            sheet.write(1, col, value)
+        workbook.save(str(directory / 'visit.xls'))
 
 
 def check(database_path):

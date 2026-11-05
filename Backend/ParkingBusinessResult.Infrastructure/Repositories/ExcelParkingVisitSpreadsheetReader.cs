@@ -10,18 +10,20 @@ public sealed class ExcelParkingVisitSpreadsheetReader : IParkingVisitSpreadshee
 
     static ExcelParkingVisitSpreadsheetReader() => System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
-    public IReadOnlyList<ParkingVisitRow> Read(Stream content)
+    public IReadOnlyList<ParkingVisitRow> Read(Stream content, string extension)
     {
-        try { return ReadRows(content); }
+        try { return ReadRows(content, extension); }
         catch (ExcelDataReader.Exceptions.HeaderException exception)
         {
             throw new InvalidDataException("File Excel không hợp lệ.", exception);
         }
     }
 
-    private static IReadOnlyList<ParkingVisitRow> ReadRows(Stream content)
+    private static IReadOnlyList<ParkingVisitRow> ReadRows(Stream content, string extension)
     {
-        using IExcelDataReader reader = ExcelReaderFactory.CreateOpenXmlReader(content);
+        using IExcelDataReader reader = extension.Equals(".csv", StringComparison.OrdinalIgnoreCase)
+            ? ExcelReaderFactory.CreateCsvReader(content)
+            : ExcelReaderFactory.CreateReader(content);
         if (!reader.Read() || reader.FieldCount != Headers.Length ||
             Headers.Where((header, index) => !string.Equals(reader.GetValue(index)?.ToString()?.Trim(), header, StringComparison.OrdinalIgnoreCase)).Any())
             throw new InvalidDataException("File không đúng các cột của mẫu nhập lượt xe.");

@@ -11,7 +11,7 @@ public sealed record ParkingVisitImportResult(int TotalRows, int SuccessRows, in
 
 public interface IParkingVisitSpreadsheetReader
 {
-    IReadOnlyList<ParkingVisitRow> Read(Stream content);
+    IReadOnlyList<ParkingVisitRow> Read(Stream content, string extension);
 }
 
 public interface IParkingVisitImportRepository

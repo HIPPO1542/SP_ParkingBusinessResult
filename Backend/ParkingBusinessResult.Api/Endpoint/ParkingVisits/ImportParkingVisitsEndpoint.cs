@@ -17,13 +17,14 @@ public static class ImportParkingVisitsEndpoint
             return Results.Ok(ApiResponse<object>.BusinessError("Yêu cầu phải là biểu mẫu chứa file Excel tối đa 10 MB."));
         IFormCollection form = await request.ReadFormAsync();
         IFormFile? file = form.Files.GetFile("file");
+        string extension = file is null ? "" : Path.GetExtension(file.FileName).ToLowerInvariant();
         if (file is null || form.Files.Count != 1 || file.Length is <= 0 or > MaximumFileBytes ||
-            !string.Equals(Path.GetExtension(file.FileName), ".xlsx", StringComparison.OrdinalIgnoreCase))
-            return Results.Ok(ApiResponse<object>.BusinessError("Cần một file .xlsx có dung lượng tối đa 10 MB."));
+            extension is not (".xlsx" or ".xls" or ".csv"))
+            return Results.Ok(ApiResponse<object>.BusinessError("Cần một file .xlsx, .xls hoặc .csv có dung lượng tối đa 10 MB."));
         try
         {
             using Stream stream = file.OpenReadStream();
-            ParkingVisitImportResult result = handler.Handle(new ImportParkingVisitsCommand(stream, EndpointSupport.GetAccess(user)));
+            ParkingVisitImportResult result = handler.Handle(new ImportParkingVisitsCommand(stream, extension, EndpointSupport.GetAccess(user)));
             return Results.Ok(ApiResponse<ParkingVisitImportResult>.Success(result));
         }
         catch (InvalidDataException exception)

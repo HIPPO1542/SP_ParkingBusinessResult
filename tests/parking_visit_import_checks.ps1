@@ -101,6 +101,13 @@ try {
     $fractional = Import-File 'fractional.xlsx' $token
     $fractionalComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($fractional.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
     if ($fractionalComparison.data.canCompare -or $null -ne $fractionalComparison.data.expectedAmount) { throw 'Partial-hour charge should not be guessed.' }
+    $csvResult = Import-File 'visit.csv' $token
+    if ($csvResult.code -ne 0 -or $csvResult.data.successRows -ne 1) { throw 'CSV import failed.' }
+    if (Test-Path -LiteralPath (Join-Path $testDir 'visit.xls')) {
+        $xlsResult = Import-File 'visit.xls' $token
+        if ($xlsResult.code -ne 0 -or $xlsResult.data.successRows -ne 1) { throw 'XLS import failed.' }
+        Write-Output 'Legacy XLS import passed.'
+    } else { Write-Output 'Legacy XLS fixture not available; skipped.' }
     Write-Output 'Excel import, updating, malformed data and access scope passed.'
 }
 finally {

@@ -9,7 +9,7 @@ public sealed class ImportParkingVisitsHandler(IParkingVisitSpreadsheetReader re
 
     public ParkingVisitImportResult Handle(ImportParkingVisitsCommand command)
     {
-        IReadOnlyList<ParkingVisitRow> rows = reader.Read(command.Content);
+        IReadOnlyList<ParkingVisitRow> rows = reader.Read(command.Content, command.Extension);
         var errors = new List<ParkingVisitImportError>();
         var importedIds = new List<Guid>();
         int success = 0;
