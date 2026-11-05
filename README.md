@@ -17,6 +17,8 @@ Chạy `dotnet build SP_ParkingBusinessResult.sln` và `dotnet run --project Bac
 
 Các Minimal API endpoint tiếp nhận HTTP và gọi trực tiếp handler tương ứng; command xử lý tác vụ ghi, query xử lý tác vụ đọc. Mỗi route có endpoint riêng. Các handler được đăng ký qua dependency injection, chưa dùng MediatR. Không có tầng service nghiệp vụ.
 
+Các kiểu chỉ phục vụ kết quả kinh doanh hoặc tài khoản Development được đặt trong `Common` của từng feature; `Application/Common` dành cho thành phần thực sự dùng chung. API tham chiếu Application cho các handler/DTO và Infrastructure để cấu hình truy cập dữ liệu.
+
 ```text
 Backend/
 ├── ParkingBusinessResult.Api/

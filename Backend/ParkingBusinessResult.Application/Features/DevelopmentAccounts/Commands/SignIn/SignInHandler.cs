@@ -1,4 +1,4 @@
-using ParkingBusinessResult.Application.Common;
+using ParkingBusinessResult.Application.Features.DevelopmentAccounts.Common;
 
 namespace ParkingBusinessResult.Application.Features.DevelopmentAccounts.Commands.SignIn;
 

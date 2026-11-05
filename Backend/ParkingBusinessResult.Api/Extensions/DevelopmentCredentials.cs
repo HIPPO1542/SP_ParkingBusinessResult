@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
-using ParkingBusinessResult.Application.Common;
+using ParkingBusinessResult.Application.Features.DevelopmentAccounts.Common;
 
 namespace ParkingBusinessResult.Api.Extensions;
 

@@ -1,4 +1,4 @@
-using ParkingBusinessResult.Application.Common;
+using ParkingBusinessResult.Application.Features.DevelopmentAccounts.Common;
 using ParkingBusinessResult.Api.Endpoint;
 using ParkingBusinessResult.Application.Features.DevelopmentAccounts.Commands.Bootstrap;
 using ParkingBusinessResult.Domain;

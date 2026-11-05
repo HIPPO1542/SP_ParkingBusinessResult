@@ -1,4 +1,4 @@
-using ParkingBusinessResult.Application.Common;
+using ParkingBusinessResult.Application.Features.BusinessResults.Common;
 using ParkingBusinessResult.Domain;
 
 namespace ParkingBusinessResult.Application.Features.BusinessResults.Queries.GetById;

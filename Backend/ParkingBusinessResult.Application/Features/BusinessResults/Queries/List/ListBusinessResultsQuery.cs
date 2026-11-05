@@ -1,4 +1,4 @@
-using ParkingBusinessResult.Application.Common;
+using ParkingBusinessResult.Application.Features.BusinessResults.Common;
 
 namespace ParkingBusinessResult.Application.Features.BusinessResults.Queries.List;
 

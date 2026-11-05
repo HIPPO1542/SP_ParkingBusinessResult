@@ -1,4 +1,4 @@
-namespace ParkingBusinessResult.Application.Common;
+namespace ParkingBusinessResult.Application.Features.BusinessResults.Common;
 
 public sealed record BusinessAccess(bool IsAdministrator, IReadOnlySet<Guid> ParkingLotIds)
 {

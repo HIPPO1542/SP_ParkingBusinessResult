@@ -1,4 +1,4 @@
-namespace ParkingBusinessResult.Application.Common;
+namespace ParkingBusinessResult.Application.Features.DevelopmentAccounts.Common;
 
 public interface IDevelopmentAccountRepository
 {

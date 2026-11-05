@@ -1,4 +1,4 @@
-namespace ParkingBusinessResult.Application.Common;
+namespace ParkingBusinessResult.Application.Features.BusinessResults.Common;
 
 public sealed record BusinessResultOutcome<T>(T? Data, string? Error)
 {
