@@ -2,9 +2,11 @@ using ParkingBusinessResult.Application.Features.ParkingVisits.Common;
 
 namespace ParkingBusinessResult.Application.Features.ParkingVisits.Queries.Summary;
 
+public sealed record ParkingVisitSummaryLot(Guid Id, string? Code, string? Name, string? Address);
+public sealed record ParkingVisitTopLot(ParkingVisitSummaryLot ParkingLot, decimal Revenue, int VehicleCount, decimal Percentage);
 public sealed record ParkingVisitSummary(string ReportingPeriod, long CompletedVehicleCount,
     decimal CollectedRevenue, long MissingAmountCount, decimal? PreviousRevenue, decimal? GrowthRate,
-    decimal? AverageDailyRevenue);
+    decimal? AverageDailyRevenue, IReadOnlyList<ParkingVisitTopLot>? TopRevenueParkingLots);
 
 public sealed class GetParkingVisitSummaryHandler(IParkingVisitSummaryRepository repository)
 {
@@ -28,8 +30,19 @@ public sealed class GetParkingVisitSummaryHandler(IParkingVisitSummaryRepository
         }
         int days = (query.ToExclusive - query.FromInclusive).Days;
         decimal? averageDailyRevenue = missing == 0 ? Math.Round(collected / days, 2, MidpointRounding.AwayFromZero) : null;
+        ParkingVisitTopLot[]? topLots = null;
+        if (missing == 0)
+        {
+            topLots = permitted.GroupBy(visit => visit.ParkingLotId).Select(group =>
+            {
+                CompletedParkingVisit first = group.First();
+                decimal revenue = group.Sum(visit => visit.CollectedAmount!.Value);
+                decimal percentage = collected == 0 ? 0 : Math.Round(revenue / collected * 100, 2, MidpointRounding.AwayFromZero);
+                return new ParkingVisitTopLot(new(group.Key, first.ParkingLotCode, first.ParkingLotName, first.ParkingLotAddress), revenue, group.Count(), percentage);
+            }).OrderByDescending(lot => lot.Revenue).ThenBy(lot => lot.ParkingLot.Id).Take(5).ToArray();
+        }
         return new(query.PeriodLabel,
-            permitted.LongLength, collected, missing, previousRevenue, growth, averageDailyRevenue);
+            permitted.LongLength, collected, missing, previousRevenue, growth, averageDailyRevenue, topLots);
     }
 
     private static CompletedParkingVisit[] Filter(IEnumerable<CompletedParkingVisit> visits, GetParkingVisitSummaryQuery query) =>

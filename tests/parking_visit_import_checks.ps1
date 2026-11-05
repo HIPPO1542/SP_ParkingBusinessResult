@@ -71,6 +71,7 @@ try {
     if ($bad.code -ne 7) { throw 'Invalid file was not rejected.' }
     $updatedSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11" -Headers $headers
     if ($updatedSummary.data.completedVehicleCount -ne 2 -or $updatedSummary.data.collectedRevenue -ne 35000 -or $updatedSummary.data.previousRevenue -ne 10000 -or $updatedSummary.data.growthRate -ne 250) { throw 'Updated visit summary or growth is incorrect.' }
+    if (@($updatedSummary.data.topRevenueParkingLots).Count -ne 2 -or $updatedSummary.data.topRevenueParkingLots[0].parkingLot.code -ne 'DEMO-01' -or $updatedSummary.data.topRevenueParkingLots[0].percentage -ne 85.71) { throw 'Imported visit ranking incorrect.' }
     $daySummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?fromDate=2026-11-05&toDate=2026-11-05" -Headers $headers
     if ($daySummary.data.completedVehicleCount -ne 2 -or $daySummary.data.collectedRevenue -ne 35000) { throw 'Date range should include completed visits on the selected date.' }
     $invalidRange = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?fromDate=2026-11-06&toDate=2026-11-05" -Headers $headers
@@ -99,6 +100,7 @@ try {
     if ($forbiddenComparison.data.canCompare -or $null -ne $forbiddenComparison.data.collectedAmount) { throw 'Tariff comparison exposed another parking lot.' }
     $operatorSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11" -Headers $operatorHeaders
     if ($operatorSummary.data.completedVehicleCount -ne 2 -or $operatorSummary.data.collectedRevenue -ne 30000 -or $operatorSummary.data.missingAmountCount -ne 1 -or $null -ne $operatorSummary.data.averageDailyRevenue) { throw 'Visit summary access scope or missing amount count failed.' }
+    if ($null -ne $operatorSummary.data.topRevenueParkingLots) { throw 'Incomplete revenue should not produce a ranking.' }
     $incompleteExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json' -Body $exportBody
     if ($incompleteExport.code -ne 7) { throw 'Export should reject completed visits without amounts.' }
     $operatorExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $operatorHeaders -ContentType 'application/json' -Body $exportBody
