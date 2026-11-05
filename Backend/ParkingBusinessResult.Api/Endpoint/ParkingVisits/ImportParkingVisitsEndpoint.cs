@@ -25,7 +25,8 @@ public static class ImportParkingVisitsEndpoint
         {
             using Stream stream = file.OpenReadStream();
             ParkingVisitImportResult result = handler.Handle(new ImportParkingVisitsCommand(stream, extension, EndpointSupport.GetAccess(user)));
-            return Results.Ok(ApiResponse<ParkingVisitImportResult>.Success(result));
+            string message = $"Import dữ liệu hoàn tất với {result.SuccessRows} bản ghi thành công và {result.ErrorRows} bản ghi lỗi";
+            return Results.Ok(ApiResponse<ParkingVisitImportResult>.Success(result, message));
         }
         catch (InvalidDataException exception)
         {

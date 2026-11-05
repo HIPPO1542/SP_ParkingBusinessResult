@@ -16,13 +16,14 @@ public sealed class ImportParkingVisitsHandler(IParkingVisitSpreadsheetReader re
         foreach (ParkingVisitRow row in rows)
         {
             string?[] fields = row.Cells;
-            Guid? lotId = string.IsNullOrWhiteSpace(fields[0]) ? null : repository.FindAccessibleParkingLot(fields[0]!.Trim(), command.Access);
+            string? parkingLotCode = string.IsNullOrWhiteSpace(fields[0]) ? null : fields[0]!.Trim();
+            Guid? lotId = parkingLotCode is null ? null : repository.FindAccessibleParkingLot(parkingLotCode, command.Access);
             string plate = fields[1]?.Trim().ToUpperInvariant() ?? "";
             string type = fields[2]?.Trim() ?? "";
             if (lotId is null || plate.Length is 0 or > 30 || type.Length is 0 or > 100 ||
                 !TryDate(fields[3], out DateTime entered))
             {
-                errors.Add(new(row.RowNumber, "Mã bãi không hợp lệ hoặc không có quyền; biển số, loại xe và giờ vào là bắt buộc."));
+                errors.Add(new(row.RowNumber, parkingLotCode, "Mã bãi không hợp lệ hoặc không có quyền; biển số, loại xe và giờ vào là bắt buộc."));
                 continue;
             }
             DateTime? exited = null;
@@ -30,7 +31,7 @@ public sealed class ImportParkingVisitsHandler(IParkingVisitSpreadsheetReader re
             {
                 if (!TryDate(fields[4], out DateTime parsed) || parsed <= entered)
                 {
-                    errors.Add(new(row.RowNumber, "Giờ ra không hợp lệ hoặc không sau giờ vào."));
+                    errors.Add(new(row.RowNumber, parkingLotCode, "Giờ ra không hợp lệ hoặc không sau giờ vào."));
                     continue;
                 }
                 exited = parsed;
@@ -40,7 +41,7 @@ public sealed class ImportParkingVisitsHandler(IParkingVisitSpreadsheetReader re
             {
                 if (!decimal.TryParse(fields[5], NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out decimal parsedAmount) || parsedAmount < 0)
                 {
-                    errors.Add(new(row.RowNumber, "Số tiền thực thu phải là số không âm."));
+                    errors.Add(new(row.RowNumber, parkingLotCode, "Số tiền thực thu phải là số không âm."));
                     continue;
                 }
                 amount = parsedAmount;
@@ -48,7 +49,7 @@ public sealed class ImportParkingVisitsHandler(IParkingVisitSpreadsheetReader re
             string? paymentMethod = string.IsNullOrWhiteSpace(fields[6]) ? null : fields[6]!.Trim();
             if (paymentMethod?.Length > 100)
             {
-                errors.Add(new(row.RowNumber, "Phương thức thanh toán quá dài."));
+                errors.Add(new(row.RowNumber, parkingLotCode, "Phương thức thanh toán quá dài."));
                 continue;
             }
             importedIds.Add(repository.Upsert(new ParkingVisitInput(lotId.Value, plate, type, entered, exited, amount, paymentMethod)));

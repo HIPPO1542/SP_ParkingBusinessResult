@@ -47,6 +47,7 @@ try {
     }
     $first = Import-File 'first.xlsx' $token
     if ($first.code -ne 0 -or $first.data.totalRows -ne 5 -or $first.data.successRows -ne 3 -or $first.data.errorRows -ne 2) { throw "Invalid initial import: $($first | ConvertTo-Json -Depth 5)" }
+    if ($first.data.errors[0].rowNumber -ne 5 -or $first.data.errors[0].parkingLotCode -ne 'NO-SUCH-LOT' -or -not $first.data.errors[0].errorMessage -or $first.data.errors[1].parkingLotCode -ne 'DEMO-01') { throw 'Import error details are incorrect.' }
     if (@($first.data.importedIds).Count -ne 3) { throw 'Import did not return the saved IDs.' }
     $headers = @{ Authorization = "Bearer $token" }
     $parked = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?status=PARKED" -Headers $headers
