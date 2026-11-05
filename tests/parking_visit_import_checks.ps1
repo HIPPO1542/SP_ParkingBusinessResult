@@ -92,6 +92,13 @@ try {
     Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json' -Body $pdfBody -OutFile $pdfPath
     & $pythonPath -X utf8 (Join-Path $root 'tests/check_visit_export.py') $xlsxPath $pdfPath
     if ($LASTEXITCODE -ne 0) { throw 'Visit export content invalid.' }
+    $rangeBody = @{ fileFormat = 'EXCEL'; fromDate = '2026-11-05'; toDate = '2026-11-05'; reportTitle = '=safe test' } | ConvertTo-Json
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json' -Body $rangeBody -OutFile $xlsxPath
+    & $pythonPath -X utf8 (Join-Path $root 'tests/check_visit_export.py') $xlsxPath $pdfPath
+    if ($LASTEXITCODE -ne 0) { throw 'Date range export content invalid.' }
+    $invalidRangeBody = @{ fileFormat = 'EXCEL'; fromDate = '2026-11-06'; toDate = '2026-11-05' } | ConvertTo-Json
+    $invalidRangeExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json' -Body $invalidRangeBody
+    if ($invalidRangeExport.code -ne 7) { throw 'Invalid date range export was accepted.' }
     $districtBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; district = [uri]::UnescapeDataString('Qu%E1%BA%ADn%201') } | ConvertTo-Json
     Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($districtBody)) -OutFile $xlsxPath
     & $pythonPath (Join-Path $root 'tests/check_visit_district_export.py') $xlsxPath
