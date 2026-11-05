@@ -6,6 +6,7 @@ reader = PdfReader(path)
 text = '\n'.join(page.extract_text() for page in reader.pages)
 assert 'Kỳ báo cáo: 2026-11' in text
 assert 'Tổng' in text
+assert 'Mã bãi' in text and 'Tên bãi' in text and 'DEMO-' in text and 'Bai xe gia lap' in text
 assert expected_revenue in text
 assert str(int(expected_count) * 30) in text
 assert '18,500.00' in text

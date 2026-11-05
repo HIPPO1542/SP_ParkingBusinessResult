@@ -22,7 +22,8 @@ public static class ExportBusinessReportEndpoint
 
     public static void Map(RouteGroupBuilder routes) => routes.MapPost("/export", Handle);
 
-    private static IResult Handle(Request request, ClaimsPrincipal user, ExportBusinessReportHandler handler, BusinessReportExportStore store)
+    private static IResult Handle(Request request, ClaimsPrincipal user, ExportBusinessReportHandler handler, BusinessReportExportStore store,
+        IBusinessReportParkingLotSearch parkingLotSearch)
     {
         if (!user.IsInRole("ROLE_ADMIN") && !user.IsInRole("ROLE_DISTRICT_ADMIN"))
             return Results.Ok(ApiResponse<object>.BusinessError("Bạn không có quyền xuất báo cáo."));
@@ -43,8 +44,9 @@ public static class ExportBusinessReportEndpoint
 
         IReadOnlyList<ParkingBusinessResultRecord> records = handler.Handle(
             new ExportBusinessReportQuery(period, request.ParkingLotId, title, EndpointSupport.GetAccess(user), request.District));
+        IReadOnlyDictionary<Guid, ReportParkingLot> lots = parkingLotSearch.GetParkingLots(records.Select(record => record.ParkingLotId).ToHashSet());
         BusinessReportRow[] rows = records.Select(record => new BusinessReportRow(record.ParkingLotId, record.ReportingPeriod,
-            record.Revenue, record.CompletedVehicleCount)).ToArray();
+            record.Revenue, record.CompletedVehicleCount, lots[record.ParkingLotId].Code, lots[record.ParkingLotId].Name)).ToArray();
         byte[] content = request.FileFormat == "PDF"
             ? BusinessReportPdfWriter.Write(title, period, rows)
             : BusinessReportExcelWriter.Write(title, period, rows);

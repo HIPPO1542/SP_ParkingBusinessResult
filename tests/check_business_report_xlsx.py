@@ -12,8 +12,10 @@ assert sheet['A2'].value == 'Kỳ báo cáo'
 assert sheet['B2'].value == '2026-11'
 assert sheet.max_row == int(expected_count) + 4
 assert sheet.cell(sheet.max_row, 1).value == 'Tổng'
-assert Decimal(str(sheet.cell(sheet.max_row, 3).value)) == Decimal(expected_revenue)
-assert sheet.cell(sheet.max_row, 4).value == int(expected_count) * 30
-assert sheet.cell(sheet.max_row, 5).value == 18500
+assert sheet['A3'].value == 'Mã bãi đỗ xe' and sheet['B3'].value == 'Tên bãi đỗ xe'
+assert all(str(sheet.cell(row, 1).value).startswith('DEMO-') and str(sheet.cell(row, 2).value).startswith('Bai xe gia lap') for row in range(4, sheet.max_row))
+assert Decimal(str(sheet.cell(sheet.max_row, 4).value)) == Decimal(expected_revenue)
+assert sheet.cell(sheet.max_row, 5).value == int(expected_count) * 30
+assert sheet.cell(sheet.max_row, 6).value == 18500
 workbook.close()
 print('Excel report content verified.')

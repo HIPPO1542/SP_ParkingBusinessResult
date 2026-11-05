@@ -24,7 +24,7 @@ Gửi `POST /gdci/parking/parkingLot/parkingBusinessReport/export` với Bearer 
 }
 ```
 
-`parkingLotId` và `reportTitle` không bắt buộc; `reportingPeriod` phải khớp chính xác kỳ đã lưu. Đổi `fileFormat` thành `PDF` để xuất PDF. Thành công trả JSON gồm `id`, `fileUrl`, `fileName`, `fileFormat`, `fileSize`, `recordCount` và thông tin người tạo/cập nhật. Gửi GET tới `fileUrl` kèm Bearer token của chính tài khoản đã xuất để tải file; lỗi nghiệp vụ trả JSON `code: 7`. File chứa mã bãi, kỳ, doanh thu, số lượt hoàn tất và doanh thu bình quân; các giá trị tổng ở dòng cuối. File chỉ chứa bãi trong phạm vi của tài khoản, bỏ bản ghi đã xóa mềm. Tiêu đề Excel được ghi thành văn bản, không chạy như công thức.
+`parkingLotId` và `reportTitle` không bắt buộc; `reportingPeriod` phải khớp chính xác kỳ đã lưu. Đổi `fileFormat` thành `PDF` để xuất PDF. Thành công trả JSON gồm `id`, `fileUrl`, `fileName`, `fileFormat`, `fileSize`, `recordCount` và thông tin người tạo/cập nhật. Gửi GET tới `fileUrl` kèm Bearer token của chính tài khoản đã xuất để tải file; lỗi nghiệp vụ trả JSON `code: 7`. File chứa mã bãi, tên bãi, kỳ, doanh thu, số lượt hoàn tất và doanh thu bình quân; các giá trị tổng ở dòng cuối. File chỉ chứa bãi trong phạm vi của tài khoản, bỏ bản ghi đã xóa mềm. Tiêu đề Excel được ghi thành văn bản, không chạy như công thức.
 
 Cả ba API danh sách, tổng hợp và xuất hỗ trợ `district`, đối chiếu chuỗi không phân biệt hoa/thường trong địa chỉ bãi theo LLD. Đây không phải phân loại bằng mã địa bàn chính thức; địa chỉ thiếu hoặc ghi khác có thể không khớp.
 

@@ -17,20 +17,20 @@ public static class BusinessReportExcelWriter
         {
             Row(Text(title)),
             Row(Text("Kỳ báo cáo"), Text(period)),
-            Row(Text("Mã bãi đỗ xe"), Text("Kỳ báo cáo"), Text("Doanh thu (VND)"), Text("Lượt xe hoàn tất"), Text("Bình quân mỗi lượt (VND)"))
+            Row(Text("Mã bãi đỗ xe"), Text("Tên bãi đỗ xe"), Text("Kỳ báo cáo"), Text("Doanh thu (VND)"), Text("Lượt xe hoàn tất"), Text("Bình quân mỗi lượt (VND)"))
         };
         foreach (BusinessReportRow record in records)
         {
-            rows.Add(Row(Text(record.ParkingLotId.ToString()), Text(record.ReportingPeriod), Number(record.Revenue),
+            rows.Add(Row(Text(record.ParkingLotCode ?? ""), Text(record.ParkingLotName ?? ""), Text(record.ReportingPeriod), Number(record.Revenue),
                 Number(record.CompletedVehicleCount), Number(RevenueMetrics.AverageRevenuePerVehicle(record.Revenue, record.CompletedVehicleCount))));
         }
 
         BusinessSummary summary = BusinessSummaryCalculator.Calculate(records.Select(record =>
             new BusinessSummaryEntry(record.Revenue, record.CompletedVehicleCount)));
-        rows.Add(Row(Text("Tổng"), Text(period), Number(summary.TotalRevenue), Number(summary.TotalVehicleCount), Number(summary.AverageRevenuePerVehicle)));
+        rows.Add(Row(Text("Tổng"), Text(""), Text(period), Number(summary.TotalRevenue), Number(summary.TotalVehicleCount), Number(summary.AverageRevenuePerVehicle)));
         var sheet = new XDocument(new XElement(Main + "worksheet",
             new XElement(Main + "cols", new XElement(Main + "col", new XAttribute("min", 1), new XAttribute("max", 1), new XAttribute("width", 40), new XAttribute("customWidth", 1)),
-                new XElement(Main + "col", new XAttribute("min", 2), new XAttribute("max", 5), new XAttribute("width", 27), new XAttribute("customWidth", 1))),
+                new XElement(Main + "col", new XAttribute("min", 2), new XAttribute("max", 6), new XAttribute("width", 27), new XAttribute("customWidth", 1))),
             new XElement(Main + "sheetData", rows)));
 
         using var stream = new MemoryStream();

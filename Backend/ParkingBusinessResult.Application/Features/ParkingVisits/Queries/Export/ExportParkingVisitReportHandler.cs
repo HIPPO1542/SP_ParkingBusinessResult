@@ -16,7 +16,8 @@ public sealed class ExportParkingVisitReportHandler(IParkingVisitSummaryReposito
         int missing = visits.Count(visit => visit.CollectedAmount is null);
         BusinessReportRow[] rows = visits.GroupBy(visit => visit.ParkingLotId).OrderBy(group => group.Key)
             .Select(group => new BusinessReportRow(group.Key, query.PeriodLabel,
-                group.Where(visit => visit.CollectedAmount.HasValue).Sum(visit => visit.CollectedAmount!.Value), group.Count())).ToArray();
+                group.Where(visit => visit.CollectedAmount.HasValue).Sum(visit => visit.CollectedAmount!.Value), group.Count(),
+                group.First().ParkingLotCode, group.First().ParkingLotName)).ToArray();
         return new(rows, missing);
     }
 }
