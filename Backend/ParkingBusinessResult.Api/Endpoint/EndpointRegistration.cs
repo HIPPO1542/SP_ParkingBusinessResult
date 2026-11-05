@@ -11,6 +11,12 @@ public static class EndpointRegistration
 {
     public static void MapDevelopmentEndpoints(this WebApplication app)
     {
+        app.MapGet("/test", () =>
+        {
+            using Stream stream = typeof(EndpointRegistration).Assembly.GetManifestResourceStream("ParkingBusinessResult.Api.TestUi.index.html")!;
+            using var reader = new StreamReader(stream);
+            return Results.Content(reader.ReadToEnd(), "text/html; charset=utf-8");
+        }).AllowAnonymous();
         RouteGroupBuilder businessResults = app.MapGroup("/gdci/parking/parkingLot/businessOperation").RequireAuthorization("BusinessResultAccess");
         ListBusinessResultsEndpoint.Map(businessResults);
         GetBusinessResultEndpoint.Map(businessResults);

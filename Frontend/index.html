@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kiểm thử kết quả kinh doanh bãi xe</title>
+  <style>
+    :root{font-family:Segoe UI,Arial,sans-serif;color:#14263e;background:#f2f6fb;font-size:15px}*{box-sizing:border-box}body{margin:0}header{background:#12355b;color:white;padding:24px max(24px,calc((100vw - 1160px)/2))}header h1{font-size:24px;margin:2px 0 6px}header p{margin:0;color:#d0e2f4}main{max-width:1208px;margin:auto;padding:24px;display:grid;gap:16px}.card{background:#fff;border:1px solid #dce5ef;border-radius:12px;padding:22px;box-shadow:0 3px 12px #16385d0a}.card h2{font-size:18px;margin:0 0 8px}.muted{color:#556b81;line-height:1.5;margin:0 0 16px}.row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}.field{display:grid;gap:6px;min-width:180px;flex:1}label{font-size:13px;font-weight:600;color:#3f5266}input,select,button{font:inherit;border-radius:7px;padding:10px 12px}input,select{width:100%;border:1px solid #bccbda;background:white;color:#14263e}input[type=file]{padding:8px}button{border:0;background:#1764a3;color:#fff;font-weight:600;cursor:pointer}button:hover{background:#104d7d}button.secondary{background:#e8f0f7;color:#194d79}button:disabled{opacity:.5;cursor:not-allowed}.status{display:inline-block;font-size:13px;border-radius:20px;padding:5px 10px;background:#eaf2f8;color:#28506f}.status.connected{background:#e5f5ec;color:#1e7042}.notice{background:#f3f8fc;border-left:3px solid #4898c4;padding:11px 14px;line-height:1.5;color:#3c5367;border-radius:3px;margin:14px 0}.error{background:#fff2f0;color:#a22924;border-left-color:#da6257}.success{background:#eaf8ef;color:#226341;border-left-color:#39a965}.hidden{display:none!important}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}.metric{background:#f6f9fc;border:1px solid #e1eaf3;border-radius:9px;padding:15px}.metric span{display:block;font-size:13px;color:#5e7183}.metric strong{display:block;font-size:21px;margin-top:8px}.table-wrap{overflow-x:auto;margin-top:16px}table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:11px;border-bottom:1px solid #e7edf3;font-size:13px}th{color:#586e82;background:#f7f9fc}td.numeric{text-align:right;white-space:nowrap}pre{white-space:pre-wrap;overflow:auto;background:#102b46;color:#e9f4ff;padding:16px;border-radius:8px;max-height:420px;font-size:12px;line-height:1.5}details summary{cursor:pointer;color:#356084;font-weight:600;margin-top:16px}.inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.inline h2{margin:0;flex:1}.file-info{font-size:13px;color:#586e82;margin:8px 0 0}footer{color:#65798c;font-size:12px;text-align:center;padding:0 0 24px}@media(max-width:700px){.metrics{grid-template-columns:repeat(2,1fr)}header{padding:22px 20px}main{padding:16px}.card{padding:17px}.field{min-width:140px}button{flex-grow:1}}
+  </style>
+</head>
+<body>
+<header><h1>Kết quả kinh doanh bãi xe</h1><p>Giao diện kiểm thử API · Môi trường Development</p></header>
+<main>
+  <section class="card">
+    <div class="inline"><h2>1. Đăng nhập</h2><span id="authStatus" class="status">Chưa đăng nhập</span></div>
+    <p class="muted">Dùng tài khoản quản trị đã tạo khi chạy chương trình.</p>
+    <form id="loginForm" class="row"><div class="field"><label for="username">Tên đăng nhập</label><input id="username" autocomplete="username" required></div><div class="field"><label for="password">Mật khẩu</label><input id="password" type="password" autocomplete="current-password" required></div><button type="submit">Đăng nhập</button><button type="button" class="secondary" id="logout">Đăng xuất</button></form>
+    <p id="loginMessage" class="notice hidden" role="status"></p>
+  </section>
+  <section class="card">
+    <h2>2. Nhập file lượt xe</h2><p class="muted">Mỗi dòng là một lượt xe. Chọn file Excel hoặc CSV theo mẫu của dự án.</p>
+    <form id="importForm" class="row"><div class="field"><label for="importFile">File dữ liệu</label><input id="importFile" type="file" accept=".xlsx,.xls,.csv" required></div><button type="submit">Nhập dữ liệu</button></form>
+    <p class="file-info">Các cột: Mã bãi, Biển số, Loại xe, Giờ vào, Giờ ra, Số tiền đã thu (VND), Phương thức thanh toán.</p>
+    <div id="importResult" class="notice hidden" role="status"></div><div class="table-wrap hidden" id="importErrorsWrap"><table><thead><tr><th>Dòng</th><th>Mã bãi</th><th>Lỗi</th></tr></thead><tbody id="importErrors"></tbody></table></div>
+  </section>
+  <section class="card">
+    <h2>3. Xem thống kê</h2><p class="muted">Chọn kỳ và nguồn dữ liệu cần xem.</p>
+    <div class="row"><div class="field"><label for="period">Tháng báo cáo</label><input id="period" type="month" required></div><div class="field"><label for="source">Nguồn dữ liệu</label><select id="source"><option value="visits">Lượt xe đã nhập từ file</option><option value="business">Kết quả kinh doanh đã lưu</option></select></div><button type="button" id="view">Xem thống kê</button></div>
+    <div id="sourceNotice" class="notice">Thống kê theo các lượt xe đã ra trong tháng và tiền thực thu trong file.</div>
+    <div id="stats" class="metrics hidden"><div class="metric"><span>Doanh thu</span><strong id="revenue">—</strong></div><div class="metric"><span>Lượt xe đã ra</span><strong id="vehicles">—</strong></div><div class="metric"><span>Bình quân / ngày</span><strong id="daily">—</strong></div><div class="metric"><span>Tăng trưởng</span><strong id="growth">—</strong></div></div>
+    <p id="statsMessage" class="notice hidden" role="status"></p>
+    <div id="lotsWrap" class="table-wrap hidden"><table><thead><tr><th>Bãi xe</th><th>Địa chỉ</th><th>Doanh thu</th><th>Lượt xe</th><th>Tỷ lệ</th></tr></thead><tbody id="lots"></tbody></table></div>
+    <details><summary>Xem JSON thống kê</summary><pre id="summaryJson">Chưa có dữ liệu.</pre></details>
+  </section>
+  <section class="card">
+    <h2>4. Danh sách</h2><p class="muted">Hiển thị tối đa 100 dòng đầu tiên theo nguồn đã chọn ở trên.</p><button type="button" class="secondary" id="list">Xem danh sách</button>
+    <p id="listMessage" class="notice hidden" role="status"></p><div id="listWrap" class="table-wrap hidden"><table><thead id="listHead"></thead><tbody id="listBody"></tbody></table></div><details><summary>Xem JSON danh sách</summary><pre id="listJson">Chưa có dữ liệu.</pre></details>
+  </section>
+  <section class="card">
+    <h2>5. Xuất báo cáo</h2><p class="muted">Báo cáo sử dụng kỳ và nguồn đang chọn ở bước 3.</p>
+    <div class="row"><div class="field"><label for="format">Định dạng</label><select id="format"><option value="EXCEL">Excel (.xlsx)</option><option value="PDF">PDF (.pdf)</option></select></div><button type="button" id="export">Xuất báo cáo</button><button type="button" class="secondary hidden" id="download">Tải file đã tạo</button></div>
+    <p id="exportMessage" class="notice hidden" role="status"></p><details><summary>Xem JSON xuất báo cáo</summary><pre id="exportJson">Chưa có dữ liệu.</pre></details>
+  </section>
+</main><footer>Giao diện kiểm thử cục bộ · Dữ liệu hiển thị theo quyền tài khoản</footer>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const base = '/gdci/parking/parkingLot';
+  const number = value => value == null ? '—' : new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 2}).format(value);
+  let token = null;
+  let exportFile = null;
+  const month = new Date();
+  $('period').value = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
+
+  function notify(id, message, kind = '') {
+    const node = $(id); node.textContent = message; node.className = `notice ${kind}`;
+  }
+  function textCell(row, value, numeric = false) {
+    const cell = row.insertCell(); cell.textContent = value == null || value === '' ? '—' : String(value);
+    if (numeric) cell.className = 'numeric';
+  }
+  function addRow(body, values, numericColumns = []) {
+    const row = body.insertRow(); values.forEach((value, i) => textCell(row, value, numericColumns.includes(i)));
+  }
+  function showJson(id, data) { $(id).textContent = JSON.stringify(data, null, 2); }
+  function requireLogin() { if (!token) throw new Error('Vui lòng đăng nhập trước.'); }
+  function period() { if (!$('period').value) throw new Error('Vui lòng chọn tháng báo cáo.'); return $('period').value; }
+  async function request(path, options = {}) {
+    requireLogin();
+    const response = await fetch(path, {...options, headers: {...options.headers, Authorization: `Bearer ${token}`}});
+    if (!response.ok) throw new Error(response.status === 401 ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.' : `Không thể gọi API (HTTP ${response.status}).`);
+    return response;
+  }
+  async function jsonRequest(path, options) {
+    const response = await request(path, options); const body = await response.json();
+    if (body.code !== 0) throw new Error(body.message || 'Yêu cầu không thành công.'); return body;
+  }
+  function downloadBlob(blob, name) {
+    const url = URL.createObjectURL(blob); const link = document.createElement('a');
+    link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  $('loginForm').addEventListener('submit', async event => {
+    event.preventDefault(); token = null; exportFile = null; $('download').classList.add('hidden'); $('authStatus').textContent = 'Chưa đăng nhập'; $('authStatus').className = 'status';
+    try {
+      const response = await fetch('/dev/auth/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('username').value,password:$('password').value})});
+      if (!response.ok) throw new Error(`Không đăng nhập được (HTTP ${response.status}).`);
+      const result = await response.json(); if (result.code !== 0 || !result.data?.accessToken) throw new Error(result.message || 'Đăng nhập không thành công.');
+      token = result.data.accessToken; $('password').value = ''; $('authStatus').textContent = 'Đã đăng nhập'; $('authStatus').className = 'status connected'; notify('loginMessage', 'Đăng nhập thành công. Phiên có hiệu lực 30 phút.', 'success');
+    } catch (error) { notify('loginMessage', error.message, 'error'); }
+  });
+  $('logout').addEventListener('click', () => { token = null; exportFile = null; $('download').classList.add('hidden'); $('authStatus').textContent = 'Chưa đăng nhập'; $('authStatus').className = 'status'; notify('loginMessage', 'Đã đăng xuất.'); });
+  $('importForm').addEventListener('submit', async event => {
+    event.preventDefault(); $('importErrorsWrap').classList.add('hidden');
+    try {
+      const file = $('importFile').files[0]; if (!file) throw new Error('Vui lòng chọn file.');
+      const data = new FormData(); data.append('file', file); const result = await jsonRequest(`${base}/businessOperation/import`, {method:'POST',body:data});
+      notify('importResult', `Tổng ${result.data.totalRows} dòng · Thành công ${result.data.successRows} · Lỗi ${result.data.errorRows}`, result.data.errorRows ? '' : 'success');
+      const body = $('importErrors'); body.replaceChildren(); (result.data.errors || []).forEach(error => addRow(body,[error.rowNumber,error.parkingLotCode,error.errorMessage]));
+      $('importErrorsWrap').classList.toggle('hidden', !result.data.errors?.length);
+    } catch (error) { notify('importResult', error.message, 'error'); }
+  });
+  $('source').addEventListener('change', () => {
+    $('sourceNotice').textContent = $('source').value === 'visits' ? 'Thống kê theo các lượt xe đã ra trong tháng và tiền thực thu trong file.' : 'Thống kê từ bảng kết quả kinh doanh đã lưu; dữ liệu nhập lượt xe không tự cập nhật bảng này.';
+    $('stats').classList.add('hidden'); $('lotsWrap').classList.add('hidden'); $('listWrap').classList.add('hidden'); $('statsMessage').classList.add('hidden'); $('listMessage').classList.add('hidden'); $('summaryJson').textContent = 'Chưa có dữ liệu.'; $('listJson').textContent = 'Chưa có dữ liệu.';
+    exportFile = null; $('download').classList.add('hidden'); $('exportJson').textContent = 'Chưa có dữ liệu.'; $('exportMessage').classList.add('hidden');
+  });
+  $('view').addEventListener('click', async () => {
+    $('stats').classList.add('hidden'); $('lotsWrap').classList.add('hidden'); $('statsMessage').classList.add('hidden');
+    try {
+      const visits = $('source').value === 'visits'; const path = visits ? 'parkingVisit/summary' : 'parkingBusinessReport/summary';
+      const result = await jsonRequest(`${base}/${path}?reportingPeriod=${encodeURIComponent(period())}`); const data = result.data; showJson('summaryJson', result);
+      $('revenue').textContent = `${number(visits ? data.collectedRevenue : data.totalRevenue)} đ`; $('vehicles').textContent = number(visits ? data.completedVehicleCount : data.totalVehicleCount);
+      $('daily').textContent = data.averageDailyRevenue == null ? '—' : `${number(data.averageDailyRevenue)} đ`; $('growth').textContent = data.growthRate == null ? '—' : `${number(data.growthRate)}%`;
+      $('stats').classList.remove('hidden'); const body = $('lots'); body.replaceChildren();
+      (data.topRevenueParkingLots || []).forEach(item => addRow(body,[`${item.parkingLot?.code || ''} · ${item.parkingLot?.name || ''}`,item.parkingLot?.address,`${number(item.revenue)} đ`,number(item.vehicleCount),`${number(item.percentage)}%`],[2,3,4]));
+      $('lotsWrap').classList.toggle('hidden', !data.topRevenueParkingLots?.length);
+      if (visits && data.missingAmountCount > 0) notify('statsMessage', `Có ${data.missingAmountCount} lượt đã ra chưa có số tiền thực thu. Doanh thu hiện chỉ cộng các khoản đã có.`, 'error');
+      else notify('statsMessage', 'Đã tải thống kê.', 'success');
+    } catch (error) { notify('statsMessage', error.message, 'error'); }
+  });
+  $('list').addEventListener('click', async () => {
+    $('listWrap').classList.add('hidden');
+    try {
+      const visits = $('source').value === 'visits'; const path = visits ? 'parkingVisit?pageSize=100' : `parkingBusinessReport?reportingPeriod=${encodeURIComponent(period())}&pageSize=100`;
+      const result = await jsonRequest(`${base}/${path}`); showJson('listJson', result); const items = visits ? result.data.items : result.data;
+      const headings = visits ? ['Biển số','Loại xe','Giờ vào','Giờ ra','Tiền đã thu'] : ['Bãi xe','Đơn vị quản lý','Kỳ báo cáo','Doanh thu','Lượt xe'];
+      const head = $('listHead'); head.replaceChildren(); const headerRow = head.insertRow(); headings.forEach(value => { const th = document.createElement('th'); th.textContent = value; headerRow.appendChild(th); });
+      const body = $('listBody'); body.replaceChildren(); items.forEach(item => addRow(body, visits ? [item.licensePlate,item.vehicleType,item.enteredAt,item.exitedAt,item.collectedAmount == null ? null : `${number(item.collectedAmount)} đ`] : [`${item.parkingLot?.code || ''} · ${item.parkingLot?.name || ''}`,item.operatorName,item.reportingPeriod,`${number(item.revenue)} đ`,number(item.vehicleCount)],[4]));
+      $('listWrap').classList.toggle('hidden', !items.length); notify('listMessage', visits ? `Hiển thị ${items.length} / ${result.data.totalCount} lượt xe; danh sách này gồm mọi thời điểm.` : `Hiển thị ${items.length} bản ghi trong kỳ đã chọn.`, 'success');
+    } catch (error) { notify('listMessage', error.message, 'error'); }
+  });
+  $('export').addEventListener('click', async () => {
+    exportFile = null; $('download').classList.add('hidden'); $('exportJson').textContent = 'Chưa có dữ liệu.';
+    try {
+      const visits = $('source').value === 'visits'; const format = $('format').value; const path = visits ? 'parkingVisit/export' : 'parkingBusinessReport/export';
+      const response = await request(`${base}/${path}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileFormat:format,reportingPeriod:period()})});
+      if ((response.headers.get('content-type') || '').includes('application/json')) {
+        const result = await response.json(); showJson('exportJson', result); if (result.code !== 0) throw new Error(result.message || 'Không thể xuất báo cáo.');
+        exportFile = result.data; $('download').classList.remove('hidden'); notify('exportMessage', `Đã tạo ${result.data.fileName} · ${number(result.data.recordCount)} bản ghi. Nhấn tải file để lưu về máy.`, 'success');
+      } else { downloadBlob(await response.blob(), `bao-cao-luot-xe.${format === 'PDF' ? 'pdf' : 'xlsx'}`); notify('exportMessage', 'Đã tải báo cáo lượt xe.', 'success'); $('exportJson').textContent = 'API lượt xe trả file trực tiếp.'; }
+    } catch (error) { notify('exportMessage', error.message, 'error'); }
+  });
+  $('download').addEventListener('click', async () => {
+    try { if (!exportFile) throw new Error('Chưa có báo cáo để tải.'); const response = await request(exportFile.fileUrl); downloadBlob(await response.blob(), exportFile.fileName); }
+    catch (error) { notify('exportMessage', error.message, 'error'); }
+  });
+})();
+</script>
+</body>
+</html>

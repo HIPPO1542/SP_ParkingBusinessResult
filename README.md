@@ -66,6 +66,8 @@ Các endpoint `GET/POST /gdci/parking/parkingLot/businessOperation` và `GET/PUT
 
 Collection và hướng dẫn kiểm thử bằng Postman nằm trong thư mục [`postman/`](postman/README.md).
 
+Giao diện kiểm thử cơ bản nằm trong [`Frontend/`](Frontend/README.md). Sau khi chạy API Development theo hướng dẫn bên dưới, mở `http://localhost:5069/test` để đăng nhập, nhập file, xem số liệu và xuất báo cáo.
+
 ### Tài khoản cục bộ cho Development
 
 Khi chạy lần đầu, đặt `Authentication:BootstrapUsername` và `Authentication:BootstrapPassword` trong cấu hình bí mật hoặc biến môi trường; mật khẩu có từ 12 đến 256 ký tự. Nếu bảng `dev_auth_users` chưa có tài khoản, ứng dụng tạo một `ROLE_ADMIN`; cấu hình bootstrap không thay đổi tài khoản đã tồn tại. Mật khẩu được lưu dưới dạng băm bằng ASP.NET Core Identity PasswordHasher. Bảng tài khoản cục bộ được tạo trong SQLite khi ứng dụng khởi động ở Development.
