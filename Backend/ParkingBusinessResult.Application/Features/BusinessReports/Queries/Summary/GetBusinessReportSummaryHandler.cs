@@ -1,4 +1,5 @@
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.List;
+using ParkingBusinessResult.Application.Features.BusinessReports.Common;
 using ParkingBusinessResult.Domain;
 
 namespace ParkingBusinessResult.Application.Features.BusinessReports.Queries.Summary;

@@ -1,6 +1,6 @@
 using ParkingBusinessResult.Domain;
 
-namespace ParkingBusinessResult.Application.Features.BusinessReports;
+namespace ParkingBusinessResult.Application.Features.BusinessReports.Common;
 
 public static class BusinessSummaryCalculator
 {

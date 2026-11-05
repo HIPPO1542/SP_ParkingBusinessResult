@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using ParkingBusinessResult.Api.Contracts;
-using ParkingBusinessResult.Application.Features.BusinessReports;
+using ParkingBusinessResult.Application.Features.BusinessReports.Common;
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.Summary;
 
 namespace ParkingBusinessResult.Api.Endpoint.BusinessReports;

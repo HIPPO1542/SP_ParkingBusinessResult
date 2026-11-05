@@ -1,5 +1,5 @@
 using System.Globalization;
-using ParkingBusinessResult.Application.Features.BusinessReports;
+using ParkingBusinessResult.Application.Features.BusinessReports.Common;
 using ParkingBusinessResult.Domain;
 using PdfSharp.Drawing;
 using PdfSharp.Drawing.Layout;

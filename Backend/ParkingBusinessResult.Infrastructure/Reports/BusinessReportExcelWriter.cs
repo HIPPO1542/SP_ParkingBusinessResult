@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.IO.Compression;
 using System.Xml.Linq;
-using ParkingBusinessResult.Application.Features.BusinessReports;
+using ParkingBusinessResult.Application.Features.BusinessReports.Common;
 using ParkingBusinessResult.Domain;
 
 namespace ParkingBusinessResult.Infrastructure.Reports;

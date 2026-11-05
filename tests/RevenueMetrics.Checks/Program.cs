@@ -1,5 +1,5 @@
 ﻿using ParkingBusinessResult.Domain;
-using ParkingBusinessResult.Application.Features.BusinessReports;
+using ParkingBusinessResult.Application.Features.BusinessReports.Common;
 using ParkingBusinessResult.Infrastructure;
 using Microsoft.Data.Sqlite;
 
