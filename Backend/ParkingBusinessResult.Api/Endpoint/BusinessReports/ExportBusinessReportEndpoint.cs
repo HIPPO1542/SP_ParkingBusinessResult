@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using System.Xml;
 using ParkingBusinessResult.Api.Contracts;
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.Export;
+using ParkingBusinessResult.Application.Features.BusinessReports.Common;
 using ParkingBusinessResult.Domain;
 using ParkingBusinessResult.Infrastructure.Reports;
 
@@ -37,10 +38,12 @@ public static class ExportBusinessReportEndpoint
 
         IReadOnlyList<ParkingBusinessResultRecord> records = handler.Handle(
             new ExportBusinessReportQuery(period, request.ParkingLotId, title, EndpointSupport.GetAccess(user), request.District));
+        BusinessReportRow[] rows = records.Select(record => new BusinessReportRow(record.ParkingLotId, record.ReportingPeriod,
+            record.Revenue, record.CompletedVehicleCount)).ToArray();
         if (request.FileFormat == "PDF")
-            return Results.File(BusinessReportPdfWriter.Write(title, period, records), "application/pdf", "bao-cao-kinh-doanh.pdf");
+            return Results.File(BusinessReportPdfWriter.Write(title, period, rows), "application/pdf", "bao-cao-kinh-doanh.pdf");
 
-        return Results.File(BusinessReportExcelWriter.Write(title, period, records),
+        return Results.File(BusinessReportExcelWriter.Write(title, period, rows),
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "bao-cao-kinh-doanh.xlsx");
     }
 }

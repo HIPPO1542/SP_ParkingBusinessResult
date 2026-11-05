@@ -1,6 +1,7 @@
 using ParkingBusinessResult.Api.Endpoint.BusinessResults;
 using ParkingBusinessResult.Api.Endpoint.BusinessReports;
 using ParkingBusinessResult.Api.Endpoint.DevelopmentAccounts;
+using ParkingBusinessResult.Api.Endpoint.ParkingVisits;
 
 namespace ParkingBusinessResult.Api.Endpoint;
 
@@ -19,6 +20,11 @@ public static class EndpointRegistration
         ListBusinessReportEndpoint.Map(businessReports);
         GetBusinessReportSummaryEndpoint.Map(businessReports);
         ExportBusinessReportEndpoint.Map(businessReports);
+
+        RouteGroupBuilder parkingVisits = app.MapGroup("/dev/parking-visits").RequireAuthorization("BusinessResultAccess");
+        ImportParkingVisitsEndpoint.Map(parkingVisits);
+        GetParkingVisitSummaryEndpoint.Map(parkingVisits);
+        ExportParkingVisitReportEndpoint.Map(parkingVisits);
 
         RouteGroupBuilder accounts = app.MapGroup("/dev/auth");
         LoginEndpoint.Map(accounts);

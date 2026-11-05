@@ -1,0 +1,58 @@
+import sqlite3
+import sys
+from datetime import datetime
+from pathlib import Path
+
+from openpyxl import Workbook
+
+HEADERS = ['Mã bãi', 'Biển số', 'Loại xe', 'Giờ vào', 'Giờ ra', 'Số tiền đã thu (VND)', 'Phương thức thanh toán']
+
+
+def write(path, rows):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(HEADERS)
+    for row in rows:
+        sheet.append(row)
+    workbook.save(path)
+
+
+def make_fixtures(directory):
+    write(directory / 'first.xlsx', [
+        ['DEMO-01', '59A-1', 'Ô tô', '2026-11-04 23:30', None, None, None],
+        ['DEMO-02', '59B-2', 'Xe máy', datetime(2026, 11, 5, 8, 0), datetime(2026, 11, 5, 9, 0), 5000, 'Tiền mặt'],
+        ['DEMO-02', '59Z-9', 'Xe máy', '2026-10-05 08:00', '2026-10-05 09:00', 10000, 'Tiền mặt'],
+        ['NO-SUCH-LOT', '59C-3', 'Xe máy', '2026-11-05 08:00', None, None, None],
+        ['DEMO-01', '59D-4', 'Xe máy', '2026-11-05 10:00', '2026-11-05 09:00', 0, None],
+    ])
+    write(directory / 'update.xlsx', [
+        ['DEMO-01', '59a-1', 'Ô tô', '2026-11-04 23:30', '2026-11-05 01:00', 30000, 'Điện tử'],
+    ])
+    write(directory / 'scoped.xlsx', [
+        ['DEMO-01', '59E-5', 'Xe máy', '2026-11-05 08:00', None, None, None],
+        ['DEMO-02', '59F-6', 'Xe máy', '2026-11-05 08:00', None, None, None],
+        ['DEMO-01', '59G-7', 'Xe máy', '05/11/2026 08:00', '05/11/2026 09:00', None, None],
+    ])
+    write(directory / 'blank_update.xlsx', [
+        ['DEMO-01', '59A-1', 'Ô tô', '2026-11-04 23:30', None, None, None],
+    ])
+    (directory / 'invalid.xlsx').write_bytes(b'not an Excel workbook')
+
+
+def check(database_path):
+    with sqlite3.connect(database_path) as database:
+        rows = database.execute('SELECT licensePlate, enteredAt, exitedAt, collectedAmount, paymentMethod FROM parking_visit ORDER BY licensePlate').fetchall()
+        assert len(rows) == 5, rows
+        assert rows[0] == ('59A-1', '2026-11-04 23:30:00', '2026-11-05 01:00:00', '30000', 'Điện tử'), rows[0]
+        assert rows[1][0] == '59B-2' and rows[1][3] == '5000', rows[1]
+        assert rows[2][0] == '59E-5' and rows[2][2] is None, rows[2]
+        assert rows[3][0] == '59G-7' and rows[3][3] is None, rows[3]
+        assert rows[4][0] == '59Z-9' and rows[4][3] == '10000', rows[4]
+        assert not database.execute('PRAGMA foreign_key_check').fetchall()
+    print('Imported visits verified directly in SQLite.')
+
+
+if sys.argv[1] == 'make':
+    make_fixtures(Path(sys.argv[2]))
+else:
+    check(Path(sys.argv[2]))

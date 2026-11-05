@@ -10,7 +10,7 @@ namespace ParkingBusinessResult.Infrastructure.Reports;
 
 public static class BusinessReportPdfWriter
 {
-    public static byte[] Write(string title, string period, IReadOnlyList<ParkingBusinessResultRecord> records)
+    public static byte[] Write(string title, string period, IReadOnlyList<BusinessReportRow> records)
     {
         if (!OperatingSystem.IsWindows())
             throw new PlatformNotSupportedException("Xuất PDF thử nghiệm cần phông chữ Windows.");
@@ -37,7 +37,7 @@ public static class BusinessReportPdfWriter
         }
 
         NewPage();
-        foreach (ParkingBusinessResultRecord record in records)
+        foreach (BusinessReportRow record in records)
         {
             if (y > 550) NewPage();
             DrawRow(graphics!, normal, y, record.ParkingLotId.ToString(), record.ReportingPeriod,

@@ -11,7 +11,7 @@ public static class BusinessReportExcelWriter
     private static readonly XNamespace Main = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
     private static readonly XNamespace Relationships = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
-    public static byte[] Write(string title, string period, IReadOnlyList<ParkingBusinessResultRecord> records)
+    public static byte[] Write(string title, string period, IReadOnlyList<BusinessReportRow> records)
     {
         var rows = new List<XElement>
         {
@@ -19,7 +19,7 @@ public static class BusinessReportExcelWriter
             Row(Text("Kỳ báo cáo"), Text(period)),
             Row(Text("Mã bãi đỗ xe"), Text("Kỳ báo cáo"), Text("Doanh thu (VND)"), Text("Lượt xe hoàn tất"), Text("Bình quân mỗi lượt (VND)"))
         };
-        foreach (ParkingBusinessResultRecord record in records)
+        foreach (BusinessReportRow record in records)
         {
             rows.Add(Row(Text(record.ParkingLotId.ToString()), Text(record.ReportingPeriod), Number(record.Revenue),
                 Number(record.CompletedVehicleCount), Number(RevenueMetrics.AverageRevenuePerVehicle(record.Revenue, record.CompletedVehicleCount))));

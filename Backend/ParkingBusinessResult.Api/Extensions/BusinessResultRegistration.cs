@@ -2,6 +2,9 @@ using ParkingBusinessResult.Application.Features.BusinessResults.Commands.Create
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.List;
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.Export;
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.Summary;
+using ParkingBusinessResult.Application.Features.ParkingVisits.Commands.Import;
+using ParkingBusinessResult.Application.Features.ParkingVisits.Queries.Summary;
+using ParkingBusinessResult.Application.Features.ParkingVisits.Queries.Export;
 using ParkingBusinessResult.Application.Features.BusinessResults.Commands.Delete;
 using ParkingBusinessResult.Application.Features.BusinessResults.Commands.Update;
 using ParkingBusinessResult.Application.Features.BusinessResults.Queries.GetById;
@@ -24,6 +27,9 @@ public static class BusinessResultRegistration
         services.AddScoped<ListBusinessReportHandler>();
         services.AddScoped<GetBusinessReportSummaryHandler>();
         services.AddScoped<ExportBusinessReportHandler>();
+        services.AddScoped<ImportParkingVisitsHandler>();
+        services.AddScoped<GetParkingVisitSummaryHandler>();
+        services.AddScoped<ExportParkingVisitReportHandler>();
         services.AddSingleton<BootstrapAdministratorHandler>();
         services.AddSingleton<CreateAccountHandler>();
         services.AddSingleton<SignInHandler>();

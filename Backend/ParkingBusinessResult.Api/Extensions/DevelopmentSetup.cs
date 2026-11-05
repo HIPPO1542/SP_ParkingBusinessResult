@@ -1,5 +1,6 @@
 using ParkingBusinessResult.Application.Features.DevelopmentAccounts.Common;
 using ParkingBusinessResult.Application.Features.BusinessReports.Common;
+using ParkingBusinessResult.Application.Features.ParkingVisits.Common;
 using ParkingBusinessResult.Api.Endpoint;
 using ParkingBusinessResult.Application.Features.DevelopmentAccounts.Commands.Bootstrap;
 using ParkingBusinessResult.Domain;
@@ -19,6 +20,10 @@ public static class DevelopmentSetup
             ?? Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "../../database/sqlite/parking_business_result.db"));
         builder.Services.AddSingleton<IBusinessResultRepository>(new SqliteBusinessResultRepository(databasePath));
         builder.Services.AddSingleton<IBusinessReportParkingLotSearch>(new SqliteBusinessReportParkingLotSearch(databasePath));
+        builder.Services.AddSingleton<IParkingVisitSpreadsheetReader, ExcelParkingVisitSpreadsheetReader>();
+        var visitRepository = new SqliteParkingVisitImportRepository(databasePath);
+        builder.Services.AddSingleton<IParkingVisitImportRepository>(visitRepository);
+        builder.Services.AddSingleton<IParkingVisitSummaryRepository>(visitRepository);
         builder.Services.AddSingleton<IDevelopmentAccountRepository>(new SqliteDevelopmentAccountRepository(databasePath));
         builder.Services.AddSingleton<IDevelopmentCredentials, DevelopmentCredentials>();
     }
