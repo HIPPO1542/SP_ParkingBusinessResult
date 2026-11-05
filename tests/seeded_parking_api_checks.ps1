@@ -4,6 +4,7 @@ $databasePath = Join-Path ([IO.Path]::GetTempPath()) ("parking-seeded-api-" + [g
 $pythonPath = Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'
 $apiPath = Join-Path $root 'Backend/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll'
 $server = $null
+$exportPath = Join-Path ([IO.Path]::GetTempPath()) ("parking-report-" + [guid]::NewGuid().ToString('N') + '.xlsx')
 
 try {
     & $pythonPath (Join-Path $root 'tests/prepare_sqlite_fixture.py') $databasePath ([guid]::NewGuid().ToString())
@@ -52,6 +53,16 @@ try {
     if ($emptyPeriod.data.totalRevenue -ne 0 -or $emptyPeriod.data.totalVehicleCount -ne 0) { throw 'Empty periods should have zero totals.' }
     $first = $report.data[0]
     $second = $report.data[1]
+    $exportBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; reportTitle = '=test formula is text' } | ConvertTo-Json
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
+    & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 5 2775000
+    if ($LASTEXITCODE -ne 0) { throw 'Excel report content verification failed.' }
+    $unsupportedBody = @{ fileFormat = 'PDF'; reportingPeriod = '2026-11' } | ConvertTo-Json
+    $unsupported = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $unsupportedBody
+    if ($unsupported.code -ne 7) { throw 'Unsupported format should be rejected.' }
+    $unknownBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; district = 'test' } | ConvertTo-Json
+    $unknown = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $unknownBody
+    if ($unknown.code -ne 7) { throw 'Unsupported filters should be rejected.' }
     $scoped = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11&parkingLotId=$($first.parkingLotId)" -Headers $headers
     if ($scoped.data.totalRevenue -ne 555000 -or $scoped.data.totalVehicleCount -ne 30) { throw 'Parking lot filter failed.' }
     $account = @{ username = 'report-operator'; password = 'report-password-only'; role = 'ROLE_PARKING_OPERATOR'; parkingLotId = $first.parkingLotId } | ConvertTo-Json
@@ -60,20 +71,35 @@ try {
     $operatorBody = @{ username = 'report-operator'; password = 'report-password-only' } | ConvertTo-Json
     $operator = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $operatorBody
     $operatorHeaders = @{ Authorization = "Bearer $($operator.data.accessToken)" }
+    $operatorExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $operatorHeaders -ContentType 'application/json' -Body $exportBody
+    if ($operatorExport.code -ne 7) { throw 'Operator must not export reports.' }
     $operatorReport = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11" -Headers $operatorHeaders
     if (@($operatorReport.data).Count -ne 1 -or $operatorReport.data[0].parkingLotId -ne $first.parkingLotId) { throw 'Operator report scope failed.' }
     $forbiddenLot = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11&parkingLotId=$($second.parkingLotId)" -Headers $operatorHeaders
     if ($forbiddenLot.data.totalRevenue -ne 0) { throw 'Operator accessed another parking lot.' }
+    $districtBody = @{ username = 'report-district'; password = 'report-password-only'; role = 'ROLE_DISTRICT_ADMIN'; parkingLotId = $first.parkingLotId } | ConvertTo-Json
+    $districtCreated = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/users" -Headers $headers -ContentType 'application/json' -Body $districtBody
+    if ($districtCreated.code -ne 0) { throw 'Could not create district account.' }
+    $districtLoginBody = @{ username = 'report-district'; password = 'report-password-only' } | ConvertTo-Json
+    $district = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $districtLoginBody
+    $districtHeaders = @{ Authorization = "Bearer $($district.data.accessToken)" }
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $districtHeaders -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
+    & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 1 555000
+    if ($LASTEXITCODE -ne 0) { throw 'Scoped Excel report verification failed.' }
     $deleted = Invoke-RestMethod -Method Delete -Uri "$baseUrl/dev/business-results/$($first.id)" -Headers $headers
     if ($deleted.code -ne 0) { throw 'Failed to soft-delete test record.' }
     $afterDelete = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11" -Headers $headers
     if ($afterDelete.data.totalRevenue -ne 2220000 -or $afterDelete.data.totalVehicleCount -ne 120) { throw 'Deleted record was included in report.' }
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
+    & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 4 2220000
+    if ($LASTEXITCODE -ne 0) { throw 'Soft-deleted record was exported.' }
     Write-Output 'Seeded API returned five matching business results.'
     Write-Output 'Report list, summary, period and lot filters, access scope, and soft delete checks passed.'
 }
 finally {
     if ($null -ne $server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force; $server.WaitForExit() }
     if (Test-Path -LiteralPath $databasePath) { Remove-Item -LiteralPath $databasePath -Force }
+    if (Test-Path -LiteralPath $exportPath) { Remove-Item -LiteralPath $exportPath -Force }
     $backupPattern = [IO.Path]::GetFileNameWithoutExtension($databasePath) + '.backup-demo-*.db'
     Get-ChildItem -LiteralPath ([IO.Path]::GetTempPath()) -Filter $backupPattern -File | Remove-Item -Force
 }

@@ -1,5 +1,6 @@
 using ParkingBusinessResult.Application.Features.BusinessResults.Commands.Create;
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.List;
+using ParkingBusinessResult.Application.Features.BusinessReports.Queries.Export;
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.Summary;
 using ParkingBusinessResult.Application.Features.BusinessResults.Commands.Delete;
 using ParkingBusinessResult.Application.Features.BusinessResults.Commands.Update;
@@ -22,6 +23,7 @@ public static class BusinessResultRegistration
         services.AddScoped<ListBusinessResultsHandler>();
         services.AddScoped<ListBusinessReportHandler>();
         services.AddScoped<GetBusinessReportSummaryHandler>();
+        services.AddScoped<ExportBusinessReportHandler>();
         services.AddSingleton<BootstrapAdministratorHandler>();
         services.AddSingleton<CreateAccountHandler>();
         services.AddSingleton<SignInHandler>();

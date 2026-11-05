@@ -18,6 +18,7 @@ public static class EndpointRegistration
         RouteGroupBuilder businessReports = app.MapGroup("/dev/business-reports").RequireAuthorization("BusinessResultAccess");
         ListBusinessReportEndpoint.Map(businessReports);
         GetBusinessReportSummaryEndpoint.Map(businessReports);
+        ExportBusinessReportEndpoint.Map(businessReports);
 
         RouteGroupBuilder accounts = app.MapGroup("/dev/auth");
         LoginEndpoint.Map(accounts);

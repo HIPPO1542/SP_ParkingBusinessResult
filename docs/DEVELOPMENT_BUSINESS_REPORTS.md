@@ -11,4 +11,19 @@ Thêm `&parkingLotId=<UUID>` để chỉ xem một bãi. `reportingPeriod` bắt
 
 Với dữ liệu giả lập ban đầu kỳ `2026-11`, tổng là 2.775.000 đồng và 150 lượt, bình quân 18.500 đồng/lượt. Kết quả thay đổi khi dữ liệu kết quả kinh doanh được sửa hoặc xóa mềm. Những bản ghi này là số liệu tổng hợp đã lưu, không tự cập nhật theo các lượt xe thử nghiệm hay thay đổi bảng giá.
 
-Hai endpoint này chỉ chạy Development và chưa phải hợp đồng chính thức UC 3.4: chưa có lọc ngày/quận, tìm kiếm, phân trang, tăng trưởng, xuất Excel/PDF và các chỉ số khác theo tài liệu. Chưa có import file. Không dùng các lượt thử nghiệm để coi là dữ liệu vận hành thực tế.
+## Xuất Excel
+
+Gửi `POST /dev/business-reports/export` với Bearer token của `ROLE_ADMIN` hoặc `ROLE_DISTRICT_ADMIN` và body:
+
+```json
+{
+  "fileFormat": "EXCEL",
+  "reportingPeriod": "2026-11",
+  "parkingLotId": null,
+  "reportTitle": "Báo cáo kết quả kinh doanh"
+}
+```
+
+`parkingLotId` và `reportTitle` không bắt buộc; `reportingPeriod` phải khớp chính xác kỳ đã lưu. Thành công trả trực tiếp file `.xlsx` (trong Postman chọn **Send and Download**); lỗi nghiệp vụ trả JSON `code: 7`. File chứa mã bãi, kỳ, doanh thu, số lượt hoàn tất và doanh thu bình quân; các giá trị tổng ở dòng cuối. File chỉ chứa bãi trong phạm vi của tài khoản, bỏ bản ghi đã xóa mềm. Tiêu đề được ghi thành văn bản, không chạy như công thức Excel.
+
+Các endpoint này chỉ chạy Development và chưa phải hợp đồng chính thức UC 3.4. Đặc tả yêu cầu tạo file, trả thông tin cùng URL tải; endpoint thử nghiệm trả file trực tiếp. Chưa hỗ trợ PDF, lọc ngày/quận, tìm kiếm, phân trang, tăng trưởng và các chỉ số khác theo tài liệu; các tham số xuất chưa hỗ trợ bị từ chối. Chưa có import file. Không dùng các lượt thử nghiệm để coi là dữ liệu vận hành thực tế.
