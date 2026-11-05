@@ -9,20 +9,20 @@ public static class EndpointRegistration
 {
     public static void MapDevelopmentEndpoints(this WebApplication app)
     {
-        RouteGroupBuilder businessResults = app.MapGroup("/dev/business-results").RequireAuthorization("BusinessResultAccess");
+        RouteGroupBuilder businessResults = app.MapGroup("/gdci/parking/parkingLot/businessOperation").RequireAuthorization("BusinessResultAccess");
         ListBusinessResultsEndpoint.Map(businessResults);
         GetBusinessResultEndpoint.Map(businessResults);
         CreateBusinessResultEndpoint.Map(businessResults);
         UpdateBusinessResultEndpoint.Map(businessResults);
         DeleteBusinessResultEndpoint.Map(businessResults);
+        ImportParkingVisitsEndpoint.Map(businessResults);
 
-        RouteGroupBuilder businessReports = app.MapGroup("/dev/business-reports").RequireAuthorization("BusinessResultAccess");
+        RouteGroupBuilder businessReports = app.MapGroup("/gdci/parking/parkingLot/parkingBusinessReport").RequireAuthorization("BusinessResultAccess");
         ListBusinessReportEndpoint.Map(businessReports);
         GetBusinessReportSummaryEndpoint.Map(businessReports);
         ExportBusinessReportEndpoint.Map(businessReports);
 
-        RouteGroupBuilder parkingVisits = app.MapGroup("/dev/parking-visits").RequireAuthorization("BusinessResultAccess");
-        ImportParkingVisitsEndpoint.Map(parkingVisits);
+        RouteGroupBuilder parkingVisits = app.MapGroup("/gdci/parking/parkingLot/parkingVisit").RequireAuthorization("BusinessResultAccess");
         ListParkingVisitsEndpoint.Map(parkingVisits);
         GetParkingVisitSummaryEndpoint.Map(parkingVisits);
         ExportParkingVisitReportEndpoint.Map(parkingVisits);

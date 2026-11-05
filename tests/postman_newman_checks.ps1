@@ -28,7 +28,7 @@ try {
     $ready = $false
     for ($attempt = 0; $attempt -lt 20; $attempt++) {
         if ($server.HasExited) { throw 'API process exited during startup.' }
-        try { $null = Invoke-RestMethod -Uri "$baseUrl/dev/business-results"; $ready = $true; break } catch { Start-Sleep -Milliseconds 500 }
+        try { $null = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation"; $ready = $true; break } catch { Start-Sleep -Milliseconds 500 }
     }
     if (-not $ready) { throw 'API did not start.' }
 
@@ -40,26 +40,26 @@ try {
     $headers = @{ Authorization = "Bearer $token" }
     $deletedId = & $pythonPath (Join-Path $root 'tests/read_postman_deleted_record.py') $databasePath
     if ($LASTEXITCODE -ne 0) { throw 'The deleted record was not retained in SQLite.' }
-    if ((Invoke-RestMethod -Uri "$baseUrl/dev/business-results/$deletedId" -Headers $headers).code -ne 7) { throw 'Deleted record remains visible.' }
-    if ((Invoke-RestMethod -Method Delete -Uri "$baseUrl/dev/business-results/$deletedId" -Headers $headers).code -ne 7) { throw 'Repeated delete did not fail.' }
+    if ((Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation/$deletedId" -Headers $headers).code -ne 7) { throw 'Deleted record remains visible.' }
+    if ((Invoke-RestMethod -Method Delete -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation/$deletedId" -Headers $headers).code -ne 7) { throw 'Repeated delete did not fail.' }
     $deletedUpdate = @{ revenue = 10; completedVehicleCount = 1; note = 'deleted' } | ConvertTo-Json
-    if ((Invoke-RestMethod -Method Put -Uri "$baseUrl/dev/business-results/$deletedId" -Headers $headers -ContentType 'application/json' -Body $deletedUpdate).code -ne 7) { throw 'Deleted record was updated.' }
+    if ((Invoke-RestMethod -Method Put -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation/$deletedId" -Headers $headers -ContentType 'application/json' -Body $deletedUpdate).code -ne 7) { throw 'Deleted record was updated.' }
     $replacementBody = @{ parkingLotId = $lotId; reportingPeriod = '2026-10'; revenue = 900; completedVehicleCount = 3; note = 'replacement' } | ConvertTo-Json
-    if ((Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/business-results" -Headers $headers -ContentType 'application/json' -Body $replacementBody).code -ne 0) { throw 'Could not recreate a result after soft deletion.' }
+    if ((Invoke-RestMethod -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation" -Headers $headers -ContentType 'application/json' -Body $replacementBody).code -ne 0) { throw 'Could not recreate a result after soft deletion.' }
     $originalBody = @{ parkingLotId = $lotId; reportingPeriod = '2026-11'; revenue = 1200; completedVehicleCount = 4; note = 'baseline' } | ConvertTo-Json
-    $created = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/business-results" -Headers $headers -ContentType 'application/json' -Body $originalBody
+    $created = Invoke-RestMethod -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation" -Headers $headers -ContentType 'application/json' -Body $originalBody
     if ($created.code -ne 0) { throw 'Failed to create isolated record for body validation.' }
     $id = $created.data.id
     $documentedBody = @{ totalCheckIn = 4; totalCheckOut = 4; averageOccupancyRate = 50; peakOccupancyRate = 60; totalRevenue = 1200; cashRevenue = 500; electronicRevenue = 700; operatingExpenses = 0; notes = 'from specification' } | ConvertTo-Json
-    $update = Invoke-RestMethod -Method Put -Uri "$baseUrl/dev/business-results/$id" -Headers $headers -ContentType 'application/json' -Body $documentedBody
-    $unchanged = Invoke-RestMethod -Uri "$baseUrl/dev/business-results/$id" -Headers $headers
+    $update = Invoke-RestMethod -Method Put -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation/$id" -Headers $headers -ContentType 'application/json' -Body $documentedBody
+    $unchanged = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation/$id" -Headers $headers
     if ($update.code -ne 7 -or $unchanged.data.revenue -ne 1200 -or $unchanged.data.completedVehicleCount -ne 4) {
         throw "An unsupported documented body was not safely rejected: code=$($update.code), revenue=$($unchanged.data.revenue), count=$($unchanged.data.completedVehicleCount)."
     }
     $missingBody = @{ revenue = 0; note = 'missing vehicle count' } | ConvertTo-Json
-    if ((Invoke-RestMethod -Method Put -Uri "$baseUrl/dev/business-results/$id" -Headers $headers -ContentType 'application/json' -Body $missingBody).code -ne 7) { throw 'Missing required field was accepted.' }
+    if ((Invoke-RestMethod -Method Put -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation/$id" -Headers $headers -ContentType 'application/json' -Body $missingBody).code -ne 7) { throw 'Missing required field was accepted.' }
     $zeroBody = @{ revenue = 0; completedVehicleCount = 0; note = 'explicit zero values' } | ConvertTo-Json
-    if ((Invoke-RestMethod -Method Put -Uri "$baseUrl/dev/business-results/$id" -Headers $headers -ContentType 'application/json' -Body $zeroBody).code -ne 0) { throw 'Valid explicit zero values were rejected.' }
+    if ((Invoke-RestMethod -Method Put -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation/$id" -Headers $headers -ContentType 'application/json' -Body $zeroBody).code -ne 0) { throw 'Valid explicit zero values were rejected.' }
     Write-Output 'Unsupported and incomplete bodies rejected; explicit zeros accepted; soft-deleted data retained and hidden.'
 }
 finally {

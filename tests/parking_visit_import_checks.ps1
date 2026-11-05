@@ -33,7 +33,7 @@ try {
     $ready = $false
     for ($attempt = 0; $attempt -lt 20; $attempt++) {
         if ($server.HasExited) { throw 'API exited during startup.' }
-        try { $null = Invoke-RestMethod -Uri "$baseUrl/dev/business-results"; $ready = $true; break } catch { Start-Sleep -Milliseconds 500 }
+        try { $null = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation"; $ready = $true; break } catch { Start-Sleep -Milliseconds 500 }
     }
     if (-not $ready) { throw 'API did not start.' }
     $loginBody = @{ username = 'visit-test-admin'; password = 'visit-test-password-only' } | ConvertTo-Json
@@ -41,7 +41,7 @@ try {
     $token = $login.data.accessToken
     function Import-File($name, $bearer) {
         $filePath = Join-Path $testDir $name
-        $raw = & curl.exe -sS -H "Authorization: Bearer $bearer" -F "file=@$filePath" "$baseUrl/dev/parking-visits/import"
+        $raw = & curl.exe -sS -H "Authorization: Bearer $bearer" -F "file=@$filePath" "$baseUrl/gdci/parking/parkingLot/businessOperation/import"
         if ($LASTEXITCODE -ne 0) { throw 'Import request failed.' }
         try { return ($raw | ConvertFrom-Json) } catch { throw 'Import returned a non-JSON response.' }
     }
@@ -49,58 +49,58 @@ try {
     if ($first.code -ne 0 -or $first.data.totalRows -ne 5 -or $first.data.successRows -ne 3 -or $first.data.errorRows -ne 2) { throw "Invalid initial import: $($first | ConvertTo-Json -Depth 5)" }
     if (@($first.data.importedIds).Count -ne 3) { throw 'Import did not return the saved IDs.' }
     $headers = @{ Authorization = "Bearer $token" }
-    $parked = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits?status=PARKED" -Headers $headers
-    $completed = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits?status=COMPLETED&pageSize=1" -Headers $headers
+    $parked = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?status=PARKED" -Headers $headers
+    $completed = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?status=COMPLETED&pageSize=1" -Headers $headers
     if ($parked.data.totalCount -ne 1 -or $parked.data.items[0].licensePlate -ne '59A-1' -or $completed.data.totalCount -ne 2 -or @($completed.data.items).Count -ne 1) { throw 'Visit list status or paging failed.' }
-    $invalidList = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits?status=unknown" -Headers $headers
+    $invalidList = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?status=unknown" -Headers $headers
     if ($invalidList.code -ne 7) { throw 'Invalid visit status was accepted.' }
-    $validComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($first.data.importedIds[1])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
+    $validComparison = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/$($first.data.importedIds[1])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
     if (-not $validComparison.data.canCompare -or $validComparison.data.expectedAmount -ne 5000 -or $validComparison.data.difference -ne 0) { throw 'Tariff comparison was incorrect.' }
-    $openComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($first.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
+    $openComparison = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/$($first.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
     if ($openComparison.data.canCompare -or $null -ne $openComparison.data.expectedAmount) { throw 'Open visit should not be compared.' }
-    $holidayComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($first.data.importedIds[1])/tariff-comparison?dayType=HOLIDAY" -Headers $headers
+    $holidayComparison = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/$($first.data.importedIds[1])/tariff-comparison?dayType=HOLIDAY" -Headers $headers
     if ($holidayComparison.data.canCompare) { throw 'Missing holiday tariff should not be guessed.' }
-    $initialSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11" -Headers $headers
+    $initialSummary = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?reportingPeriod=2026-11" -Headers $headers
     if ($initialSummary.data.completedVehicleCount -ne 1 -or $initialSummary.data.collectedRevenue -ne 5000 -or $initialSummary.data.missingAmountCount -ne 0) { throw 'Initial visit summary is incorrect.' }
     foreach ($name in @('update.xlsx', 'blank_update.xlsx')) {
         $result = Import-File $name $token
         if ($result.code -ne 0 -or $result.data.successRows -ne 1) { throw "Update failed: $name" }
         if ($result.data.importedIds[0] -ne $first.data.importedIds[0]) { throw 'Repeated import changed the visit ID.' }
     }
-    $overnight = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($first.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
+    $overnight = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/$($first.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
     if ($overnight.data.canCompare -or $null -ne $overnight.data.expectedAmount) { throw 'Overnight charge should not be guessed.' }
     $bad = Import-File 'invalid.xlsx' $token
     if ($bad.code -ne 7) { throw 'Invalid file was not rejected.' }
-    $updatedSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11" -Headers $headers
+    $updatedSummary = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?reportingPeriod=2026-11" -Headers $headers
     if ($updatedSummary.data.completedVehicleCount -ne 2 -or $updatedSummary.data.collectedRevenue -ne 35000 -or $updatedSummary.data.previousRevenue -ne 10000 -or $updatedSummary.data.growthRate -ne 250) { throw 'Updated visit summary or growth is incorrect.' }
     if ($updatedSummary.data.cashRevenue -ne 5000 -or $updatedSummary.data.electronicRevenue -ne 30000 -or $updatedSummary.data.unclassifiedRevenue -ne 0) { throw 'Payment method totals are incorrect.' }
     if (@($updatedSummary.data.topRevenueParkingLots).Count -ne 2 -or $updatedSummary.data.topRevenueParkingLots[0].parkingLot.code -ne 'DEMO-01' -or $updatedSummary.data.topRevenueParkingLots[0].percentage -ne 85.71) { throw 'Imported visit ranking incorrect.' }
     if (@($updatedSummary.data.revenueByDistrict).Count -ne 2 -or $updatedSummary.data.revenueByDistrict[0].revenue -ne 30000 -or $updatedSummary.data.revenueByDistrict[0].parkingLotsCount -ne 1) { throw 'District revenue grouping failed.' }
-    $districtSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11&district=Qu%E1%BA%ADn%201" -Headers $headers
+    $districtSummary = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?reportingPeriod=2026-11&district=Qu%E1%BA%ADn%201" -Headers $headers
     if ($districtSummary.data.completedVehicleCount -ne 1 -or $districtSummary.data.collectedRevenue -ne 30000) { throw 'Visit district filter failed.' }
-    $daySummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?fromDate=2026-11-05&toDate=2026-11-05" -Headers $headers
+    $daySummary = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?fromDate=2026-11-05&toDate=2026-11-05" -Headers $headers
     if ($daySummary.data.completedVehicleCount -ne 2 -or $daySummary.data.collectedRevenue -ne 35000) { throw 'Date range should include completed visits on the selected date.' }
-    $invalidRange = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?fromDate=2026-11-06&toDate=2026-11-05" -Headers $headers
+    $invalidRange = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?fromDate=2026-11-06&toDate=2026-11-05" -Headers $headers
     if ($invalidRange.code -ne 7) { throw 'Invalid date range was accepted.' }
-    $previousMonth = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-10" -Headers $headers
+    $previousMonth = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?reportingPeriod=2026-10" -Headers $headers
     if ($previousMonth.data.completedVehicleCount -ne 1 -or $previousMonth.data.collectedRevenue -ne 10000 -or $null -ne $previousMonth.data.growthRate) { throw 'Wrong reporting month or unknown growth.' }
     $xlsxPath = Join-Path $testDir 'export.xlsx'
     $pdfPath = Join-Path $testDir 'export.pdf'
     $exportBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; reportTitle = '=safe test' } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json' -Body $exportBody -OutFile $xlsxPath
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/export" -Headers $headers -ContentType 'application/json' -Body $exportBody -OutFile $xlsxPath
     $pdfBody = @{ fileFormat = 'PDF'; reportingPeriod = '2026-11'; reportTitle = 'Báo cáo lượt xe' } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json' -Body $pdfBody -OutFile $pdfPath
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/export" -Headers $headers -ContentType 'application/json' -Body $pdfBody -OutFile $pdfPath
     & $pythonPath -X utf8 (Join-Path $root 'tests/check_visit_export.py') $xlsxPath $pdfPath
     if ($LASTEXITCODE -ne 0) { throw 'Visit export content invalid.' }
     $rangeBody = @{ fileFormat = 'EXCEL'; fromDate = '2026-11-05'; toDate = '2026-11-05'; reportTitle = '=safe test' } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json' -Body $rangeBody -OutFile $xlsxPath
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/export" -Headers $headers -ContentType 'application/json' -Body $rangeBody -OutFile $xlsxPath
     & $pythonPath -X utf8 (Join-Path $root 'tests/check_visit_export.py') $xlsxPath $pdfPath
     if ($LASTEXITCODE -ne 0) { throw 'Date range export content invalid.' }
     $invalidRangeBody = @{ fileFormat = 'EXCEL'; fromDate = '2026-11-06'; toDate = '2026-11-05' } | ConvertTo-Json
-    $invalidRangeExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json' -Body $invalidRangeBody
+    $invalidRangeExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/export" -Headers $headers -ContentType 'application/json' -Body $invalidRangeBody
     if ($invalidRangeExport.code -ne 7) { throw 'Invalid date range export was accepted.' }
     $districtBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; district = [uri]::UnescapeDataString('Qu%E1%BA%ADn%201') } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($districtBody)) -OutFile $xlsxPath
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/export" -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($districtBody)) -OutFile $xlsxPath
     & $pythonPath (Join-Path $root 'tests/check_visit_district_export.py') $xlsxPath
     if ($LASTEXITCODE -ne 0) { throw 'Visit district export incorrect.' }
     $account = @{ username = 'visit-operator'; password = 'visit-password-only'; role = 'ROLE_PARKING_OPERATOR'; parkingLotId = $lotId } | ConvertTo-Json
@@ -111,31 +111,31 @@ try {
     $scoped = Import-File 'scoped.xlsx' $operator.data.accessToken
     if ($scoped.code -ne 0 -or $scoped.data.successRows -ne 2 -or $scoped.data.errorRows -ne 1) { throw 'Import scope failed.' }
     $operatorHeaders = @{ Authorization = "Bearer $($operator.data.accessToken)" }
-    $operatorList = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits" -Headers $operatorHeaders
+    $operatorList = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit" -Headers $operatorHeaders
     if ($operatorList.data.totalCount -ne 3 -or @($operatorList.data.items | Where-Object { $_.parkingLotId -ne $lotId }).Count -ne 0) { throw 'Visit list access scope failed.' }
-    $forbiddenComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($first.data.importedIds[1])/tariff-comparison?dayType=WEEKDAY" -Headers $operatorHeaders
+    $forbiddenComparison = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/$($first.data.importedIds[1])/tariff-comparison?dayType=WEEKDAY" -Headers $operatorHeaders
     if ($forbiddenComparison.data.canCompare -or $null -ne $forbiddenComparison.data.collectedAmount) { throw 'Tariff comparison exposed another parking lot.' }
-    $operatorSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11" -Headers $operatorHeaders
+    $operatorSummary = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?reportingPeriod=2026-11" -Headers $operatorHeaders
     if ($operatorSummary.data.completedVehicleCount -ne 2 -or $operatorSummary.data.collectedRevenue -ne 30000 -or $operatorSummary.data.missingAmountCount -ne 1 -or $null -ne $operatorSummary.data.averageDailyRevenue) { throw 'Visit summary access scope or missing amount count failed.' }
     if ($null -ne $operatorSummary.data.topRevenueParkingLots) { throw 'Incomplete revenue should not produce a ranking.' }
     if ($null -ne $operatorSummary.data.revenueByDistrict) { throw 'Incomplete revenue should not produce district grouping.' }
-    $incompleteExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $headers -ContentType 'application/json' -Body $exportBody
+    $incompleteExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/export" -Headers $headers -ContentType 'application/json' -Body $exportBody
     if ($incompleteExport.code -ne 7) { throw 'Export should reject completed visits without amounts.' }
-    $operatorExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/parking-visits/export" -Headers $operatorHeaders -ContentType 'application/json' -Body $exportBody
+    $operatorExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/export" -Headers $operatorHeaders -ContentType 'application/json' -Body $exportBody
     if ($operatorExport.code -ne 7) { throw 'Operator should not be permitted to export.' }
     & $pythonPath -X utf8 (Join-Path $root 'tests/parking_visit_import_fixture.py') check $databasePath
     if ($LASTEXITCODE -ne 0) { throw 'SQLite visit data incorrect.' }
     $unknownDistrict = Import-File 'unknown_district.xlsx' $token
     if ($unknownDistrict.data.successRows -ne 1) { throw 'Unknown district fixture import failed.' }
     $unknownLot = & $pythonPath -c "import sqlite3,sys; print(sqlite3.connect(sys.argv[1]).execute('select Id from DL_KTHT_baiDoXe where ma = ?',('DEMO-03',)).fetchone()[0])" $databasePath
-    $unknownSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11&parkingLotId=$unknownLot" -Headers $headers
+    $unknownSummary = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?reportingPeriod=2026-11&parkingLotId=$unknownLot" -Headers $headers
     if (@($unknownSummary.data.revenueByDistrict).Count -ne 1 -or $null -ne $unknownSummary.data.revenueByDistrict[0].district -or $unknownSummary.data.revenueByDistrict[0].revenue -ne 2000) { throw 'Unknown district should remain unclassified.' }
     $fractional = Import-File 'fractional.xlsx' $token
-    $fractionalComparison = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/$($fractional.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
+    $fractionalComparison = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/$($fractional.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
     if ($fractionalComparison.data.canCompare -or $null -ne $fractionalComparison.data.expectedAmount) { throw 'Partial-hour charge should not be guessed.' }
     $unclassified = Import-File 'unclassified.xlsx' $token
     if ($unclassified.code -ne 0 -or $unclassified.data.successRows -ne 1) { throw 'Unclassified payment import failed.' }
-    $paymentSummary = Invoke-RestMethod -Uri "$baseUrl/dev/parking-visits/summary?reportingPeriod=2026-11" -Headers $headers
+    $paymentSummary = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?reportingPeriod=2026-11" -Headers $headers
     if ($paymentSummary.data.unclassifiedRevenue -ne 9000 -or $paymentSummary.data.unclassifiedPaymentCount -ne 1) { throw 'Unknown payment method should be reported separately.' }
     $csvResult = Import-File 'visit.csv' $token
     if ($csvResult.code -ne 0 -or $csvResult.data.successRows -ne 1) { throw 'CSV import failed.' }

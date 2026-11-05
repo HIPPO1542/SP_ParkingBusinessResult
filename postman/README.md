@@ -21,7 +21,7 @@
 
 Nếu dùng **Collection Runner**, bỏ chọn request tạo tài khoản tùy chọn khi chưa cấu hình tài khoản. Nếu muốn giữ dữ liệu thử, bỏ chọn cả request xóa mềm và request kiểm tra bản ghi đã xóa.
 
-Các request **Đối chiếu route/body tài liệu** cho thấy route ví dụ chưa triển khai và API thử nghiệm từ chối body chưa hỗ trợ thay vì âm thầm ghi sai dữ liệu. Các kiểm tra đó **không có nghĩa API đã khớp ApiSpec**. Chi tiết khác biệt được ghi trong `docs/API_CONTRACT_REVIEW.md`.
+Request **Kiểm tra route theo tài liệu** xác nhận route có thể gọi; các request đối chiếu body xác nhận API từ chối body chưa hỗ trợ thay vì âm thầm ghi sai dữ liệu. Các kiểm tra đó **không có nghĩa API đã khớp hoàn toàn ApiSpec**. Chi tiết khác biệt được ghi trong `docs/API_CONTRACT_REVIEW.md`.
 
 API và tài khoản trong collection hiện chỉ dành cho môi trường Development. Các lỗi nghiệp vụ vẫn trả HTTP 200; kiểm tra trường `code` (`0`: thành công, `7`: lỗi). Token hết hạn sau 30 phút; đăng nhập lại khi cần.
 

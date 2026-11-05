@@ -65,11 +65,12 @@
       "name": "2. Kết quả kinh doanh",
       "item": [
         {
-          "name": "Đối chiếu route tài liệu (chưa triển khai)",
+          "name": "Kiểm tra route theo tài liệu",
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.test('Route ví dụ trong tài liệu chưa được triển khai', function () { pm.response.to.have.status(404); });"
+            "const response = pm.response.json();",
+            "pm.test('Route tài liệu trả danh sách', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); pm.expect(response.data).to.be.an('array'); });"
           ] } }],
-          "request": { "method": "GET", "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation", "description": "Route tài liệu dùng module ví dụ parking. HTTP 404 cho thấy route này chưa có; đây không phải là kiểm thử đạt hợp đồng API." }
+          "request": { "method": "GET", "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation", "description": "Route theo ví dụ module parking trong tài liệu. Body, response và quyền vẫn cần đối chiếu riêng." }
         },
         {
           "name": "Danh sách kết quả",
@@ -77,7 +78,7 @@
             "const response = pm.response.json();",
             "pm.test('HTTP 200 và lấy danh sách thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); pm.expect(response.data).to.be.an('array'); });"
           ] } }],
-          "request": { "method": "GET", "url": "{{baseUrl}}/dev/business-results" }
+          "request": { "method": "GET", "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation" }
         },
         {
           "name": "Đối chiếu body thêm theo tài liệu (chưa hỗ trợ)",
@@ -89,7 +90,7 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"parkingLotId\": \"{{parkingLotId}}\",\n  \"reportDate\": \"2026-10-01\",\n  \"periodType\": \"MONTHLY\",\n  \"totalCheckIn\": 125,\n  \"totalCheckOut\": 125,\n  \"averageOccupancyRate\": 50,\n  \"peakOccupancyRate\": 60,\n  \"totalRevenue\": 2500000,\n  \"cashRevenue\": 1000000,\n  \"electronicRevenue\": 1500000,\n  \"operatingExpenses\": 0,\n  \"notes\": \"Body theo ApiSpec\"\n}" },
-            "url": "{{baseUrl}}/dev/business-results",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation",
             "description": "Kiểm tra sự khác biệt với ApiSpec. code 7 ở đây xác nhận API hiện tại CHƯA hỗ trợ body tài liệu, không có nghĩa là đã khớp tài liệu."
           }
         },
@@ -105,7 +106,7 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"parkingLotId\": \"{{parkingLotId}}\",\n  \"reportingPeriod\": \"{{reportingPeriod}}\",\n  \"revenue\": 2500000,\n  \"completedVehicleCount\": 125,\n  \"note\": \"Dữ liệu thử Postman\"\n}" },
-            "url": "{{baseUrl}}/dev/business-results",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation",
             "description": "Cần bãi xe có thật trong database. Một bãi xe chỉ có một bản ghi cho cùng kỳ báo cáo."
           }
         },
@@ -115,7 +116,7 @@
             "const response = pm.response.json();",
             "pm.test('HTTP 200 và xem chi tiết thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
           ] } }],
-          "request": { "method": "GET", "url": "{{baseUrl}}/dev/business-results/{{resultId}}", "description": "Chạy Thêm kết quả trước hoặc tự điền resultId." }
+          "request": { "method": "GET", "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{resultId}}", "description": "Chạy Thêm kết quả trước hoặc tự điền resultId." }
         },
         {
           "name": "Đối chiếu body sửa theo tài liệu (chưa hỗ trợ)",
@@ -127,7 +128,7 @@
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"totalCheckIn\": 125,\n  \"totalCheckOut\": 125,\n  \"averageOccupancyRate\": 50,\n  \"peakOccupancyRate\": 60,\n  \"totalRevenue\": 2500000,\n  \"cashRevenue\": 1000000,\n  \"electronicRevenue\": 1500000,\n  \"operatingExpenses\": 0,\n  \"notes\": \"Body theo ApiSpec\"\n}" },
-            "url": "{{baseUrl}}/dev/business-results/{{resultId}}",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{resultId}}",
             "description": "Body theo ApiSpec chưa được API thử nghiệm hỗ trợ; phải từ chối và giữ nguyên bản ghi."
           }
         },
@@ -141,7 +142,7 @@
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"revenue\": 3000000,\n  \"completedVehicleCount\": 150,\n  \"note\": \"Đã cập nhật bằng Postman\"\n}" },
-            "url": "{{baseUrl}}/dev/business-results/{{resultId}}"
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{resultId}}"
           }
         },
         {
@@ -151,7 +152,7 @@
             "pm.test('HTTP 200 và xóa thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
             "if (response.code === 0 && response.data && response.data.id) { pm.collectionVariables.set('deletedResultId', response.data.id); pm.collectionVariables.unset('resultId'); }"
           ] } }],
-          "request": { "method": "DELETE", "url": "{{baseUrl}}/dev/business-results/{{resultId}}", "description": "Đánh dấu bản ghi đã xóa và ẩn khỏi API; dữ liệu vẫn còn trong SQLite. Chỉ chạy khi muốn xóa mềm bản ghi đó." }
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{resultId}}", "description": "Đánh dấu bản ghi đã xóa và ẩn khỏi API; dữ liệu vẫn còn trong SQLite. Chỉ chạy khi muốn xóa mềm bản ghi đó." }
         },
         {
           "name": "Kiểm tra bản ghi đã xóa mềm",
@@ -159,7 +160,7 @@
             "const response = pm.response.json();",
             "pm.test('Bản ghi đã xóa mềm không còn hiển thị qua API', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(7); });"
           ] } }],
-          "request": { "method": "GET", "url": "{{baseUrl}}/dev/business-results/{{deletedResultId}}", "description": "Chạy sau request xóa mềm; ID được lưu tự động vào deletedResultId." }
+          "request": { "method": "GET", "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{deletedResultId}}", "description": "Chạy sau request xóa mềm; ID được lưu tự động vào deletedResultId." }
         }
       ]
     }

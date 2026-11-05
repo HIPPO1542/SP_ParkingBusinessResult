@@ -3,8 +3,8 @@
 Sau khi chạy API Development và đăng nhập như trong README, gửi token Bearer tới:
 
 ```http
-GET /dev/business-reports?reportingPeriod=2026-11
-GET /dev/business-reports/summary?reportingPeriod=2026-11
+GET /gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11
+GET /gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11
 ```
 
 Thêm `&parkingLotId=<UUID>` để chỉ xem một bãi. `reportingPeriod` bắt buộc và được so khớp chính xác với `kyBaoCao` trong database. Danh sách hỗ trợ `keyword` để tìm trong tên hoặc địa chỉ bãi, `pageNumber` (từ 1, mặc định 1) và `pageSize` (1–100, mặc định 10), ví dụ `&pageNumber=2&pageSize=10`. Bộ lọc chưa hỗ trợ bị từ chối. Kết quả danh sách chỉ gồm các bản ghi chưa xóa mà tài khoản được phép xem. Tổng hợp tính `totalRevenue`, `totalVehicleCount` (lượt đã hoàn tất), `averageRevenuePerVehicle` và top 5 bãi có doanh thu cao nhất; kỳ không có dữ liệu cho kết quả bằng 0. Chỉ tổng hợp cùng một chuỗi kỳ để tránh cộng trùng các kỳ tháng, quý và năm chồng nhau.
@@ -13,7 +13,7 @@ Với dữ liệu giả lập ban đầu kỳ `2026-11`, tổng là 2.775.000 đ
 
 ## Xuất Excel và PDF
 
-Gửi `POST /dev/business-reports/export` với Bearer token của `ROLE_ADMIN` hoặc `ROLE_DISTRICT_ADMIN` và body:
+Gửi `POST /gdci/parking/parkingLot/parkingBusinessReport/export` với Bearer token của `ROLE_ADMIN` hoặc `ROLE_DISTRICT_ADMIN` và body:
 
 ```json
 {

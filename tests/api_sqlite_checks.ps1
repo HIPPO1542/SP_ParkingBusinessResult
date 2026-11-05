@@ -35,7 +35,7 @@ try {
     $listener.Start()
     $port = $listener.LocalEndpoint.Port
     $listener.Stop()
-    $baseUrl = "http://127.0.0.1:$port/dev/business-results"
+    $baseUrl = "http://127.0.0.1:$port/gdci/parking/parkingLot/businessOperation"
     $env:ASPNETCORE_ENVIRONMENT = 'Development'
     $env:ParkingBusinessResult__DatabasePath = $databasePath
     $env:Authentication__Issuer = 'test-issuer'

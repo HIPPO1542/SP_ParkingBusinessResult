@@ -21,11 +21,11 @@ class PostmanCollectionTests(unittest.TestCase):
         routes = {(item['request']['method'], item['request']['url'].split('?')[0]) for item in requests}
         self.assertEqual(routes, {
             ('POST', '{{baseUrl}}/dev/auth/login'),
-            ('POST', '{{baseUrl}}/dev/parking-visits/import'),
-            ('GET', '{{baseUrl}}/dev/parking-visits'),
-            ('GET', '{{baseUrl}}/dev/parking-visits/summary'),
-            ('GET', '{{baseUrl}}/dev/parking-visits/{{visitId}}/tariff-comparison'),
-            ('POST', '{{baseUrl}}/dev/parking-visits/export'),
+            ('POST', '{{baseUrl}}/gdci/parking/parkingLot/businessOperation/import'),
+            ('GET', '{{baseUrl}}/gdci/parking/parkingLot/parkingVisit'),
+            ('GET', '{{baseUrl}}/gdci/parking/parkingLot/parkingVisit/summary'),
+            ('GET', '{{baseUrl}}/gdci/parking/parkingLot/parkingVisit/{{visitId}}/tariff-comparison'),
+            ('POST', '{{baseUrl}}/gdci/parking/parkingLot/parkingVisit/export'),
         })
         for item in requests:
             for event in item.get('event', []):
@@ -42,12 +42,11 @@ class PostmanCollectionTests(unittest.TestCase):
             ("POST", "{{baseUrl}}/dev/auth/login"),
             ("POST", "{{baseUrl}}/dev/auth/users"),
             ("GET", "{{baseUrl}}/gdci/parking/parkingLot/businessOperation"),
-            ("GET", "{{baseUrl}}/dev/business-results"),
-            ("POST", "{{baseUrl}}/dev/business-results"),
-            ("GET", "{{baseUrl}}/dev/business-results/{{resultId}}"),
-            ("PUT", "{{baseUrl}}/dev/business-results/{{resultId}}"),
-            ("DELETE", "{{baseUrl}}/dev/business-results/{{resultId}}"),
-            ("GET", "{{baseUrl}}/dev/business-results/{{deletedResultId}}"),
+            ("POST", "{{baseUrl}}/gdci/parking/parkingLot/businessOperation"),
+            ("GET", "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{resultId}}"),
+            ("PUT", "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{resultId}}"),
+            ("DELETE", "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{resultId}}"),
+            ("GET", "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{deletedResultId}}"),
         })
         for item in requests:
             for event in item.get("event", []):

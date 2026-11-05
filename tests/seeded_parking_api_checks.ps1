@@ -30,74 +30,80 @@ try {
     $ready = $false
     for ($attempt = 0; $attempt -lt 20; $attempt++) {
         if ($server.HasExited) { throw 'API process exited during startup.' }
-        try { $null = Invoke-RestMethod -Uri "$baseUrl/dev/business-results"; $ready = $true; break } catch { Start-Sleep -Milliseconds 500 }
+        try { $null = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation"; $ready = $true; break } catch { Start-Sleep -Milliseconds 500 }
     }
     if (-not $ready) { throw 'API did not start.' }
     $body = @{ username = 'seed-test-admin'; password = 'seed-test-password-only' } | ConvertTo-Json
     $login = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $body
     if ($login.code -ne 0 -or -not $login.data.accessToken) { throw 'Login failed.' }
     $headers = @{ Authorization = "Bearer $($login.data.accessToken)" }
-    $response = Invoke-RestMethod -Uri "$baseUrl/dev/business-results" -Headers $headers
+    try {
+        $null = Invoke-WebRequest -Uri "$baseUrl/dev/business-results" -Headers $headers -UseBasicParsing
+        throw 'The old business-results route should not be mapped.'
+    } catch [System.Net.WebException] {
+        if ([int]$_.Exception.Response.StatusCode -ne 404) { throw }
+    }
+    $response = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation" -Headers $headers
     if ($response.code -ne 0 -or @($response.data).Count -ne 5) { throw 'Expected five business results.' }
     foreach ($result in $response.data) {
         if ($result.completedVehicleCount -ne 30 -or $result.revenue -ne 555000 -or $result.reportingPeriod -ne '2026-11') {
             throw 'Unexpected business totals in API response.'
         }
     }
-    $report = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11" -Headers $headers
+    $report = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11" -Headers $headers
     if ($report.code -ne 0 -or @($report.data).Count -ne 5) { throw 'Expected five report records.' }
-    $nameSearch = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&keyword=Bai%20xe%20gia%20lap%2001" -Headers $headers
+    $nameSearch = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11&keyword=Bai%20xe%20gia%20lap%2001" -Headers $headers
     if ($nameSearch.code -ne 0 -or @($nameSearch.data).Count -ne 1) { throw 'Search by parking lot name failed.' }
-    $addressSearch = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&keyword=dia%20chi%20gia%20lap" -Headers $headers
+    $addressSearch = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11&keyword=dia%20chi%20gia%20lap" -Headers $headers
     if ($addressSearch.code -ne 0 -or @($addressSearch.data).Count -ne 5) { throw 'Search by parking lot address failed.' }
-    $emptySearch = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&keyword=not-found" -Headers $headers
+    $emptySearch = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11&keyword=not-found" -Headers $headers
     if ($emptySearch.code -ne 0 -or @($emptySearch.data).Count -ne 0) { throw 'Search should return no matching results.' }
-    $page1 = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&pageNumber=1&pageSize=2" -Headers $headers
-    $page2 = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&pageNumber=2&pageSize=2" -Headers $headers
-    $page3 = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&pageNumber=3&pageSize=2" -Headers $headers
+    $page1 = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11&pageNumber=1&pageSize=2" -Headers $headers
+    $page2 = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11&pageNumber=2&pageSize=2" -Headers $headers
+    $page3 = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11&pageNumber=3&pageSize=2" -Headers $headers
     if (@($page1.data).Count -ne 2 -or @($page2.data).Count -ne 2 -or @($page3.data).Count -ne 1 -or $page1.data[0].id -eq $page2.data[0].id) { throw 'Report pagination failed.' }
     foreach ($query in @('pageNumber=0', 'pageSize=101', 'pageSize=invalid', 'fromDate=2026-11-01')) {
-        $invalid = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&$query" -Headers $headers
+        $invalid = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11&$query" -Headers $headers
         if ($invalid.code -ne 7) { throw "Invalid or unsupported query was not rejected: $query" }
     }
-    $unsupportedSummary = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11&fromDate=2026-11-01" -Headers $headers
+    $unsupportedSummary = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11&fromDate=2026-11-01" -Headers $headers
     if ($unsupportedSummary.code -ne 7) { throw 'Unsupported summary filter was not rejected.' }
-    $districtReport = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&district=dia%20chi%20gia%20lap" -Headers $headers
+    $districtReport = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11&district=dia%20chi%20gia%20lap" -Headers $headers
     if (@($districtReport.data).Count -ne 5) { throw 'District filter failed.' }
-    $districtEmpty = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11&district=not-found" -Headers $headers
+    $districtEmpty = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11&district=not-found" -Headers $headers
     if ($districtEmpty.data.totalRevenue -ne 0) { throw 'District filter returned unrelated results.' }
-    $summary = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11" -Headers $headers
+    $summary = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11" -Headers $headers
     if ($summary.data.totalRevenue -ne 2775000 -or $summary.data.totalVehicleCount -ne 150 -or $summary.data.averageRevenuePerVehicle -ne 18500) { throw 'Unexpected report summary.' }
     if ($summary.data.reportingPeriod -ne '2026-11' -or @($summary.data.topRevenueParkingLots).Count -ne 5) { throw 'Expected five top parking lots.' }
     foreach ($topLot in $summary.data.topRevenueParkingLots) {
         if ($topLot.revenue -ne 555000 -or $topLot.vehicleCount -ne 30 -or $topLot.percentage -ne 20 -or -not $topLot.parkingLot.name -or -not $topLot.parkingLot.code) { throw 'Unexpected top parking lot details.' }
     }
-    $missingPeriod = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary" -Headers $headers
+    $missingPeriod = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary" -Headers $headers
     if ($missingPeriod.code -ne 7) { throw 'A report period must be required.' }
-    $emptyPeriod = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=other" -Headers $headers
+    $emptyPeriod = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=other" -Headers $headers
     if ($emptyPeriod.data.totalRevenue -ne 0 -or $emptyPeriod.data.totalVehicleCount -ne 0) { throw 'Empty periods should have zero totals.' }
     $first = $report.data[0]
     $second = $report.data[1]
     $exportBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; reportTitle = '=test formula is text' } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $headers -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
     & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 5 2775000
     if ($LASTEXITCODE -ne 0) { throw 'Excel report content verification failed.' }
     $pdfBody = @{ fileFormat = 'PDF'; reportingPeriod = '2026-11'; reportTitle = 'Báo cáo kết quả kinh doanh' } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $pdfBody -OutFile $pdfPath
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $headers -ContentType 'application/json' -Body $pdfBody -OutFile $pdfPath
     & $pythonPath (Join-Path $root 'tests/check_business_report_pdf.py') $pdfPath 5 '2,775,000.00'
     if ($LASTEXITCODE -ne 0) { throw 'PDF report content verification failed.' }
     if ($env:PARKING_REPORT_PDF_CAPTURE) { Copy-Item -LiteralPath $pdfPath -Destination $env:PARKING_REPORT_PDF_CAPTURE }
     $unsupportedBody = @{ fileFormat = 'TXT'; reportingPeriod = '2026-11' } | ConvertTo-Json
-    $unsupported = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $unsupportedBody
+    $unsupported = Invoke-RestMethod -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $headers -ContentType 'application/json' -Body $unsupportedBody
     if ($unsupported.code -ne 7) { throw 'Unsupported format should be rejected.' }
     $unknownBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; fromDate = '2026-11-01' } | ConvertTo-Json
-    $unknown = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $unknownBody
+    $unknown = Invoke-RestMethod -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $headers -ContentType 'application/json' -Body $unknownBody
     if ($unknown.code -ne 7) { throw 'Unsupported filters should be rejected.' }
     $districtExportBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; reportTitle = '=test formula is text'; district = 'dia chi gia lap' } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $districtExportBody -OutFile $exportPath
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $headers -ContentType 'application/json' -Body $districtExportBody -OutFile $exportPath
     & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 5 2775000
     if ($LASTEXITCODE -ne 0) { throw 'District Excel report verification failed.' }
-    $scoped = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11&parkingLotId=$($first.parkingLotId)" -Headers $headers
+    $scoped = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11&parkingLotId=$($first.parkingLotId)" -Headers $headers
     if ($scoped.data.totalRevenue -ne 555000 -or $scoped.data.totalVehicleCount -ne 30) { throw 'Parking lot filter failed.' }
     if (@($scoped.data.topRevenueParkingLots).Count -ne 1 -or $scoped.data.topRevenueParkingLots[0].percentage -ne 100) { throw 'Scoped ranking failed.' }
     $account = @{ username = 'report-operator'; password = 'report-password-only'; role = 'ROLE_PARKING_OPERATOR'; parkingLotId = $first.parkingLotId } | ConvertTo-Json
@@ -106,13 +112,13 @@ try {
     $operatorBody = @{ username = 'report-operator'; password = 'report-password-only' } | ConvertTo-Json
     $operator = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $operatorBody
     $operatorHeaders = @{ Authorization = "Bearer $($operator.data.accessToken)" }
-    $operatorExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $operatorHeaders -ContentType 'application/json' -Body $exportBody
+    $operatorExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $operatorHeaders -ContentType 'application/json' -Body $exportBody
     if ($operatorExport.code -ne 7) { throw 'Operator must not export reports.' }
-    $operatorReport = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11" -Headers $operatorHeaders
+    $operatorReport = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11" -Headers $operatorHeaders
     if (@($operatorReport.data).Count -ne 1 -or $operatorReport.data[0].parkingLotId -ne $first.parkingLotId) { throw 'Operator report scope failed.' }
-    $operatorSearch = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports?reportingPeriod=2026-11&keyword=dia%20chi%20gia%20lap" -Headers $operatorHeaders
+    $operatorSearch = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11&keyword=dia%20chi%20gia%20lap" -Headers $operatorHeaders
     if (@($operatorSearch.data).Count -ne 1 -or $operatorSearch.data[0].parkingLotId -ne $first.parkingLotId) { throw 'Search exposed results outside operator scope.' }
-    $forbiddenLot = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11&parkingLotId=$($second.parkingLotId)" -Headers $operatorHeaders
+    $forbiddenLot = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11&parkingLotId=$($second.parkingLotId)" -Headers $operatorHeaders
     if ($forbiddenLot.data.totalRevenue -ne 0) { throw 'Operator accessed another parking lot.' }
     if (@($forbiddenLot.data.topRevenueParkingLots).Count -ne 0) { throw 'Operator accessed another parking lot ranking.' }
     $districtBody = @{ username = 'report-district'; password = 'report-password-only'; role = 'ROLE_DISTRICT_ADMIN'; parkingLotId = $first.parkingLotId } | ConvertTo-Json
@@ -121,23 +127,23 @@ try {
     $districtLoginBody = @{ username = 'report-district'; password = 'report-password-only' } | ConvertTo-Json
     $district = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $districtLoginBody
     $districtHeaders = @{ Authorization = "Bearer $($district.data.accessToken)" }
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $districtHeaders -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $districtHeaders -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
     & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 1 555000
     if ($LASTEXITCODE -ne 0) { throw 'Scoped Excel report verification failed.' }
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $districtHeaders -ContentType 'application/json' -Body $pdfBody -OutFile $pdfPath
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $districtHeaders -ContentType 'application/json' -Body $pdfBody -OutFile $pdfPath
     & $pythonPath (Join-Path $root 'tests/check_business_report_pdf.py') $pdfPath 1 '555,000.00'
     if ($LASTEXITCODE -ne 0) { throw 'Scoped PDF report verification failed.' }
-    $deleted = Invoke-RestMethod -Method Delete -Uri "$baseUrl/dev/business-results/$($first.id)" -Headers $headers
+    $deleted = Invoke-RestMethod -Method Delete -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation/$($first.id)" -Headers $headers
     if ($deleted.code -ne 0) { throw 'Failed to soft-delete test record.' }
-    $afterDelete = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11" -Headers $headers
+    $afterDelete = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11" -Headers $headers
     if ($afterDelete.data.totalRevenue -ne 2220000 -or $afterDelete.data.totalVehicleCount -ne 120) { throw 'Deleted record was included in report.' }
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/dev/business-reports/export" -Headers $headers -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $headers -ContentType 'application/json' -Body $exportBody -OutFile $exportPath
     & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 4 2220000
     if ($LASTEXITCODE -ne 0) { throw 'Soft-deleted record was exported.' }
     $updatedBody = @{ revenue = 700000; completedVehicleCount = 30; note = 'ranking test' } | ConvertTo-Json
-    $updated = Invoke-RestMethod -Method Put -Uri "$baseUrl/dev/business-results/$($second.id)" -Headers $headers -ContentType 'application/json' -Body $updatedBody
+    $updated = Invoke-RestMethod -Method Put -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation/$($second.id)" -Headers $headers -ContentType 'application/json' -Body $updatedBody
     if ($updated.code -ne 0) { throw 'Could not prepare ranking test.' }
-    $ranked = Invoke-RestMethod -Uri "$baseUrl/dev/business-reports/summary?reportingPeriod=2026-11" -Headers $headers
+    $ranked = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod=2026-11" -Headers $headers
     if ($ranked.data.topRevenueParkingLots[0].parkingLot.id -ne $second.parkingLotId -or $ranked.data.topRevenueParkingLots[0].percentage -ne 29.6) { throw 'Ranking order or percentage incorrect.' }
     Write-Output 'Seeded API returned five matching business results.'
     Write-Output 'Report list, summary, period and lot filters, access scope, and soft delete checks passed.'
