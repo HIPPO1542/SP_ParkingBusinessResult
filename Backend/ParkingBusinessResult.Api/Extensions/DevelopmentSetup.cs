@@ -1,4 +1,5 @@
 using ParkingBusinessResult.Application.Common;
+using ParkingBusinessResult.Api.Endpoint;
 using ParkingBusinessResult.Application.Features.DevelopmentAccounts.Commands.Bootstrap;
 using ParkingBusinessResult.Domain;
 using ParkingBusinessResult.Infrastructure;
@@ -11,7 +12,6 @@ public static class DevelopmentSetup
     public static void Configure(WebApplicationBuilder builder)
     {
         DevelopmentAuthentication.Configure(builder);
-        builder.Services.AddControllers();
         builder.Services.AddBusinessResultHandlers();
 
         string databasePath = builder.Configuration["ParkingBusinessResult:DatabasePath"]
@@ -31,6 +31,6 @@ public static class DevelopmentSetup
             app.Configuration["Authentication:BootstrapUsername"],
             app.Configuration["Authentication:BootstrapPassword"]);
         app.Services.GetRequiredService<BootstrapAdministratorHandler>().Handle(command);
-        app.MapControllers();
+        app.MapDevelopmentEndpoints();
     }
 }

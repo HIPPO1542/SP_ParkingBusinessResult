@@ -5,7 +5,7 @@ Khung ASP.NET Core theo DDD, CQRS và Clean Architecture. Bốn project nằm tr
 - Domain: mô hình miền và hợp đồng repository.
 - Application: command, query và handler theo từng tác vụ.
 - Infrastructure: ánh xạ và truy cập dữ liệu.
-- Api: controller, cấu hình xác thực và hợp đồng response.
+- Api: Minimal API endpoints, cấu hình xác thực và hợp đồng response.
 
 Các thao tác thử nghiệm trả HTTP 200 với code 0 khi thành công hoặc code 7 khi có lỗi nghiệp vụ; không có metadata. Các lỗi do framework xử lý chưa được chuẩn hóa đầy đủ theo hợp đồng này.
 
@@ -15,12 +15,12 @@ Cần chốt nguồn dữ liệu cho các chỉ số, quy tắc kỳ báo cáo, 
 
 Chạy `dotnet build SP_ParkingBusinessResult.sln` và `dotnet run --project Backend/ParkingBusinessResult.Api`. API thử nghiệm dưới đây chỉ hoạt động trong môi trường Development; endpoint nghiệp vụ theo ApiSpec, xác thực, MediatR và Swagger chưa được hoàn thiện.
 
-Các controller tiếp nhận HTTP và gọi trực tiếp handler tương ứng; command xử lý tác vụ ghi, query xử lý tác vụ đọc. Các handler được đăng ký qua dependency injection, chưa dùng MediatR. Không có tầng service nghiệp vụ.
+Các Minimal API endpoint tiếp nhận HTTP và gọi trực tiếp handler tương ứng; command xử lý tác vụ ghi, query xử lý tác vụ đọc. Mỗi route có endpoint riêng. Các handler được đăng ký qua dependency injection, chưa dùng MediatR. Không có tầng service nghiệp vụ.
 
 ```text
 Backend/
 ├── ParkingBusinessResult.Api/
-│   ├── Controllers/        # Tiếp nhận HTTP và chuyển tới handler
+│   ├── Endpoint/           # Minimal API: mỗi route một endpoint
 │   ├── Contracts/          # Envelope phản hồi
 │   ├── Extensions/         # Cấu hình DI và xác thực
 │   ├── Middlewares/
