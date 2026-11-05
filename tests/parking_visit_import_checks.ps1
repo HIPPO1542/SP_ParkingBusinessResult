@@ -54,6 +54,14 @@ try {
     $parked = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?status=PARKED" -Headers $headers
     $completed = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?status=COMPLETED&pageSize=1" -Headers $headers
     if ($parked.data.totalCount -ne 1 -or $parked.data.items[0].licensePlate -ne '59A-1' -or $completed.data.totalCount -ne 2 -or @($completed.data.items).Count -ne 1) { throw 'Visit list status or paging failed.' }
+    if ($parked.data.items[0].parkingLotCode -ne 'DEMO-01' -or $parked.data.items[0].parkingLotName -ne 'Bai xe gia lap 01') { throw 'Visit parking lot details are missing.' }
+    $filters = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/filters" -Headers $headers
+    if (@($filters.data.parkingLots | Where-Object { $_.code -like 'DEMO-*' }).Count -ne 5 -or $filters.data.vehicleTypes -notcontains 'MOTORBIKE') { throw 'Available filters are incorrect.' }
+    $carType = [Uri]::EscapeDataString($parked.data.items[0].vehicleType)
+    $combined = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?parkingLotId=$lotId&status=PARKED&vehicleType=$carType" -Headers $headers
+    if ($combined.data.totalCount -ne 1 -or $combined.data.items[0].licensePlate -ne '59A-1') { throw 'Combined visit filters failed.' }
+    $noCombination = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?parkingLotId=$lotId&status=COMPLETED&vehicleType=$carType" -Headers $headers
+    if ($noCombination.data.totalCount -ne 0) { throw 'Combined filters returned an unrelated visit.' }
     $invalidList = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?status=unknown" -Headers $headers
     if ($invalidList.code -ne 7) { throw 'Invalid visit status was accepted.' }
     $validComparison = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/$($first.data.importedIds[1])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
@@ -116,6 +124,8 @@ try {
     $scoped = Import-File 'scoped.xlsx' $operator.data.accessToken
     if ($scoped.code -ne 0 -or $scoped.data.successRows -ne 2 -or $scoped.data.errorRows -ne 1) { throw 'Import scope failed.' }
     $operatorHeaders = @{ Authorization = "Bearer $($operator.data.accessToken)" }
+    $operatorFilters = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/filters" -Headers $operatorHeaders
+    if (@($operatorFilters.data.parkingLots).Count -ne 1 -or $operatorFilters.data.parkingLots[0].id -ne $lotId -or $operatorFilters.data.vehicleTypes -contains 'MOTORBIKE') { throw 'Filter options exposed another parking lot.' }
     $operatorList = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit" -Headers $operatorHeaders
     if ($operatorList.data.totalCount -ne 3 -or @($operatorList.data.items | Where-Object { $_.parkingLotId -ne $lotId }).Count -ne 0) { throw 'Visit list access scope failed.' }
     $forbiddenComparison = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/$($first.data.importedIds[1])/tariff-comparison?dayType=WEEKDAY" -Headers $operatorHeaders

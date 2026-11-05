@@ -42,6 +42,7 @@ public static class EndpointRegistration
 
         RouteGroupBuilder parkingVisits = app.MapGroup("/gdci/parking/parkingLot/parkingVisit").RequireAuthorization("BusinessResultAccess");
         ListParkingVisitsEndpoint.Map(parkingVisits);
+        GetParkingVisitFiltersEndpoint.Map(parkingVisits);
         GetParkingVisitSummaryEndpoint.Map(parkingVisits);
         ExportParkingVisitReportEndpoint.Map(parkingVisits);
         CompareParkingVisitTariffEndpoint.Map(parkingVisits);

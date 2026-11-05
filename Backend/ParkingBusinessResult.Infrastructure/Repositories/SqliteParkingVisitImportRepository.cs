@@ -11,7 +11,11 @@ public sealed class SqliteParkingVisitImportRepository(string databasePath) : IP
     {
         using SqliteConnection connection = Open();
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "SELECT id, parkingLotId, licensePlate, vehicleType, enteredAt, exitedAt, collectedAmount, paymentMethod FROM parking_visit";
+        command.CommandText = """
+            SELECT v.id, v.parkingLotId, v.licensePlate, v.vehicleType, v.enteredAt, v.exitedAt,
+                   v.collectedAmount, v.paymentMethod, p.ma, p.ten
+            FROM parking_visit v JOIN "DL_KTHT_baiDoXe" p ON p.Id = v.parkingLotId
+            """;
         using SqliteDataReader reader = command.ExecuteReader();
         var visits = new List<ParkingVisitItem>();
         while (reader.Read())
@@ -20,7 +24,8 @@ public sealed class SqliteParkingVisitImportRepository(string databasePath) : IP
                 DateTime.ParseExact(reader.GetString(4), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
                 reader.IsDBNull(5) ? null : DateTime.ParseExact(reader.GetString(5), "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
                 reader.IsDBNull(6) ? null : decimal.Parse(reader.GetString(6), CultureInfo.InvariantCulture),
-                reader.IsDBNull(7) ? null : reader.GetString(7)));
+                reader.IsDBNull(7) ? null : reader.GetString(7),
+                reader.IsDBNull(8) ? null : reader.GetString(8), reader.IsDBNull(9) ? null : reader.GetString(9)));
         }
         return visits;
     }

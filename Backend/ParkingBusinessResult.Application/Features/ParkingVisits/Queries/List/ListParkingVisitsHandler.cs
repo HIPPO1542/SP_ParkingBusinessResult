@@ -12,6 +12,7 @@ public sealed class ListParkingVisitsHandler(IParkingVisitListRepository reposit
             .Where(visit => query.Access.CanAccess(visit.ParkingLotId))
             .Where(visit => query.ParkingLotId is null || visit.ParkingLotId == query.ParkingLotId)
             .Where(visit => query.Status is null || (query.Status == "PARKED" ? visit.ExitedAt is null : visit.ExitedAt is not null))
+            .Where(visit => query.VehicleType is null || string.Equals(visit.VehicleType, query.VehicleType, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(visit => visit.EnteredAt).ThenBy(visit => visit.Id).ToArray();
         long offset = ((long)query.PageNumber - 1) * query.PageSize;
         ParkingVisitItem[] page = offset >= visits.Length ? [] : visits.Skip((int)offset).Take(query.PageSize).ToArray();

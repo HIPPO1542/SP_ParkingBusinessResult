@@ -34,8 +34,11 @@
     <details><summary>Xem JSON thống kê</summary><pre id="summaryJson">Chưa có dữ liệu.</pre></details>
   </section>
   <section class="card">
-    <h2>4. Danh sách</h2><p class="muted">Hiển thị tối đa 100 dòng đầu tiên theo nguồn đã chọn ở trên.</p><button type="button" class="secondary" id="list">Xem danh sách</button>
+    <h2>4. Danh sách</h2><p class="muted">Chọn nguồn dữ liệu ở bước 3 và kết hợp các bộ lọc bên dưới.</p>
+    <div class="row" id="visitFilters"><div class="field"><label for="listLot">Bãi xe</label><select id="listLot"><option value="">Tất cả bãi</option></select></div><div class="field"><label for="listVehicleType">Loại xe</label><select id="listVehicleType"><option value="">Tất cả loại xe</option></select></div><div class="field"><label for="listStatus">Trạng thái</label><select id="listStatus"><option value="">Tất cả trạng thái</option><option value="PARKED">Đang trong bãi</option><option value="COMPLETED">Đã ra</option></select></div></div>
+    <div class="inline" style="margin-top:12px"><button type="button" class="secondary" id="list">Xem danh sách</button></div>
     <p id="listMessage" class="notice hidden" role="status"></p><div id="listWrap" class="table-wrap hidden"><table><thead id="listHead"></thead><tbody id="listBody"></tbody></table></div><details><summary>Xem JSON danh sách</summary><pre id="listJson">Chưa có dữ liệu.</pre></details>
+    <div id="listPaging" class="inline hidden" style="margin-top:12px"><button type="button" class="secondary" id="listPrev">Trang trước</button><span id="listPage"></span><button type="button" class="secondary" id="listNext">Trang sau</button></div>
   </section>
   <section class="card">
     <h2>5. Xuất báo cáo</h2><p class="muted">Báo cáo sử dụng kỳ và nguồn đang chọn ở bước 3.</p>
@@ -51,6 +54,7 @@
   const number = value => value == null ? '—' : new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 2}).format(value);
   let token = null;
   let exportFile = null;
+  let listPage = 1;
   const month = new Date();
   $('period').value = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
 
@@ -77,6 +81,18 @@
     const response = await request(path, options); const body = await response.json();
     if (body.code !== 0) throw new Error(body.message || 'Yêu cầu không thành công.'); return body;
   }
+  function setOptions(id, firstLabel, options) {
+    const select = $(id); const previous = select.value; select.replaceChildren(new Option(firstLabel, ''));
+    options.forEach(({value, label}) => select.add(new Option(label, value)));
+    if ([...select.options].some(option => option.value === previous)) select.value = previous;
+  }
+  async function refreshVisitFilters() {
+    try {
+      const {data} = await jsonRequest(`${base}/parkingVisit/filters`);
+      setOptions('listLot', 'Tất cả bãi', data.parkingLots.map(lot => ({value:lot.id, label:[lot.code, lot.name].filter(Boolean).join(' · ') || lot.id})));
+      setOptions('listVehicleType', 'Tất cả loại xe', data.vehicleTypes.map(type => ({value:type, label:type})));
+    } catch (error) { notify('listMessage', `Không tải được bộ lọc: ${error.message}`, 'error'); }
+  }
   function downloadBlob(blob, name) {
     const url = URL.createObjectURL(blob); const link = document.createElement('a');
     link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -88,6 +104,7 @@
       if (!response.ok) throw new Error(`Không đăng nhập được (HTTP ${response.status}).`);
       const result = await response.json(); if (result.code !== 0 || !result.data?.accessToken) throw new Error(result.message || 'Đăng nhập không thành công.');
       token = result.data.accessToken; $('password').value = ''; $('authStatus').textContent = 'Đã đăng nhập'; $('authStatus').className = 'status connected'; notify('loginMessage', 'Đăng nhập thành công. Phiên có hiệu lực 30 phút.', 'success');
+      await refreshVisitFilters();
     } catch (error) { notify('loginMessage', error.message, 'error'); }
   });
   $('logout').addEventListener('click', () => { token = null; exportFile = null; $('download').classList.add('hidden'); $('authStatus').textContent = 'Chưa đăng nhập'; $('authStatus').className = 'status'; notify('loginMessage', 'Đã đăng xuất.'); });
@@ -110,6 +127,7 @@
       });
       $('importedRowsWrap').classList.toggle('hidden', !result.data.importedRows?.length);
       $('importFile').value = '';
+      await refreshVisitFilters();
     } catch (error) { notify('importResult', error.message, 'error'); }
     finally { button.disabled = false; }
   });
@@ -117,6 +135,7 @@
     $('sourceNotice').textContent = $('source').value === 'visits' ? 'Thống kê theo các lượt xe đã ra trong tháng và tiền thực thu trong file.' : 'Thống kê từ bảng kết quả kinh doanh đã lưu; dữ liệu nhập lượt xe không tự cập nhật bảng này.';
     $('stats').classList.add('hidden'); $('lotsWrap').classList.add('hidden'); $('listWrap').classList.add('hidden'); $('statsMessage').classList.add('hidden'); $('listMessage').classList.add('hidden'); $('summaryJson').textContent = 'Chưa có dữ liệu.'; $('listJson').textContent = 'Chưa có dữ liệu.';
     exportFile = null; $('download').classList.add('hidden'); $('exportJson').textContent = 'Chưa có dữ liệu.'; $('exportMessage').classList.add('hidden');
+    listPage = 1; $('listPaging').classList.add('hidden'); $('visitFilters').classList.toggle('hidden', $('source').value !== 'visits');
   });
   $('view').addEventListener('click', async () => {
     $('stats').classList.add('hidden'); $('lotsWrap').classList.add('hidden'); $('statsMessage').classList.add('hidden');
@@ -132,17 +151,28 @@
       else notify('statsMessage', 'Đã tải thống kê.', 'success');
     } catch (error) { notify('statsMessage', error.message, 'error'); }
   });
-  $('list').addEventListener('click', async () => {
+  async function loadList() {
     $('listWrap').classList.add('hidden');
     try {
-      const visits = $('source').value === 'visits'; const path = visits ? 'parkingVisit?pageSize=100' : `parkingBusinessReport?reportingPeriod=${encodeURIComponent(period())}&pageSize=100`;
+      const visits = $('source').value === 'visits'; const parameters = new URLSearchParams({pageSize:'100', pageNumber:String(listPage)});
+      if (visits) {
+        if ($('listLot').value) parameters.set('parkingLotId', $('listLot').value);
+        if ($('listVehicleType').value) parameters.set('vehicleType', $('listVehicleType').value);
+        if ($('listStatus').value) parameters.set('status', $('listStatus').value);
+      } else parameters.set('reportingPeriod', period());
+      const path = `${visits ? 'parkingVisit' : 'parkingBusinessReport'}?${parameters}`;
       const result = await jsonRequest(`${base}/${path}`); showJson('listJson', result); const items = visits ? result.data.items : result.data;
-      const headings = visits ? ['Biển số','Loại xe','Giờ vào','Giờ ra','Tiền đã thu'] : ['Bãi xe','Đơn vị quản lý','Kỳ báo cáo','Doanh thu','Lượt xe'];
+      const headings = visits ? ['Bãi xe','Biển số','Loại xe','Giờ vào','Giờ ra','Tiền đã thu'] : ['Bãi xe','Đơn vị quản lý','Kỳ báo cáo','Doanh thu','Lượt xe'];
       const head = $('listHead'); head.replaceChildren(); const headerRow = head.insertRow(); headings.forEach(value => { const th = document.createElement('th'); th.textContent = value; headerRow.appendChild(th); });
-      const body = $('listBody'); body.replaceChildren(); items.forEach(item => addRow(body, visits ? [item.licensePlate,item.vehicleType,item.enteredAt,item.exitedAt,item.collectedAmount == null ? null : `${number(item.collectedAmount)} đ`] : [`${item.parkingLot?.code || ''} · ${item.parkingLot?.name || ''}`,item.operatorName,item.reportingPeriod,`${number(item.revenue)} đ`,number(item.vehicleCount)],[4]));
-      $('listWrap').classList.toggle('hidden', !items.length); notify('listMessage', visits ? `Hiển thị ${items.length} / ${result.data.totalCount} lượt xe; danh sách này gồm mọi thời điểm.` : `Hiển thị ${items.length} bản ghi trong kỳ đã chọn.`, 'success');
+      const body = $('listBody'); body.replaceChildren(); items.forEach(item => addRow(body, visits ? [[item.parkingLotCode,item.parkingLotName].filter(Boolean).join(' · '),item.licensePlate,item.vehicleType,item.enteredAt,item.exitedAt,item.collectedAmount == null ? null : `${number(item.collectedAmount)} đ`] : [`${item.parkingLot?.code || ''} · ${item.parkingLot?.name || ''}`,item.operatorName,item.reportingPeriod,`${number(item.revenue)} đ`,number(item.vehicleCount)], visits ? [5] : [3,4]));
+      $('listWrap').classList.toggle('hidden', !items.length); notify('listMessage', visits ? `Hiển thị ${items.length} dòng trên tổng ${result.data.totalCount} lượt phù hợp; danh sách gồm mọi thời điểm.` : `Hiển thị ${items.length} bản ghi trong kỳ đã chọn.`, 'success');
+      $('listPaging').classList.remove('hidden'); $('listPage').textContent = `Trang ${listPage}`; $('listPrev').disabled = listPage <= 1;
+      $('listNext').disabled = visits ? listPage * 100 >= result.data.totalCount : items.length < 100;
     } catch (error) { notify('listMessage', error.message, 'error'); }
-  });
+  }
+  $('list').addEventListener('click', () => { listPage = 1; loadList(); });
+  $('listPrev').addEventListener('click', () => { if (listPage > 1) { listPage--; loadList(); } });
+  $('listNext').addEventListener('click', () => { listPage++; loadList(); });
   $('export').addEventListener('click', async () => {
     exportFile = null; $('download').classList.add('hidden'); $('exportJson').textContent = 'Chưa có dữ liệu.';
     try {

@@ -136,9 +136,10 @@ Gọi `GET /gdci/parking/parkingLot/parkingVisit`:
 - `status=PARKED`: lượt chưa có giờ ra, tức xe đang được ghi nhận trong bãi.
 - `status=COMPLETED`: lượt đã có giờ ra.
 - `parkingLotId`: lọc theo một bãi; kết quả vẫn bị giới hạn theo quyền tài khoản.
+- `vehicleType`: lọc theo loại xe; có thể kết hợp với bãi và trạng thái.
 - `pageNumber` và `pageSize`: phân trang; mặc định trang 1, 10 dòng, tối đa 100 dòng/trang.
 
-API trả `items` và `totalCount` sau khi lọc. Đây là danh sách trong `parking_visit`, không tự bao gồm 250 lượt giả lập trong `dev_parking_sessions`.
+API trả mã, tên bãi trong mỗi lượt, cùng `items` và `totalCount` sau khi lọc. API `parkingVisit/filters` cung cấp các bãi được phép truy cập và loại xe đã có; giao diện dùng các giá trị này để lọc. Đây là danh sách trong `parking_visit`, không tự bao gồm 250 lượt giả lập trong `dev_parking_sessions`.
 
 ### 4.5. Thống kê từ lượt xe đã import
 
