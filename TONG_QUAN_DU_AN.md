@@ -2,7 +2,7 @@
 
 ## 1. Dự án làm gì?
 
-Đây là backend thử nghiệm cho nhóm nghiệp vụ quản lý kết quả kinh doanh bãi đỗ xe và báo cáo định kỳ. Dự án cho phép quản lý kết quả tổng hợp, nhập từng lượt xe từ file, thống kê doanh thu và xuất báo cáo.
+Đây là dự án quản lý kết quả kinh doanh bãi đỗ xe và báo cáo định kỳ, gồm frontend cơ bản và backend. Dự án cho phép quản lý kết quả tổng hợp, nhập từng lượt xe từ file, thống kê doanh thu và xuất báo cáo.
 
 **Quy tắc đã thống nhất:** một lượt hoàn tất là một xe đã vào rồi ra. Xe chưa có giờ ra vẫn đang trong bãi và chưa được tính là lượt hoàn tất. Doanh thu từ lượt xe dùng **số tiền thực thu trong file**; bảng giá dùng để đối chiếu.
 
@@ -20,6 +20,9 @@
 
 ```text
 SP_ParkingBusinessResult/
+├── Frontend/                         # Giao diện HTML, CSS, JavaScript
+│   ├── index.html                    # Đăng nhập, nhập file, thống kê và xuất báo cáo
+│   └── README.md                     # Hướng dẫn sử dụng giao diện
 ├── Backend/
 │   ├── ParkingBusinessResult.Api/
 │   │   ├── Contracts/                 # Cấu trúc response API
@@ -47,7 +50,7 @@ SP_ParkingBusinessResult/
 │   │   ├── Repositories/             # Hợp đồng repository kết quả kinh doanh
 │   │   ├── Exceptions/
 │   │   ├── Enums/                    # Hiện là thư mục dự phòng
-│   │   └── ValueObjects/             # Hiện là thư mục dự phòng
+│   │   └── ValueObjects/             # Kỳ báo cáo và tính kỳ trước
 │   │
 │   └── ParkingBusinessResult.Infrastructure/
 │       ├── Repositories/             # Đọc/ghi SQLite, đọc file Excel/CSV
@@ -58,6 +61,7 @@ SP_ParkingBusinessResult/
 ├── database/sqlite/                  # SQL, migration và script tạo dữ liệu mẫu
 ├── docs/                             # Tài liệu API, dữ liệu mẫu và import
 ├── outputs/parking-import/           # File Excel mẫu nhập lượt xe
+├── outputs/mau-import/               # Dữ liệu mẫu 10 lượt xe để nhập
 ├── postman/                          # Collection Postman và hướng dẫn
 ├── tests/                            # Kiểm thử database, API, file và Postman
 ├── SP_ParkingBusinessResult.sln      # Solution .NET
@@ -121,7 +125,7 @@ Gọi `POST /gdci/parking/parkingLot/businessOperation/import` dưới dạng `m
 2. API đọc `.xlsx`, `.xls` hoặc `.csv`, tối đa 10 MB và 50.000 dòng; tên và thứ tự cột phải theo mẫu.
 3. Hệ thống kiểm tra từng dòng: mã bãi và quyền truy cập, biển số, loại xe, giờ vào, giờ ra sau giờ vào, số tiền không âm. Dòng lỗi được báo theo số dòng.
 4. Dòng hợp lệ được lưu trong `parking_visit`. Nếu cùng **bãi + biển số + giờ vào** đã có, hệ thống cập nhật lượt cũ. Ô giờ ra, tiền hoặc phương thức để trống không xóa giá trị đã lưu.
-5. Kết quả trả số dòng thành công, số dòng lỗi, ID lượt đã lưu và danh sách lỗi. Nếu xảy ra lỗi hệ thống khi đang ghi, một số dòng hợp lệ trước đó có thể đã được lưu.
+5. Kết quả trả số dòng thành công, số dòng lỗi, số dòng trùng đã cập nhật, ID và thông tin lượt đã lưu cùng danh sách lỗi. Giao diện hiển thị các dòng này và cho phép chọn tiếp file khác. Nếu xảy ra lỗi hệ thống khi đang ghi, một số dòng hợp lệ trước đó có thể đã được lưu.
 
 Giờ vào và giờ ra phải có ngày/tháng/năm và giờ/phút, ví dụ `2026-11-05 08:30` hoặc `05/11/2026 08:30`. Excel cũng có thể chứa ô ngày giờ thực. Giờ ra để trống nếu xe chưa ra; số tiền có thể để trống nếu chưa có thông tin thu.
 
@@ -159,7 +163,7 @@ Hệ thống chọn lượt theo **ngày xe ra**, gồm hai ngày đầu/cuối 
 Tiền tố: `/gdci/parking/parkingLot/parkingBusinessReport`.
 
 - `GET` danh sách: lọc theo chuỗi kỳ, bãi, từ khóa tên/địa chỉ, địa bàn theo địa chỉ và phân trang.
-- `GET /summary`: tính tổng doanh thu, lượt hoàn tất, doanh thu bình quân/lượt và top 5 bãi từ **bản tổng hợp đã lưu**.
+- `GET /summary`: tính tổng doanh thu, lượt hoàn tất, doanh thu bình quân/lượt và/ngày, tăng trưởng, top 5 bãi và cơ cấu theo địa bàn từ **bản tổng hợp đã lưu**. Tăng trưởng có thể `null` nếu thiếu số liệu phù hợp; địa bàn được suy từ địa chỉ và có thể không nhận diện được.
 - `POST /export`: tạo Excel/PDF từ nguồn tổng hợp này và trả JSON có `fileUrl`; gọi GET URL đó với token của người đã xuất để tải file. PDF thử nghiệm cần Windows và font Arial.
 
 Nhóm API này và nhóm thống kê theo lượt import có nguồn dữ liệu khác nhau như mục 3. API báo cáo tổng hợp hiện còn thiếu một số bộ lọc, chỉ số và cấu trúc response theo tài liệu.

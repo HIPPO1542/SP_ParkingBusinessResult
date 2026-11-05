@@ -9,7 +9,7 @@
   </style>
 </head>
 <body>
-<header><h1>Kết quả kinh doanh bãi xe</h1><p>Giao diện kiểm thử API · Môi trường Development</p></header>
+<header><h1>Kết quả kinh doanh bãi xe</h1><p>Quản lý và theo dõi kết quả kinh doanh bãi xe</p></header>
 <main>
   <section class="card">
     <div class="inline"><h2>1. Đăng nhập</h2><span id="authStatus" class="status">Chưa đăng nhập</span></div>
@@ -42,7 +42,7 @@
     <div class="row"><div class="field"><label for="format">Định dạng</label><select id="format"><option value="EXCEL">Excel (.xlsx)</option><option value="PDF">PDF (.pdf)</option></select></div><button type="button" id="export">Xuất báo cáo</button><button type="button" class="secondary hidden" id="download">Tải file đã tạo</button></div>
     <p id="exportMessage" class="notice hidden" role="status"></p><details><summary>Xem JSON xuất báo cáo</summary><pre id="exportJson">Chưa có dữ liệu.</pre></details>
   </section>
-</main><footer>Giao diện kiểm thử cục bộ · Dữ liệu hiển thị theo quyền tài khoản</footer>
+</main><footer>Dữ liệu hiển thị theo quyền tài khoản</footer>
 <script>
 (() => {
   'use strict';

@@ -11,9 +11,9 @@ public static class EndpointRegistration
 {
     public static void MapDevelopmentEndpoints(this WebApplication app)
     {
-        app.MapGet("/test", () =>
+        app.MapGet("/", () =>
         {
-            using Stream stream = typeof(EndpointRegistration).Assembly.GetManifestResourceStream("ParkingBusinessResult.Api.TestUi.index.html")!;
+            using Stream stream = typeof(EndpointRegistration).Assembly.GetManifestResourceStream("ParkingBusinessResult.Api.Frontend.index.html")!;
             using var reader = new StreamReader(stream);
             return Results.Content(reader.ReadToEnd(), "text/html; charset=utf-8");
         }).AllowAnonymous();

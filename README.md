@@ -66,7 +66,7 @@ Các endpoint `GET/POST /gdci/parking/parkingLot/businessOperation` và `GET/PUT
 
 Collection và hướng dẫn kiểm thử bằng Postman nằm trong thư mục [`postman/`](postman/README.md).
 
-Giao diện kiểm thử cơ bản nằm trong [`Frontend/`](Frontend/README.md). Sau khi chạy API Development theo hướng dẫn bên dưới, mở `http://localhost:5069/test` để đăng nhập, nhập file, xem số liệu và xuất báo cáo.
+Giao diện nằm trong [`Frontend/`](Frontend/README.md). Sau khi chạy API Development theo hướng dẫn bên dưới, mở `http://localhost:5069/` để đăng nhập, nhập file, xem số liệu và xuất báo cáo.
 
 ### Tài khoản cục bộ cho Development
 

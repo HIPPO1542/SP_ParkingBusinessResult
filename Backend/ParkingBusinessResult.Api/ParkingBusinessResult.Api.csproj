@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\..\Frontend\index.html" LogicalName="ParkingBusinessResult.Api.TestUi.index.html" />
+    <EmbeddedResource Include="..\..\Frontend\index.html" LogicalName="ParkingBusinessResult.Api.Frontend.index.html" />
   </ItemGroup>
 
   <PropertyGroup>

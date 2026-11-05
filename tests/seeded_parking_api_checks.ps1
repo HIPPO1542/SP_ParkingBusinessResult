@@ -35,6 +35,8 @@ try {
         try { $null = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/businessOperation"; $ready = $true; break } catch { Start-Sleep -Milliseconds 500 }
     }
     if (-not $ready) { throw 'API did not start.' }
+    $homepage = Invoke-WebRequest -Uri "$baseUrl/" -UseBasicParsing
+    if ($homepage.StatusCode -ne 200 -or $homepage.Content -notmatch 'id="loginForm"') { throw 'The frontend home page was not served.' }
     $body = @{ username = 'seed-test-admin'; password = 'seed-test-password-only' } | ConvertTo-Json
     $login = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $body
     if ($login.code -ne 0 -or -not $login.data.accessToken) { throw 'Login failed.' }
