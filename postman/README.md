@@ -3,7 +3,7 @@
 1. Import `ParkingBusinessResult.postman_collection.json` vào Postman.
 2. Khởi động API theo phần **Tài khoản cục bộ cho Development** trong [README dự án](../README.md). Dùng `http://localhost:5069` với profile `http`; nếu chạy ở địa chỉ khác, sửa biến collection `baseUrl`.
 3. Trong tab **Variables** của collection, nhập `adminUsername` và `adminPassword` là tài khoản quản trị đã khởi tạo. Các giá trị này không được cung cấp sẵn trong collection. Chạy **Đăng nhập quản trị viên**; script tự lưu `accessToken` khi thành công. Nếu đăng nhập thất bại, token cũ được xóa.
-4. Đặt `parkingLotId` là ID bãi xe đã có trong database. Database mới có thể chưa có bãi xe; để thêm dữ liệu thử vào **database phát triển cục bộ**, có thể chạy một lần:
+4. Đặt `parkingLotId` là ID bãi xe đã có trong database. Nếu đã tạo 5 bãi `DEMO-01` đến `DEMO-05`, lấy ID bằng câu truy vấn trong [hướng dẫn dữ liệu giả lập](../docs/DEVELOPMENT_PARKING_DATA.md) và không cần chạy script bên dưới. Database mới có thể chưa có bãi xe; để thêm một bãi xe thử khác vào **database phát triển cục bộ**, có thể chạy một lần:
 
    ```powershell
    python postman/seed_demo.py

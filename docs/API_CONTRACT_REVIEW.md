@@ -15,6 +15,8 @@ Phạm vi: API thử nghiệm Development hiện có, đối chiếu ApiSpec/LLD
 
 Sheet Excel chỉ có một trường tổng số lượt và một trường tổng doanh thu. Nó không cung cấp riêng dữ liệu lượt vào/lượt ra, doanh thu tiền mặt/điện tử, chi phí vận hành hay tỷ lệ lấp đầy. Không thể suy ra chính xác các trường đó từ tổng doanh thu và tổng lượt; cần thống nhất nguồn dữ liệu hoặc thay đổi hợp đồng trước khi triển khai đầy đủ body/response theo tài liệu. `daXoa` là cột bổ sung theo yêu cầu xóa mềm, không có trong sheet gốc.
 
+Để kiểm thử, SQLite cục bộ có thêm ba bảng giá theo Excel và `dev_parking_sessions` chứa các lượt giả lập. Có thể đối soát doanh thu tiền mặt/điện tử của **bộ mẫu** từ bảng thử này; nó không phải nguồn dữ liệu vận hành được phê duyệt và không tự bổ sung chi phí hoặc xác nhận quy tắc tỷ lệ lấp đầy cho production. Chi tiết tại `docs/DEVELOPMENT_PARKING_DATA.md`.
+
 ## Bằng chứng kiểm thử
 
 - Chạy Postman Collection bằng Newman với database SQLite tạm: 11 request và 11 assertion thành công. Trong đó, route mẫu theo tài liệu **kỳ vọng trả 404** và hai request body theo tài liệu **kỳ vọng bị từ chối** vì API thử nghiệm chưa hỗ trợ; kết quả này không chứng minh API khớp tài liệu.
