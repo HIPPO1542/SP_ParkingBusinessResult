@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using ParkingBusinessResult.Api.Contracts;
 
-namespace ParkingBusinessResult.Api.Development;
+namespace ParkingBusinessResult.Api.Extensions;
 
 public static class DevelopmentAuthentication
 {
@@ -57,6 +57,10 @@ public static class DevelopmentAuthentication
             policy.RequireAuthenticatedUser()
                 .RequireAssertion(context => !string.IsNullOrWhiteSpace(context.User.FindFirst("sub")?.Value))
                 .RequireRole("ROLE_ADMIN", "ROLE_DISTRICT_ADMIN", "ROLE_PARKING_OPERATOR")));
+        builder.Services.AddAuthorization(options => options.AddPolicy("DevelopmentAccountAdmin", policy =>
+            policy.RequireAuthenticatedUser()
+                .RequireAssertion(context => !string.IsNullOrWhiteSpace(context.User.FindFirst("sub")?.Value))
+                .RequireRole("ROLE_ADMIN")));
         builder.Services.AddRateLimiter(options =>
         {
             options.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(

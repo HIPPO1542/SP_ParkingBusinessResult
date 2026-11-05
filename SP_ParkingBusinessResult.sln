@@ -1,17 +1,17 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Backend", "Backend", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParkingBusinessResult.Domain", "src\ParkingBusinessResult.Domain\ParkingBusinessResult.Domain.csproj", "{E031A72B-8C40-482D-9547-8310F2B7264E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParkingBusinessResult.Domain", "Backend\ParkingBusinessResult.Domain\ParkingBusinessResult.Domain.csproj", "{E031A72B-8C40-482D-9547-8310F2B7264E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParkingBusinessResult.Application", "src\ParkingBusinessResult.Application\ParkingBusinessResult.Application.csproj", "{A2634821-904A-4F65-B10A-AA297F55191D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParkingBusinessResult.Application", "Backend\ParkingBusinessResult.Application\ParkingBusinessResult.Application.csproj", "{A2634821-904A-4F65-B10A-AA297F55191D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParkingBusinessResult.Infrastructure", "src\ParkingBusinessResult.Infrastructure\ParkingBusinessResult.Infrastructure.csproj", "{0FDE107F-00EB-445F-A4E2-51E95409990F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParkingBusinessResult.Infrastructure", "Backend\ParkingBusinessResult.Infrastructure\ParkingBusinessResult.Infrastructure.csproj", "{0FDE107F-00EB-445F-A4E2-51E95409990F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParkingBusinessResult.Api", "src\ParkingBusinessResult.Api\ParkingBusinessResult.Api.csproj", "{46EBFBC0-59B5-457B-96EE-742C462642D8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParkingBusinessResult.Api", "Backend\ParkingBusinessResult.Api\ParkingBusinessResult.Api.csproj", "{46EBFBC0-59B5-457B-96EE-742C462642D8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

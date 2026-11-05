@@ -1,19 +1,48 @@
 ﻿# SP_ParkingBusinessResult
 
-Khung ASP.NET Core Minimal API theo DDD, CQRS và Clean Architecture. Dự án dùng .NET 10 SDK hiện có trên máy; phiên bản dùng chung của nhóm cần được xác nhận trước khi tích hợp.
+Khung ASP.NET Core theo DDD, CQRS và Clean Architecture. Bốn project nằm trong `Backend/`; dự án dùng .NET 10 SDK hiện có trên máy, phiên bản dùng chung của nhóm cần được xác nhận trước khi tích hợp.
 
 - Domain: mô hình miền và hợp đồng repository.
 - Application: command, query và handler theo từng tác vụ.
 - Infrastructure: ánh xạ và truy cập dữ liệu.
-- Api: Minimal API và hợp đồng response.
+- Api: controller, cấu hình xác thực và hợp đồng response.
 
-Thành công trả HTTP 200 với code 0, message, data. Lỗi nghiệp vụ trả HTTP 200 với code 7 và message; không có metadata. Hợp đồng response đã khai báo nhưng xử lý lỗi, xác thực và endpoint chưa được kết nối.
+Các thao tác thử nghiệm trả HTTP 200 với code 0 khi thành công hoặc code 7 khi có lỗi nghiệp vụ; không có metadata. Các lỗi do framework xử lý chưa được chuẩn hóa đầy đủ theo hợp đồng này.
 
-Theo sheet SP_ParkingBusinessResult, tên bảng là SP_ketQuaKinhDoanhBaiDoXe; các cột gồm id, baiDoXeId, kyBaoCao, doanhThu, soLuotXe, idNguoiTao, idNguoiCapNhat, nguoiCapNhat, ngayTao, nguoiTao, ngayCapNhat, ghiChu. Chưa có schema CSDL thực tế để xác minh tên vật lý, ràng buộc và kết nối.
+Theo sheet SP_ParkingBusinessResult, tên bảng là SP_ketQuaKinhDoanhBaiDoXe; các cột gồm id, baiDoXeId, kyBaoCao, doanhThu, soLuotXe, idNguoiTao, idNguoiCapNhat, nguoiCapNhat, ngayTao, nguoiTao, ngayCapNhat, ghiChu. SQLite cục bộ là môi trường phát triển, chưa xác minh schema triển khai chung của nhóm.
 
 Cần chốt nguồn dữ liệu cho các chỉ số, quy tắc kỳ báo cáo, cơ chế xác thực, phân quyền và xử lý trùng trong cùng file. Skill đề xuất cột phiên bản để kiểm soát đồng thời, nhưng sheet không có cột này; không tự thay đổi schema.
 
-Chạy `dotnet build SP_ParkingBusinessResult.sln` và `dotnet run --project src/ParkingBusinessResult.Api`. API thử nghiệm dưới đây chỉ hoạt động trong môi trường Development; endpoint nghiệp vụ theo ApiSpec, xác thực, MediatR và Swagger chưa được hoàn thiện.
+Chạy `dotnet build SP_ParkingBusinessResult.sln` và `dotnet run --project Backend/ParkingBusinessResult.Api`. API thử nghiệm dưới đây chỉ hoạt động trong môi trường Development; endpoint nghiệp vụ theo ApiSpec, xác thực, MediatR và Swagger chưa được hoàn thiện.
+
+Các controller tiếp nhận HTTP và gọi trực tiếp handler tương ứng; command xử lý tác vụ ghi, query xử lý tác vụ đọc. Các handler được đăng ký qua dependency injection, chưa dùng MediatR. Không có tầng service nghiệp vụ.
+
+```text
+Backend/
+├── ParkingBusinessResult.Api/
+│   ├── Controllers/        # Tiếp nhận HTTP và chuyển tới handler
+│   ├── Contracts/          # Envelope phản hồi
+│   ├── Extensions/         # Cấu hình DI và xác thực
+│   ├── Middlewares/
+│   └── Properties/
+├── ParkingBusinessResult.Application/
+│   ├── Common/
+│   ├── DTOs/
+│   └── Features/           # Commands, Queries và handler theo chức năng
+├── ParkingBusinessResult.Domain/
+│   ├── Common/
+│   ├── Entities/
+│   ├── Enums/
+│   ├── Exceptions/
+│   ├── Repositories/
+│   └── ValueObjects/
+└── ParkingBusinessResult.Infrastructure/
+    ├── Data/
+    ├── EntityConfigs/
+    └── Repositories/
+```
+
+Các thư mục chưa có thành phần được giữ bằng `.gitkeep`; repository SQLite hiện dùng SQL trực tiếp, chưa dùng EF Core entity configuration. Tên project giữ theo module `ParkingBusinessResult`, chưa đổi thành tên solution chung của nhóm.
 
 Mô hình kết quả kinh doanh sử dụng tổng số lượt xe hoàn tất (một xe vào rồi ra là một lượt). Doanh thu và số lượt không được âm. Phép tổng hợp tính doanh thu bình quân từ tổng doanh thu chia tổng số lượt, làm tròn hai chữ số; khi không có lượt xe, giá trị bằng 0 theo LLD UC 3.4. Kiểm tra các quy tắc này bằng `dotnet run --project tests/RevenueMetrics.Checks`.
 
@@ -42,7 +71,7 @@ $env:Authentication__SigningKey = [Convert]::ToBase64String($keyBytes)
 $env:Authentication__BootstrapUsername = Read-Host 'Tên quản trị viên'
 $bootstrapPassword = Read-Host 'Mật khẩu quản trị viên (ít nhất 12 ký tự)' -AsSecureString
 $env:Authentication__BootstrapPassword = [System.Net.NetworkCredential]::new('', $bootstrapPassword).Password
-dotnet run --project src/ParkingBusinessResult.Api
+dotnet run --project Backend/ParkingBusinessResult.Api
 ```
 
 - `POST /dev/auth/login` nhận JSON `username`, `password`; khi thành công trả `data.accessToken` có hiệu lực 30 phút. Giới hạn đăng nhập là 5 lần mỗi phút theo địa chỉ IP, trong bộ nhớ của tiến trình.

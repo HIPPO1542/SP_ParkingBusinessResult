@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $databasePath = Join-Path ([System.IO.Path]::GetTempPath()) ("parking-api-" + [guid]::NewGuid().ToString('N') + '.db')
 $fixturePath = Join-Path $repositoryRoot 'tests/prepare_sqlite_fixture.py'
-$apiPath = Join-Path $repositoryRoot 'src/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll'
+$apiPath = Join-Path $repositoryRoot 'Backend/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll'
 $pythonPath = Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'
 $previousEnvironment = $env:ASPNETCORE_ENVIRONMENT
 $previousDatabasePath = $env:ParkingBusinessResult__DatabasePath
@@ -68,6 +68,7 @@ try {
     $headers = @{ Authorization = "Bearer $($login.data.accessToken)" }
     $account = @{ username = 'test-operator'; password = 'operator-password-test'; role = 'ROLE_PARKING_OPERATOR'; parkingLotId = $lotId } | ConvertTo-Json
     if ((Invoke-RestMethod -Method Post -Uri "$authBaseUrl/users" -Headers $headers -ContentType 'application/json' -Body $account).code -ne 0) { throw 'Operator creation failed.' }
+    if ((Invoke-RestMethod -Method Post -Uri "$authBaseUrl/users" -Headers $headers -ContentType 'application/json' -Body $account).code -ne 7) { throw 'Duplicate account was accepted.' }
     $operatorLogin = @{ username = 'test-operator'; password = 'operator-password-test' } | ConvertTo-Json
     $operatorToken = Invoke-RestMethod -Method Post -Uri "$authBaseUrl/login" -ContentType 'application/json' -Body $operatorLogin
     if ($operatorToken.code -ne 0) { throw 'Operator login failed.' }
@@ -81,10 +82,16 @@ try {
     $id = $created.data.id
     $duplicate = Invoke-RestMethod -Method Post -Uri $baseUrl -Headers $headers -ContentType 'application/json' -Body $request
     if ($duplicate.code -ne 7) { throw 'Duplicate was not rejected.' }
+    $invalidUpdate = @{ revenue = -1; completedVehicleCount = 3; note = 'Invalid' } | ConvertTo-Json
+    if ((Invoke-RestMethod -Method Put -Uri "$baseUrl/$id" -Headers $headers -ContentType 'application/json' -Body $invalidUpdate).code -ne 7) { throw 'Invalid revenue was accepted.' }
+    if ((Invoke-RestMethod -Uri "$baseUrl/$id" -Headers $headers).data.revenue -ne 200) { throw 'Invalid update changed saved data.' }
     $update = @{ revenue = 300; completedVehicleCount = 3; note = 'Updated' } | ConvertTo-Json
     $otherHeaders = @{ Authorization = "Bearer $(New-TestToken 'ROLE_PARKING_OPERATOR' ([guid]::NewGuid().ToString()))" }
     if ((Invoke-RestMethod -Uri "$baseUrl/$id" -Headers $otherHeaders).code -ne 7) { throw 'Access to an unassigned parking lot was allowed.' }
     if (@((Invoke-RestMethod -Uri $baseUrl -Headers $otherHeaders).data).Count -ne 0) { throw 'List included records from an unassigned parking lot.' }
+    if ((Invoke-RestMethod -Method Post -Uri $baseUrl -Headers $otherHeaders -ContentType 'application/json' -Body $request).code -ne 7) { throw 'Creating a result for an unassigned parking lot was allowed.' }
+    if ((Invoke-RestMethod -Method Put -Uri "$baseUrl/$id" -Headers $otherHeaders -ContentType 'application/json' -Body $update).code -ne 7) { throw 'Updating a result for an unassigned parking lot was allowed.' }
+    if ((Invoke-RestMethod -Method Delete -Uri "$baseUrl/$id" -Headers $otherHeaders).code -ne 7) { throw 'Deleting a result for an unassigned parking lot was allowed.' }
     if ((Invoke-RestMethod -Uri "$baseUrl/$id" -Headers $operatorHeaders).code -ne 0) { throw 'Access to the assigned parking lot was denied.' }
     $updated = Invoke-RestMethod -Method Put -Uri "$baseUrl/$id" -Headers $headers -ContentType 'application/json' -Body $update
     if ($updated.code -ne 0 -or $updated.data.revenue -ne 300) { throw 'Update failed.' }
@@ -97,6 +104,17 @@ try {
     $null = Invoke-RestMethod -Method Post -Uri "$authBaseUrl/login" -ContentType 'application/json' -Body $incorrectLogin
     $null = Invoke-RestMethod -Method Post -Uri "$authBaseUrl/login" -ContentType 'application/json' -Body $incorrectLogin
     if ((Invoke-RestMethod -Method Post -Uri "$authBaseUrl/login" -ContentType 'application/json' -Body $adminLogin).code -ne 7) { throw 'Login rate limit was not enforced.' }
+    Stop-Process -Id $server.Id -Force
+    $server.WaitForExit()
+    $env:Authentication__BootstrapPassword = 'different-bootstrap-password'
+    $server = Start-Process -FilePath 'dotnet' -ArgumentList @('"' + $apiPath + '"', '--urls', "http://127.0.0.1:$port") -WorkingDirectory $repositoryRoot -PassThru -WindowStyle Hidden
+    $restarted = $false
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        if ($server.HasExited) { throw 'API process exited during restart.' }
+        try { $null = Invoke-RestMethod -Uri $baseUrl; $restarted = $true; break } catch { Start-Sleep -Milliseconds 500 }
+    }
+    if (-not $restarted) { throw 'API did not restart.' }
+    if ((Invoke-RestMethod -Method Post -Uri "$authBaseUrl/login" -ContentType 'application/json' -Body $adminLogin).code -ne 0) { throw 'Existing account did not survive restart.' }
     Write-Output 'Login, JWT, role, parking-lot scope, rate limit and SQLite CRUD checks passed.'
 }
 finally {
