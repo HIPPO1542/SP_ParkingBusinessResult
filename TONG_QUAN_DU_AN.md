@@ -242,4 +242,4 @@ Các bài kiểm tra HTTP này dùng database tạm. Kiểm thử XLS cần côn
 - Đối chiếu giá chưa tính giờ lẻ, qua ngày hoặc tự xác định ngày lễ. Dữ liệu giá mẫu không phải giá thực tế; PDF thử nghiệm hiện cần Windows.
 - Chưa có chức năng nhập/quản lý bãi và đơn vị quản lý trong module này; GIS và khóa ngoại quy hoạch chưa được chốt đầy đủ.
 
-Các khác biệt cụ thể theo route, body, response và vai trò được ghi tại [API_CONTRACT_REVIEW.md](docs/API_CONTRACT_REVIEW.md); những điểm cần thống nhất thêm nằm ở [CONTRACT_ISSUES.md](CONTRACT_ISSUES.md).
+Các khác biệt cụ thể theo route, body, response và vai trò được ghi tại [API_CONTRACT_REVIEW.md](docs/API_CONTRACT_REVIEW.md).

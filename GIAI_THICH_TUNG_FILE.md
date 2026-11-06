@@ -31,7 +31,6 @@ Project dùng Minimal API, CQRS và dependency injection. Các handler được 
 | `SP_ParkingBusinessResult.sln` | Solution gom các project .NET để build và mở trong IDE. |
 | `README.md` | Giới thiệu dự án, database, cách cấu hình tài khoản và chạy backend. |
 | `TONG_QUAN_DU_AN.md` | Tổng quan kiến trúc, chức năng, database, cách chạy và những phần chưa hoàn chỉnh. |
-| `CONTRACT_ISSUES.md` | Ghi lại các điểm cần thống nhất giữa Excel, ApiSpec, LLD và cách triển khai. |
 | `GIAI_THICH_TUNG_FILE.md` | Tài liệu đang đọc: giải thích chức năng các file. |
 
 ## 3. Frontend
