@@ -56,7 +56,7 @@ Luồng: `Endpoint → Command/Query → Handler → interface → Infrastructur
 - Import `.xlsx`, `.xls`, `.csv` tối đa 10 MB / 50.000 dòng vào `SP_datTruocChoDoXe` theo sheet `SP_ParkingBooking`. Trùng bãi + biển số + giờ vào là lỗi, không cập nhật. Dòng hợp lệ ghi chung một giao dịch; lỗi lưu trữ hoặc hủy yêu cầu trước commit sẽ rollback batch.
 - Danh sách lượt xe kèm mã/tên bãi, kết hợp lọc bãi, loại xe, đã ra/chưa ra và ngày/tháng/năm theo giờ vào hoặc giờ ra. Lọc quyền và phân trang thực hiện ở SQLite.
 - Thống kê booking theo khoảng ngày và một/nhiều bãi: tiền đã thu, lượt hoàn tất, bình quân, tăng trưởng khi đủ dữ liệu, top bãi và cơ cấu địa bàn từ địa chỉ.
-- Danh sách/tổng hợp báo cáo theo kỳ từ bảng kết quả kinh doanh; xuất Excel/PDF, trả metadata và URL tải file riêng của người xuất. Xuất từ booking trả file trực tiếp. PDF cần Windows và Arial.
+- Danh sách/tổng hợp báo cáo theo kỳ từ bảng kết quả kinh doanh; xuất Excel/PDF từ kết quả tổng hợp hoặc booking đều trả JSON metadata và URL tải file riêng của người xuất. PDF cần Windows và Arial.
 - Đối chiếu tiền thu với bảng giá khi có đủ điều kiện; không tự đoán quy tắc qua ngày, giờ lẻ hay ngày lễ.
 - Đăng nhập qua `/auth/login`, tạo tài khoản qua `/auth/users` bằng quyền admin. Mật khẩu băm, JWT có hạn 30 phút, giới hạn đăng nhập 5 lần/phút/IP trong tiến trình. Chế độ Authority/SSO là lựa chọn khi tích hợp, không bắt buộc chạy ứng dụng.
 

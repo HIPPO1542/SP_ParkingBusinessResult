@@ -5,7 +5,7 @@ using ParkingBusinessResult.Application.Features.BusinessReports.Queries.Downloa
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.Summary;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Commands.Import;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.Summary;
-using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.Export;
+using ParkingBusinessResult.Application.Features.ParkingBookings.Commands.Export;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.CompareTariff;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.List;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.Filters;

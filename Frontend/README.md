@@ -9,7 +9,7 @@ Giao diện nằm trong `index.html` và được API phục vụ ở trang gố
 
 Chọn bãi thống kê bằng nút xổ xuống và tích vào từng bãi; tích “Tất cả bãi” để bỏ giới hạn theo bãi. Danh sách lượt xe hỗ trợ kết hợp bãi, loại xe, trạng thái và ngày/tháng/năm của ngày vào bãi; để trống thành phần nào thì không giới hạn theo thành phần đó.
 
-Giao diện thống kê và xuất trực tiếp từ các lượt xe trong bảng booking; dữ liệu kết quả kinh doanh theo kỳ là nguồn riêng. Token chỉ được giữ trong bộ nhớ trang và sẽ bị xóa khi tải lại trang hoặc đăng xuất.
+Giao diện thống kê và xuất từ các lượt xe trong bảng booking; dữ liệu kết quả kinh doanh theo kỳ là nguồn riêng. Khi xuất, API trả JSON metadata đúng mẫu, giao diện hiển thị JSON này rồi dùng token tải file qua `fileUrl`. Token chỉ được giữ trong bộ nhớ trang và sẽ bị xóa khi tải lại trang hoặc đăng xuất.
 
 ## Chạy debug trong VS Code
 

@@ -206,14 +206,20 @@
   $('listNext').addEventListener('click', () => { listPage++; loadList(); });
   $('export').addEventListener('click', async () => {
     $('exportJson').textContent = 'Chưa có dữ liệu.';
+    const button = $('export'); button.disabled = true;
     try {
       const format = $('format').value; const filters = reportFilters();
       const response = await request(`${base}/parkingBooking/export`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileFormat:format,...filters})});
-      if ((response.headers.get('content-type') || '').includes('application/json')) {
-        const result = await response.json(); showJson('exportJson', result); if (result.code !== 0) throw new Error(result.message || 'Không thể xuất báo cáo.');
-        notify('exportMessage', result.message, 'success');
-      } else { downloadBlob(await response.blob(), `bao-cao-luot-xe.${format === 'PDF' ? 'pdf' : 'xlsx'}`); notify('exportMessage', 'Đã tải báo cáo lượt xe.', 'success'); $('exportJson').textContent = 'API lượt xe trả file trực tiếp.'; }
+      const result = await response.json(); showJson('exportJson', result);
+      if (result.code !== 0) throw new Error(result.message || 'Không thể xuất báo cáo.');
+      const download = await request(result.data.fileUrl);
+      if ((download.headers.get('content-type') || '').includes('application/json')) {
+        const error = await download.json(); throw new Error(error.message || 'Không thể tải báo cáo.');
+      }
+      downloadBlob(await download.blob(), result.data.fileName);
+      notify('exportMessage', `Đã tải ${result.data.fileName} · ${number(result.data.recordCount)} dòng báo cáo.`, 'success');
     } catch (error) { notify('exportMessage', error.message, 'error'); }
+    finally { button.disabled = false; }
   });
 })();
 </script>

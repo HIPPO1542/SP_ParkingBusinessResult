@@ -27,6 +27,7 @@ try {
     $baseUrl = "http://127.0.0.1:$port"
     $env:ASPNETCORE_ENVIRONMENT = 'Development'
     $env:ParkingBusinessResult__DatabasePath = $databasePath
+    $env:ParkingBusinessResult__ExportDirectory = Join-Path $testDir 'exports'
     $env:Authentication__Issuer = 'visit-test-issuer'
     $env:Authentication__Audience = 'visit-test-audience'
     $env:Authentication__SigningKey = 'visit-test-key-only-for-local-integration-tests'
@@ -119,24 +120,39 @@ try {
     $xlsxPath = Join-Path $testDir 'export.xlsx'
     $pdfPath = Join-Path $testDir 'export.pdf'
     $exportBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; reportTitle = '=safe test' } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBooking/export" -Headers $headers -ContentType 'application/json' -Body $exportBody -OutFile $xlsxPath
+    function Save-BookingReport($body, $target, $format, $count) {
+        $response = Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBooking/export" -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -UseBasicParsing
+        $result = $response.Content | ConvertFrom-Json
+        $fields = @('id','fileUrl','fileName','fileFormat','fileSize','recordCount','createdAt','createdBy','createdById','updatedAt','updatedBy','updatedById')
+        if ($response.StatusCode -ne 200 -or $result.code -ne 0 -or [string]::IsNullOrWhiteSpace($result.message)) { throw 'Export must return the success JSON envelope.' }
+        if (@($result.data.PSObject.Properties).Count -ne $fields.Count) { throw 'Export metadata has an unexpected shape.' }
+        foreach ($field in $fields) { if ($null -eq $result.data.PSObject.Properties[$field]) { throw "Missing export metadata: $field" } }
+        if ($result.data.fileFormat -ne $format -or $result.data.recordCount -ne $count -or $result.data.fileSize -le 0) { throw 'Incorrect export format, size or record count.' }
+        if ($result.data.createdBy -ne 'visit-test-admin' -or $result.data.updatedBy -ne 'visit-test-admin' -or -not $result.data.createdById -or $result.data.createdById -ne $result.data.updatedById) { throw 'Export audit does not identify the authenticated creator.' }
+        if ($result.data.createdAt -notmatch '^\d{4}-\d{2}-\d{2}$' -or $result.data.updatedAt -notmatch '^\d{4}-\d{2}-\d{2}$') { throw 'Invalid export audit dates.' }
+        if ($result.data.fileUrl -ne "/static/exports/$($result.data.fileName)") { throw 'Invalid export URL.' }
+        Invoke-WebRequest -Uri "$baseUrl$($result.data.fileUrl)" -Headers $headers -OutFile $target
+        if ((Get-Item -LiteralPath $target).Length -ne $result.data.fileSize) { throw 'Downloaded file size differs from metadata.' }
+        $script:lastBookingExportUrl = $result.data.fileUrl
+    }
+    Save-BookingReport $exportBody $xlsxPath 'EXCEL' 2
     $pdfBody = @{ fileFormat = 'PDF'; reportingPeriod = '2026-11'; reportTitle = 'Báo cáo lượt xe' } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBooking/export" -Headers $headers -ContentType 'application/json' -Body $pdfBody -OutFile $pdfPath
+    Save-BookingReport $pdfBody $pdfPath 'PDF' 2
     & $pythonPath -X utf8 (Join-Path $root 'tests/check_visit_export.py') $xlsxPath $pdfPath
     if ($LASTEXITCODE -ne 0) { throw 'Visit export content invalid.' }
     $rangeBody = @{ fileFormat = 'EXCEL'; fromDate = '2026-11-05'; toDate = '2026-11-05'; reportTitle = '=safe test' } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBooking/export" -Headers $headers -ContentType 'application/json' -Body $rangeBody -OutFile $xlsxPath
+    Save-BookingReport $rangeBody $xlsxPath 'EXCEL' 2
     & $pythonPath -X utf8 (Join-Path $root 'tests/check_visit_export.py') $xlsxPath $pdfPath
     if ($LASTEXITCODE -ne 0) { throw 'Date range export content invalid.' }
     $invalidRangeBody = @{ fileFormat = 'EXCEL'; fromDate = '2026-11-06'; toDate = '2026-11-05' } | ConvertTo-Json
     $invalidRangeExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBooking/export" -Headers $headers -ContentType 'application/json' -Body $invalidRangeBody
     if ($invalidRangeExport.code -ne 7) { throw 'Invalid date range export was accepted.' }
     $districtBody = @{ fileFormat = 'EXCEL'; reportingPeriod = '2026-11'; district = [uri]::UnescapeDataString('Qu%E1%BA%ADn%201') } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBooking/export" -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($districtBody)) -OutFile $xlsxPath
+    Save-BookingReport $districtBody $xlsxPath 'EXCEL' 1
     & $pythonPath (Join-Path $root 'tests/check_visit_district_export.py') $xlsxPath
     if ($LASTEXITCODE -ne 0) { throw 'Visit district export incorrect.' }
     $lotBody = @{ fileFormat = 'EXCEL'; fromDate = '2026-11-01'; toDate = '2026-11-30'; parkingLotIds = @($lotId) } | ConvertTo-Json
-    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBooking/export" -Headers $headers -ContentType 'application/json' -Body $lotBody -OutFile $xlsxPath
+    Save-BookingReport $lotBody $xlsxPath 'EXCEL' 1
     & $pythonPath (Join-Path $root 'tests/check_visit_district_export.py') $xlsxPath
     if ($LASTEXITCODE -ne 0) { throw 'Selected-lot export incorrect.' }
     $account = @{ username = 'visit-operator'; password = 'visit-password-only'; role = 'ROLE_PARKING_OPERATOR'; parkingLotId = $lotId } | ConvertTo-Json
@@ -147,6 +163,8 @@ try {
     $scoped = Import-File 'scoped.xlsx' $operator.data.accessToken
     if ($scoped.code -ne 0 -or $scoped.data.successRows -ne 2 -or $scoped.data.errorRows -ne 1) { throw 'Import scope failed.' }
     $operatorHeaders = @{ Authorization = "Bearer $($operator.data.accessToken)" }
+    $deniedDownload = Invoke-RestMethod -Uri "$baseUrl$script:lastBookingExportUrl" -Headers $operatorHeaders
+    if ($deniedDownload.code -ne 7 -or $null -ne $deniedDownload.data) { throw 'Another user could download the exported booking report.' }
     $operatorFilters = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBooking/filters" -Headers $operatorHeaders
     if (@($operatorFilters.data.parkingLots).Count -ne 1 -or $operatorFilters.data.parkingLots[0].id -ne $lotId -or $operatorFilters.data.vehicleTypes -contains 'MOTORBIKE') { throw 'Filter options exposed another parking lot.' }
     $operatorList = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBooking" -Headers $operatorHeaders
@@ -191,6 +209,5 @@ try {
 finally {
     if ($null -ne $server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force; $server.WaitForExit() }
     if ((Split-Path -Parent $testDir) -ne [IO.Path]::GetTempPath().TrimEnd('\')) { throw 'Unexpected test directory.' }
-    Get-ChildItem -LiteralPath $testDir -File | Remove-Item -Force
-    Remove-Item -LiteralPath $testDir
+    Remove-Item -LiteralPath $testDir -Recurse -Force
 }
