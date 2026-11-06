@@ -7,12 +7,12 @@ public sealed record SavedBusinessReport(Guid Id, string FileUrl, string FileNam
     int RecordCount, string CreatedAt, string? CreatedBy, string CreatedById,
     string UpdatedAt, string? UpdatedBy, string UpdatedById);
 
-public interface IBusinessReportDocumentWriter
+public interface IReportDocumentWriter
 {
-    ReportDocument Write(string format, string title, string period, IReadOnlyList<BusinessReportRow> rows);
+    ReportDocument Write(string format, string title, string period, IReadOnlyList<ReportRow> rows);
 }
 
-public interface IBusinessReportExportStore
+public interface IReportExportStore
 {
     SavedBusinessReport Save(ReportActor actor, string format, ReportDocument document, int recordCount);
     ReportDownload? FindFile(ReportActor actor, string fileName);

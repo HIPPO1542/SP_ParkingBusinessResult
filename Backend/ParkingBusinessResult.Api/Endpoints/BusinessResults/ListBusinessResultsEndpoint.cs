@@ -11,7 +11,7 @@ public static class ListBusinessResultsEndpoint
 
     private static IResult Handle(ClaimsPrincipal user, ListBusinessResultsHandler handler)
     {
-        IReadOnlyList<ParkingBusinessResultRecord> results = handler.Handle(new ListBusinessResultsQuery(EndpointSupport.GetAccess(user)));
-        return Results.Ok(ApiResponse<IReadOnlyList<ParkingBusinessResultRecord>>.Success(results));
+        IReadOnlyList<BusinessResultRecord> results = handler.Handle(new ListBusinessResultsQuery(EndpointSupport.GetAccess(user)));
+        return Results.Ok(ApiResponse<IReadOnlyList<BusinessResultRecord>>.Success(results));
     }
 }

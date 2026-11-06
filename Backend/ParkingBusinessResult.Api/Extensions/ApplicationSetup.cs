@@ -31,9 +31,9 @@ public static class ApplicationSetup
         builder.Services.AddParkingPersistence(databasePath);
         string? configuredExports = builder.Configuration["ParkingBusinessResult:ExportDirectory"];
         string exportDirectory = Path.GetFullPath(configuredExports ?? "App_Data/exports", builder.Environment.ContentRootPath);
-        builder.Services.AddSingleton<IBusinessReportExportStore>(new BusinessReportExportStore(exportDirectory, builder.Configuration.GetValue<bool>("ParkingBusinessResult:AllowLegacyReportDownloads")));
-        builder.Services.AddSingleton<IBusinessReportDocumentWriter, BusinessReportDocumentWriter>();
-        builder.Services.AddSingleton<IParkingBookingSpreadsheetReader, ExcelParkingBookingSpreadsheetReader>();
+        builder.Services.AddSingleton<IReportExportStore>(new ReportExportStore(exportDirectory, builder.Configuration.GetValue<bool>("ParkingBusinessResult:AllowLegacyReportDownloads")));
+        builder.Services.AddSingleton<IReportDocumentWriter, ReportDocumentWriter>();
+        builder.Services.AddSingleton<IBookingSpreadsheetReader, ExcelBookingReader>();
         builder.Services.AddSingleton<ILocalCredentials, LocalCredentials>();
         var probe = new SqliteStorageProbe(databasePath);
         builder.Services.AddHealthChecks().AddCheck("sqlite", () => probe.IsReady()

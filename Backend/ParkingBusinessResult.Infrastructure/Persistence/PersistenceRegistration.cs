@@ -14,16 +14,16 @@ public static class PersistenceRegistration
     public static IServiceCollection AddParkingPersistence(this IServiceCollection services, string databasePath)
     {
         services.AddSingleton<IDbContextFactory<ParkingDbContext>>(new ParkingContextFactory(databasePath));
-        services.AddSingleton<IBusinessResultRepository, SqliteBusinessResultRepository>();
-        services.AddSingleton<IBusinessReportQueryRepository, SqliteBusinessReportQueryRepository>();
-        services.AddSingleton<IBusinessReportParkingLotSearch, SqliteBusinessReportParkingLotSearch>();
-        services.AddSingleton<IBusinessReportMetadataReader, SqliteBusinessReportMetadataReader>();
-        services.AddSingleton<IParkingBookingImportRepository, SqliteParkingBookingImportRepository>();
-        services.AddSingleton<SqliteParkingBookingQueryRepository>();
-        services.AddSingleton<IParkingBookingListRepository>(provider => provider.GetRequiredService<SqliteParkingBookingQueryRepository>());
-        services.AddSingleton<IParkingBookingSummaryRepository>(provider => provider.GetRequiredService<SqliteParkingBookingQueryRepository>());
-        services.AddSingleton<IParkingBookingTariffRepository, SqliteParkingBookingTariffRepository>();
-        services.AddSingleton<ILocalAccountRepository, SqliteLocalAccountRepository>();
+        services.AddSingleton<IBusinessResultRepository, BusinessResultRepository>();
+        services.AddSingleton<IReportQueryRepository, ReportQueryRepository>();
+        services.AddSingleton<IReportParkingLotSearch, ReportParkingLotSearch>();
+        services.AddSingleton<IReportMetadataReader, ReportMetadataReader>();
+        services.AddSingleton<IBookingImportRepository, BookingImportRepository>();
+        services.AddSingleton<BookingQueryRepository>();
+        services.AddSingleton<IBookingListRepository>(provider => provider.GetRequiredService<BookingQueryRepository>());
+        services.AddSingleton<IBookingSummaryRepository>(provider => provider.GetRequiredService<BookingQueryRepository>());
+        services.AddSingleton<IBookingTariffRepository, BookingTariffRepository>();
+        services.AddSingleton<ILocalAccountRepository, LocalAccountRepository>();
         return services;
     }
 }

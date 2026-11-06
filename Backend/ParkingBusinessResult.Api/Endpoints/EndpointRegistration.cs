@@ -24,21 +24,21 @@ public static class EndpointRegistration
         CreateBusinessResultEndpoint.Map(businessResults);
         UpdateBusinessResultEndpoint.Map(businessResults);
         DeleteBusinessResultEndpoint.Map(businessResults);
-        ImportParkingBookingsEndpoint.Map(businessResults);
+        ImportBookingsEndpoint.Map(businessResults);
 
         RouteGroupBuilder businessReports = app.MapGroup("/gdci/parking/parkingLot/parkingBusinessReport").RequireAuthorization("BusinessResultAccess");
-        ListBusinessReportEndpoint.Map(businessReports);
-        GetBusinessReportSummaryEndpoint.Map(businessReports);
-        ExportBusinessReportEndpoint.Map(businessReports);
+        ListReportsEndpoint.Map(businessReports);
+        GetReportSummaryEndpoint.Map(businessReports);
+        ExportReportEndpoint.Map(businessReports);
 
-        DownloadBusinessReportEndpoint.Map(app);
+        DownloadReportEndpoint.Map(app);
 
         RouteGroupBuilder parkingBookings = app.MapGroup("/gdci/parking/parkingLot/parkingBooking").RequireAuthorization("BusinessResultAccess");
-        ListParkingBookingsEndpoint.Map(parkingBookings);
-        GetParkingBookingFiltersEndpoint.Map(parkingBookings);
-        GetParkingBookingSummaryEndpoint.Map(parkingBookings);
-        ExportParkingBookingReportEndpoint.Map(parkingBookings);
-        CompareParkingBookingTariffEndpoint.Map(parkingBookings);
+        ListBookingsEndpoint.Map(parkingBookings);
+        GetBookingFiltersEndpoint.Map(parkingBookings);
+        GetBookingSummaryEndpoint.Map(parkingBookings);
+        ExportBookingReportEndpoint.Map(parkingBookings);
+        CompareBookingTariffEndpoint.Map(parkingBookings);
 
         if ((app.Configuration["Authentication:Mode"] ?? "Local") == "Local")
         {

@@ -15,24 +15,24 @@ Infrastructure tham chiếu Application và dùng các kiểu Domain qua tham ch
 Luồng đọc danh sách:
 
 ```text
-ListParkingBookingsEndpoint
- → ListParkingBookingsQuery → ListParkingBookingsHandler
- → IParkingBookingListRepository → SqliteParkingBookingQueryRepository
+ListBookingsEndpoint
+ → ListBookingsQuery → ListBookingsHandler
+ → IBookingListRepository → BookingQueryRepository
  → SELECT có điều kiện quyền, bộ lọc, COUNT và LIMIT/OFFSET
- → ParkingBookingPage → ApiResponse → giao diện
+ → BookingPage → ApiResponse → giao diện
 ```
 
 Luồng ghi import:
 
 ```text
-ImportParkingBookingsEndpoint
- → ImportParkingBookingsCommand → ImportParkingBookingsHandler
- → IParkingBookingSpreadsheetReader → kiểm tra từng dòng
- → IParkingBookingImportSession → INSERT trong một giao dịch
+ImportBookingsEndpoint
+ → ImportBookingsCommand → ImportBookingsHandler
+ → IBookingSpreadsheetReader → kiểm tra từng dòng
+ → IBookingImportSession → INSERT trong một giao dịch
  → Commit → kết quả từng dòng → ApiResponse → giao diện
 ```
 
-Xuất báo cáo tổng hợp là `Commands/Export` vì tạo file lưu trên máy chủ. Tải file là `Queries/Download`. Xuất thống kê booking vẫn là Query vì chỉ tạo nội dung trả về, không lưu thêm dữ liệu. Handler dùng `IBusinessReportDocumentWriter` và `IBusinessReportExportStore`; implementation nằm trong Infrastructure.
+Xuất báo cáo tổng hợp là `Commands/Export` vì tạo file lưu trên máy chủ. Tải file là `Queries/Download`. Xuất thống kê booking vẫn là Query vì chỉ tạo nội dung trả về, không lưu thêm dữ liệu. Handler dùng `IReportDocumentWriter` và `IReportExportStore`; implementation nằm trong Infrastructure.
 
 Không cần MediatR để thực hiện CQRS. Không thêm event bus, Outbox hoặc Unit of Work tổng quát khi module chưa có nghiệp vụ cần chúng.
 

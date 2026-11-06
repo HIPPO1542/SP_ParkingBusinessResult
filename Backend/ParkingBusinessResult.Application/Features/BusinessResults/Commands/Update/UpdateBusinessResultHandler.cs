@@ -5,24 +5,24 @@ namespace ParkingBusinessResult.Application.Features.BusinessResults.Commands.Up
 
 public sealed class UpdateBusinessResultHandler(IBusinessResultRepository repository)
 {
-    public BusinessResultOutcome<ParkingBusinessResultRecord> Handle(UpdateBusinessResultCommand command)
+    public BusinessResultOutcome<BusinessResultRecord> Handle(UpdateBusinessResultCommand command)
     {
-        ParkingBusinessResultRecord? existing = repository.FindById(command.Id);
+        BusinessResultRecord? existing = repository.FindById(command.Id);
         if (existing is null || !command.Access.CanAccess(existing.ParkingLotId)) return NotFound();
 
         try
         {
             existing.Update(command.Revenue, command.CompletedVehicleCount, command.Note);
             if (!repository.TryUpdate(command.Id, existing.Revenue, existing.CompletedVehicleCount, existing.Note, command.Actor)) return NotFound();
-            ParkingBusinessResultRecord? updated = repository.FindById(command.Id);
-            return updated is null ? NotFound() : BusinessResultOutcome<ParkingBusinessResultRecord>.Success(updated);
+            BusinessResultRecord? updated = repository.FindById(command.Id);
+            return updated is null ? NotFound() : BusinessResultOutcome<BusinessResultRecord>.Success(updated);
         }
         catch (ArgumentException)
         {
-            return BusinessResultOutcome<ParkingBusinessResultRecord>.Failure("Dữ liệu kết quả kinh doanh không hợp lệ.");
+            return BusinessResultOutcome<BusinessResultRecord>.Failure("Dữ liệu kết quả kinh doanh không hợp lệ.");
         }
     }
 
-    private static BusinessResultOutcome<ParkingBusinessResultRecord> NotFound() =>
-        BusinessResultOutcome<ParkingBusinessResultRecord>.Failure("Không tìm thấy kết quả kinh doanh.");
+    private static BusinessResultOutcome<BusinessResultRecord> NotFound() =>
+        BusinessResultOutcome<BusinessResultRecord>.Failure("Không tìm thấy kết quả kinh doanh.");
 }

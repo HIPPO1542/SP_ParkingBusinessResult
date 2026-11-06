@@ -4,6 +4,6 @@ namespace ParkingBusinessResult.Application.Features.BusinessResults.Queries.Lis
 
 public sealed class ListBusinessResultsHandler(IBusinessResultRepository repository)
 {
-    public IReadOnlyList<ParkingBusinessResultRecord> Handle(ListBusinessResultsQuery query) =>
+    public IReadOnlyList<BusinessResultRecord> Handle(ListBusinessResultsQuery query) =>
         repository.List(query.Access.IsAdministrator ? null : query.Access.ParkingLotIds);
 }
