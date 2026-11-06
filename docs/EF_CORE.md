@@ -19,7 +19,7 @@ Bảng booking giữ 16 cột. ID và ngày audit dạng text, tiền dạng REA
 
 ## Công cụ và lệnh migration
 
-Migration mới `RemoveLegacyParkingSessions` chỉ xóa bảng `dev_parking_sessions`. Migration này chưa được áp dụng lên database có dữ liệu. Cần duyệt việc loại bỏ dữ liệu cũ và backup trước khi cho phép cập nhật database đến migration này; không tự chạy `database update` trên database đang sử dụng. `Down` chỉ tái tạo cấu trúc bảng, không phục hồi các dòng đã xóa.
+Migration `RemoveLegacyParkingSessions` chỉ xóa bảng `dev_parking_sessions`. Bản cài cục bộ đã áp dụng sau khi người dùng phê duyệt và database được backup. Với database khác, cần duyệt việc loại bỏ dữ liệu cũ và backup trước khi cho phép cập nhật đến migration này; không tự chạy `database update` trên database đang sử dụng. `Down` chỉ tái tạo cấu trúc bảng, không phục hồi các dòng đã xóa.
 
 Chạy từ thư mục gốc:
 

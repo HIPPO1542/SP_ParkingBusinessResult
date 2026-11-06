@@ -23,4 +23,4 @@ Các bảng `SP_khungGiaThuPhi`, `SP_chiTietMucThuKhungGia`, `SP_apDungKhungGia`
 
 API và nghiệp vụ lượt xe dùng `SP_datTruocChoDoXe`. `DevParkingSessions`, DbSet, configuration và các navigation tương ứng đã được gỡ khỏi model hiện tại. SQL `005_dev_parking_sessions.sql` và các migration cũ được giữ nguyên làm lịch sử, không còn được seed gọi để tạo bảng.
 
-Migration mới `RemoveLegacyParkingSessions` chỉ xóa `dev_parking_sessions`. Chưa áp dụng lên database hiện có: dữ liệu lượt cũ vẫn còn vật lý. Cần phê duyệt riêng và backup trước khi áp dụng vì các dòng trong bảng cũ sẽ mất; rollback chỉ tái tạo schema, không khôi phục dữ liệu. Không chuyển các lượt giả lập này vào booking.
+Migration `RemoveLegacyParkingSessions` chỉ xóa `dev_parking_sessions`. Bản cài cục bộ đã áp dụng sau phê duyệt của người dùng và backup, loại bỏ 250 lượt cũ; booking và các bảng khác được giữ nguyên. Với database khác, cần phê duyệt riêng và backup trước khi áp dụng; rollback chỉ tái tạo schema, không khôi phục dữ liệu. Không chuyển các lượt giả lập này vào booking.
