@@ -1,40 +1,26 @@
 using System.Globalization;
-using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using ParkingBusinessResult.Infrastructure.Data;
 using ParkingBusinessResult.Application.Features.BusinessReports.Common;
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.List;
-
 namespace ParkingBusinessResult.Infrastructure.Repositories;
-
 public sealed class SqliteBusinessReportMetadataReader(string databasePath) : IBusinessReportMetadataReader
 {
     public IReadOnlyDictionary<Guid, BusinessReportMetadata> FindMany(IReadOnlySet<Guid> resultIds)
     {
-        if (resultIds.Count == 0) return new Dictionary<Guid, BusinessReportMetadata>();
-        using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = databasePath, Mode = SqliteOpenMode.ReadWrite }.ToString());
-        connection.Open();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT r.id,p.Id,p.ma,p.ten,p.diaChi,u.tenDonVi,
-                   r.ngayTao,r.nguoiTao,r.idNguoiTao,r.ngayCapNhat,r.nguoiCapNhat,r.idNguoiCapNhat
-            FROM "SP_ketQuaKinhDoanhBaiDoXe" r
-            JOIN "DL_KTHT_baiDoXe" p ON p.Id=r.baiDoXeId
-            LEFT JOIN "SP_donViKinhDoanhQuanLy" u ON u.id=p.donViQuanLyId
-            WHERE r.daXoa=0
-            """;
-        using SqliteDataReader reader = command.ExecuteReader();
-        var result = new Dictionary<Guid, BusinessReportMetadata>();
-        while (reader.Read())
-        {
-            if (!Guid.TryParse(reader.GetString(0), out Guid id) || !resultIds.Contains(id)) continue;
-            var lot = new ReportParkingLot(Guid.Parse(reader.GetString(1)), Text(reader, 2), Text(reader, 3), Text(reader, 4));
-            result.Add(id, new(lot, Text(reader, 5), Date(reader, 6), Text(reader, 7), Text(reader, 8),
-                Date(reader, 9), Text(reader, 10), Text(reader, 11)));
-        }
-        return result;
+        using var db = ParkingContextFactory.Create(databasePath);
+        string[] ids = resultIds.Select(id => id.ToString()).ToArray();
+        var rows = from row in db.SpKetQuaKinhDoanhBaiDoXe.AsNoTracking()
+                   join lot in db.DlKthtBaiDoXe on row.BaiDoXeId equals lot.Id
+                   join unit in db.SpDonViKinhDoanhQuanLy on lot.DonViQuanLyId equals unit.Id into units
+                   from unit in units.DefaultIfEmpty()
+                   where row.DaXoa == 0 && ids.Contains(row.Id)
+                   select new { row.Id, LotId = lot.Id, lot.Ma, lot.Ten, lot.DiaChi, Operator = unit == null ? null : unit.TenDonVi,
+                       row.NgayTao, row.NguoiTao, row.IdNguoiTao, row.NgayCapNhat, row.NguoiCapNhat, row.IdNguoiCapNhat };
+        return rows.AsEnumerable().ToDictionary(row => Guid.Parse(row.Id), row => new BusinessReportMetadata(
+            new ReportParkingLot(Guid.Parse(row.LotId), row.Ma, row.Ten, row.DiaChi), row.Operator,
+            Date(row.NgayTao), row.NguoiTao, row.IdNguoiTao, Date(row.NgayCapNhat), row.NguoiCapNhat, row.IdNguoiCapNhat));
     }
-
-    private static string? Text(SqliteDataReader reader, int index) => reader.IsDBNull(index) ? null : reader.GetString(index);
-    private static string? Date(SqliteDataReader reader, int index) =>
-        DateTimeOffset.TryParse(Text(reader, index), CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTimeOffset date)
-            ? date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : null;
+    private static string? Date(string? text) => DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
+        ? date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : null;
 }

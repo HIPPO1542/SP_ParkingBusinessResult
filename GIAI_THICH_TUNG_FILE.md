@@ -21,7 +21,7 @@ Các tên thường gặp:
 - **DTO/record:** kiểu dữ liệu mang thông tin giữa các phần hoặc trả về API.
 - **Migration:** script thay đổi cấu trúc database và có thể chuyển dữ liệu cũ.
 
-Project dùng Minimal API, CQRS và dependency injection. Các handler được gọi trực tiếp; dự án **không dùng MediatR hoặc EF Core**. API, giao diện và tài khoản Local chạy được ở Production; Authority là chế độ xác thực tùy chọn khi tích hợp SSO.
+Project dùng Minimal API, CQRS và dependency injection. Các handler được gọi trực tiếp; Infrastructure dùng **EF Core SQLite 10.0.14**. API, giao diện và tài khoản Local chạy được ở Production; Authority là chế độ xác thực tùy chọn khi tích hợp SSO. DbContext, model lưu trữ và migrations được mô tả tại [EF_CORE.md](docs/EF_CORE.md).
 
 ## 2. File tại thư mục gốc
 
@@ -246,7 +246,7 @@ Thư mục `Endpoint/LocalAccounts/`:
 | `Reports/BusinessReportExportStore.cs` | Ghi file tạm rồi đổi tên, tạo metadata; chỉ cho chủ sở hữu issuer/subject tải lại. |
 | `Reports/BusinessReportDocumentWriter.cs` | Chọn bộ tạo Excel/PDF và trả nội dung qua hợp đồng Application. |
 | `Data/SqliteStorageProbe.cs` | Kiểm tra database đọc được và có ba bảng lõi cho readiness. |
-| `EntityConfigs/.gitkeep` | Giữ thư mục dự phòng `EntityConfigs`; hiện chưa dùng EF Core configuration. |
+| `EntityConfigs/.gitkeep` | Thư mục dự phòng; mapping EF hiện nằm trong `Data/ParkingDbContext.cs` và các file partial của context. |
 
 ## 8. Database và dữ liệu mẫu
 

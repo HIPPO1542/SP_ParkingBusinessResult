@@ -1,48 +1,23 @@
-using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using ParkingBusinessResult.Infrastructure.Data;
 using ParkingBusinessResult.Application.Features.BusinessReports.Common;
-
 namespace ParkingBusinessResult.Infrastructure.Repositories;
-
 public sealed class SqliteBusinessReportParkingLotSearch(string databasePath) : IBusinessReportParkingLotSearch
 {
     public IReadOnlyDictionary<Guid, ReportParkingLot> GetParkingLots(IReadOnlySet<Guid> ids)
     {
-        if (ids.Count == 0) return new Dictionary<Guid, ReportParkingLot>();
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath, Mode = SqliteOpenMode.ReadWrite, ForeignKeys = true };
-        using var connection = new SqliteConnection(connectionString.ToString());
-        connection.Open();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "SELECT \"Id\", \"ma\", \"ten\", \"diaChi\" FROM \"DL_KTHT_baiDoXe\"";
-        using SqliteDataReader reader = command.ExecuteReader();
-        var lots = new Dictionary<Guid, ReportParkingLot>();
-        while (reader.Read())
-        {
-            Guid id = Guid.Parse(reader.GetString(0));
-            if (!ids.Contains(id)) continue;
-            lots.Add(id, new ReportParkingLot(id, reader.IsDBNull(1) ? null : reader.GetString(1),
-                reader.IsDBNull(2) ? null : reader.GetString(2), reader.IsDBNull(3) ? null : reader.GetString(3)));
-        }
-        return lots;
+        using var db = ParkingContextFactory.Create(databasePath);
+        string[] selected = ids.Select(id => id.ToString()).ToArray();
+        return db.DlKthtBaiDoXe.AsNoTracking().Where(lot => selected.Contains(lot.Id))
+            .Select(lot => new { lot.Id, lot.Ma, lot.Ten, lot.DiaChi }).AsEnumerable()
+            .ToDictionary(lot => Guid.Parse(lot.Id), lot => new ReportParkingLot(Guid.Parse(lot.Id), lot.Ma, lot.Ten, lot.DiaChi));
     }
-
     public IReadOnlySet<Guid> FindMatchingLots(string? keyword, string? district)
     {
-        var connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath, Mode = SqliteOpenMode.ReadWrite, ForeignKeys = true };
-        using var connection = new SqliteConnection(connectionString.ToString());
-        connection.Open();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "SELECT \"Id\", \"ten\", \"diaChi\" FROM \"DL_KTHT_baiDoXe\"";
-        using SqliteDataReader reader = command.ExecuteReader();
-        var matchingLots = new HashSet<Guid>();
-        while (reader.Read())
-        {
-            string name = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
-            string address = reader.IsDBNull(2) ? string.Empty : reader.GetString(2);
-            bool matchesKeyword = keyword is null || name.Contains(keyword, StringComparison.OrdinalIgnoreCase) || address.Contains(keyword, StringComparison.OrdinalIgnoreCase);
-            bool matchesDistrict = district is null || address.Contains(district, StringComparison.OrdinalIgnoreCase);
-            if (matchesKeyword && matchesDistrict)
-                matchingLots.Add(Guid.Parse(reader.GetString(0)));
-        }
-        return matchingLots;
+        using var db = ParkingContextFactory.Create(databasePath);
+        var lots = db.DlKthtBaiDoXe.AsNoTracking().AsQueryable();
+        if (keyword is not null) lots = lots.Where(lot => ParkingDbContext.ContainsIgnoreCase(lot.Ten, keyword) || ParkingDbContext.ContainsIgnoreCase(lot.DiaChi, keyword));
+        if (district is not null) lots = lots.Where(lot => ParkingDbContext.ContainsIgnoreCase(lot.DiaChi, district));
+        return lots.Select(lot => lot.Id).AsEnumerable().Select(Guid.Parse).ToHashSet();
     }
 }

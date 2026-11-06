@@ -49,7 +49,7 @@ database/sqlite/                        # Schema, migration và script dữ li�
 tests/                                  # Kiểm tra bằng database tạm
 ```
 
-Luồng: `Endpoint → Command/Query → Handler → interface → Infrastructure → SQLite/file`. Domain không phụ thuộc framework; Application không tham chiếu Infrastructure. Handler được gọi qua DI, không có service nghiệp vụ, MediatR hay EF Core. Quy tắc không âm nằm trong entity; tính bình quân và kỳ báo cáo nằm trong Domain.
+Luồng: `Endpoint → Command/Query → Handler → interface → Infrastructure → EF Core → SQLite/file`. Domain không phụ thuộc framework; Application không tham chiếu Infrastructure. Handler được gọi qua DI; Infrastructure dùng EF Core SQLite 10.0.14. Quy tắc không âm nằm trong entity; tính bình quân và kỳ báo cáo nằm trong Domain. Cách tạo/cập nhật schema tại [EF Core và migrations](docs/EF_CORE.md).
 
 ## Các chức năng
 

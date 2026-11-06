@@ -1,81 +1,32 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using ParkingBusinessResult.Infrastructure.Data;
+using ParkingBusinessResult.Infrastructure.Data.Models;
 using ParkingBusinessResult.Application.Features.LocalAccounts.Common;
-
 namespace ParkingBusinessResult.Infrastructure.Repositories;
-
-public sealed class SqliteLocalAccountRepository : ILocalAccountRepository
+public sealed class SqliteLocalAccountRepository(string databasePath) : ILocalAccountRepository
 {
-    private readonly string connectionString;
-
-    public SqliteLocalAccountRepository(string databasePath)
-    {
-        connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath, Mode = SqliteOpenMode.ReadWrite }.ToString();
-    }
-
     public void Initialize()
     {
-        using SqliteConnection connection = Open();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = """
-            CREATE TABLE IF NOT EXISTS "dev_auth_users" (
-                "id" TEXT NOT NULL PRIMARY KEY,
-                "username" TEXT NOT NULL COLLATE NOCASE UNIQUE,
-                "passwordHash" TEXT NOT NULL,
-                "role" TEXT NOT NULL,
-                "parkingLotId" TEXT
-            )
-            """;
-        command.ExecuteNonQuery();
+        using var db = ParkingContextFactory.Create(databasePath);
+        db.Database.ExecuteSqlRaw("CREATE TABLE IF NOT EXISTS dev_auth_users (id TEXT NOT NULL PRIMARY KEY,username TEXT NOT NULL COLLATE NOCASE UNIQUE,passwordHash TEXT NOT NULL,role TEXT NOT NULL,parkingLotId TEXT)");
     }
-
     public void AddFirstAdministrator(LocalAccount account)
     {
-        using SqliteConnection connection = Open();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = """
-            INSERT INTO dev_auth_users (id, username, passwordHash, role)
-            SELECT $id, $username, $hash, $role
-            WHERE NOT EXISTS (SELECT 1 FROM dev_auth_users)
-            """;
-        AddAccountParameters(command, account);
-        command.ExecuteNonQuery();
+        using var db = ParkingContextFactory.Create(databasePath);
+        db.Database.ExecuteSqlInterpolated($"INSERT INTO dev_auth_users (id,username,passwordHash,role) SELECT {account.Id.ToString()},{account.Username},{account.PasswordHash},{account.Role} WHERE NOT EXISTS (SELECT 1 FROM dev_auth_users)");
     }
-
     public bool TryAdd(LocalAccount account)
     {
-        using SqliteConnection connection = Open();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "INSERT INTO dev_auth_users (id, username, passwordHash, role, parkingLotId) VALUES ($id, $username, $hash, $role, $lot)";
-        AddAccountParameters(command, account);
-        command.Parameters.AddWithValue("$lot", (object?)account.ParkingLotId?.ToString() ?? DBNull.Value);
-        try { command.ExecuteNonQuery(); return true; }
-        catch (SqliteException exception) when (exception.SqliteExtendedErrorCode is 1555 or 2067) { return false; }
+        using var db = ParkingContextFactory.Create(databasePath);
+        db.DevAuthUsers.Add(new DevAuthUsers { Id = account.Id.ToString(), Username = account.Username, PasswordHash = account.PasswordHash, Role = account.Role, ParkingLotId = account.ParkingLotId?.ToString() });
+        try { db.SaveChanges(); return true; }
+        catch (DbUpdateException error) when (error.InnerException is SqliteException { SqliteExtendedErrorCode: 1555 or 2067 }) { return false; }
     }
-
     public LocalAccount? FindByUsername(string username)
     {
-        using SqliteConnection connection = Open();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "SELECT id, username, passwordHash, role, parkingLotId FROM dev_auth_users WHERE username = $username";
-        command.Parameters.AddWithValue("$username", username);
-        using SqliteDataReader reader = command.ExecuteReader();
-        if (!reader.Read()) return null;
-        Guid? parkingLotId = reader.IsDBNull(4) ? null : Guid.Parse(reader.GetString(4));
-        return new LocalAccount(Guid.Parse(reader.GetString(0)), reader.GetString(1), reader.GetString(2), reader.GetString(3), parkingLotId);
-    }
-
-    private SqliteConnection Open()
-    {
-        var connection = new SqliteConnection(connectionString);
-        connection.Open();
-        return connection;
-    }
-
-    private static void AddAccountParameters(SqliteCommand command, LocalAccount account)
-    {
-        command.Parameters.AddWithValue("$id", account.Id.ToString());
-        command.Parameters.AddWithValue("$username", account.Username);
-        command.Parameters.AddWithValue("$hash", account.PasswordHash);
-        command.Parameters.AddWithValue("$role", account.Role);
+        using var db = ParkingContextFactory.Create(databasePath);
+        var row = db.DevAuthUsers.AsNoTracking().SingleOrDefault(row => row.Username == username);
+        return row is null ? null : new(Guid.Parse(row.Id), row.Username, row.PasswordHash, row.Role, row.ParkingLotId is null ? null : Guid.Parse(row.ParkingLotId));
     }
 }

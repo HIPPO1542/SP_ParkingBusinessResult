@@ -1,54 +1,41 @@
 using System.Globalization;
-using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using ParkingBusinessResult.Infrastructure.Data;
 using ParkingBusinessResult.Application.Features.BusinessResults.Common;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Common;
-
 namespace ParkingBusinessResult.Infrastructure.Repositories;
-
 public sealed class SqliteParkingBookingTariffRepository(string databasePath) : IParkingBookingTariffRepository
 {
     public ParkingBookingTariffData? Find(Guid bookingId, string dayType, BusinessAccess access)
     {
-        using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = databasePath, Mode = SqliteOpenMode.ReadWrite, ForeignKeys = true }.ToString());
-        connection.Open();
-        using SqliteCommand visitCommand = connection.CreateCommand();
-        visitCommand.CommandText = "SELECT baiDoXeId, loaiXe, thoiGianBatDau, thoiGianKetThuc, tongTien FROM \"SP_datTruocChoDoXe\" WHERE id = $id";
-        visitCommand.Parameters.AddWithValue("$id", bookingId.ToString());
-        using SqliteDataReader reader = visitCommand.ExecuteReader();
-        if (!reader.Read()) return null;
-        Guid lotId = Guid.Parse(reader.GetString(0));
-        if (!access.CanAccess(lotId)) return null;
-        string vehicleType = reader.GetString(1);
-        string enteredText = reader.GetString(2);
-        string? exitedText = reader.IsDBNull(3) ? null : reader.GetString(3);
-        DateTime entered = DateTime.ParseExact(enteredText, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
-        DateTime? exited = exitedText is null ? null : DateTime.ParseExact(exitedText, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
-        decimal? collected = reader.IsDBNull(4) ? null : Convert.ToDecimal(reader.GetValue(4), CultureInfo.InvariantCulture);
-        reader.Close();
+        using var db = ParkingContextFactory.Create(databasePath);
+        var booking = db.SpDatTruocChoDoXe.AsNoTracking().SingleOrDefault(row => row.Id == bookingId.ToString());
+        if (booking is null || !access.CanAccess(Guid.Parse(booking.BaiDoXeId))) return null;
+        decimal? amount = booking.TongTien.HasValue ? Convert.ToDecimal(booking.TongTien.Value) : null;
         var rules = new List<ParkingTariffRule>();
-        if (exitedText is null) return new(entered, null, collected, rules);
-        using SqliteCommand tableCheck = connection.CreateCommand();
-        tableCheck.CommandText = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('SP_khungGiaThuPhi','SP_chiTietMucThuKhungGia','SP_apDungKhungGia')";
-        if ((long)tableCheck.ExecuteScalar()! != 3) return new(entered, exited, collected, rules);
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT r.soGioDau, r.giaGioDau, r.giaGioTiepTheo
-            FROM "SP_chiTietMucThuKhungGia" r
-            JOIN "SP_khungGiaThuPhi" f ON f.id = r.idKhungGia
-            JOIN "SP_apDungKhungGia" a ON a.khungGiaId = f.id AND a.baiDoXeId = f.baiDoXeId
-            WHERE a.baiDoXeId = $lot AND a.trangThaiApDung = 'APPLIED' AND f.trangThai = 'ACTIVE'
-              AND julianday(a.ngayApDung) <= julianday($entered)
-              AND julianday(f.ngayHieuLuc) <= julianday($entered) AND julianday(f.ngayHetHieuLuc) >= julianday($exited)
-              AND r.loaiPhuongTien = $type AND r.loaiNgay = $day
-            """;
-        command.Parameters.AddWithValue("$lot", lotId.ToString());
-        command.Parameters.AddWithValue("$entered", enteredText);
-        command.Parameters.AddWithValue("$exited", exitedText);
-        command.Parameters.AddWithValue("$type", vehicleType);
-        command.Parameters.AddWithValue("$day", dayType);
-        using SqliteDataReader ruleReader = command.ExecuteReader();
-        while (ruleReader.Read())
-            rules.Add(new(Convert.ToDecimal(ruleReader.GetDouble(0)), Convert.ToDecimal(ruleReader.GetDouble(1)), Convert.ToDecimal(ruleReader.GetDouble(2))));
-        return new(entered, exited, collected, rules);
+        if (booking.ThoiGianKetThuc is null) return new(booking.ThoiGianBatDau, null, amount, rules);
+        int tables = db.Database.SqlQueryRaw<int>("SELECT count(*) AS Value FROM sqlite_master WHERE type='table' AND name IN ('SP_khungGiaThuPhi','SP_chiTietMucThuKhungGia','SP_apDungKhungGia')").Single();
+        if (tables == 3)
+        {
+            string entered = booking.ThoiGianBatDau.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            string exited = booking.ThoiGianKetThuc.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            // julianday preserves the existing SQLite interpretation of price effective dates.
+            var prices = db.Database.SqlQuery<TariffRow>($"""
+                SELECT r.soGioDau AS FirstHours,r.giaGioDau AS FirstPrice,r.giaGioTiepTheo AS NextPrice
+                FROM SP_chiTietMucThuKhungGia r JOIN SP_khungGiaThuPhi f ON f.id=r.idKhungGia
+                JOIN SP_apDungKhungGia a ON a.khungGiaId=f.id AND a.baiDoXeId=f.baiDoXeId
+                WHERE a.baiDoXeId={booking.BaiDoXeId} AND a.trangThaiApDung='APPLIED' AND f.trangThai='ACTIVE'
+                AND julianday(a.ngayApDung)<=julianday({entered}) AND julianday(f.ngayHieuLuc)<=julianday({entered})
+                AND julianday(f.ngayHetHieuLuc)>=julianday({exited}) AND r.loaiPhuongTien={booking.LoaiXe} AND r.loaiNgay={dayType}
+                """).ToArray();
+            rules.AddRange(prices.Select(row => new ParkingTariffRule(Convert.ToDecimal(row.FirstHours), Convert.ToDecimal(row.FirstPrice), Convert.ToDecimal(row.NextPrice))));
+        }
+        return new(booking.ThoiGianBatDau, booking.ThoiGianKetThuc, amount, rules);
+    }
+    private sealed class TariffRow
+    {
+        public double FirstHours { get; set; }
+        public double FirstPrice { get; set; }
+        public double NextPrice { get; set; }
     }
 }

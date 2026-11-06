@@ -1,6 +1,6 @@
-using System.Globalization;
-using System.Text;
-using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using ParkingBusinessResult.Infrastructure.Data;
+using ParkingBusinessResult.Infrastructure.Data.Models;
 using ParkingBusinessResult.Application.Features.BusinessResults.Common;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Common;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.List;
@@ -11,124 +11,64 @@ public sealed class SqliteParkingBookingQueryRepository(string databasePath) : I
 {
     public ParkingBookingPage GetPage(ListParkingBookingsQuery query)
     {
-        using SqliteConnection connection = Open();
-        using SqliteCommand command = connection.CreateCommand();
-        var where = new StringBuilder(" WHERE 1=1");
-        AddScope(command, where, query.Access, query.ParkingLotId);
-        if (query.Status is not null)
-            where.Append(query.Status == "PARKED" ? " AND v.thoiGianKetThuc IS NULL" : " AND v.thoiGianKetThuc IS NOT NULL");
-        if (query.VehicleType is not null)
-        {
-            where.Append(" AND v.loaiXe = $type COLLATE ORDINAL_NOCASE");
-            command.Parameters.AddWithValue("$type", query.VehicleType);
-        }
-        string dateColumn = query.DateField == "exitedAt" ? "v.thoiGianKetThuc" : "v.thoiGianBatDau";
-        AddDatePart(command, where, dateColumn, "%d", "$day", query.Day);
-        AddDatePart(command, where, dateColumn, "%m", "$month", query.Month);
-        AddDatePart(command, where, dateColumn, "%Y", "$year", query.Year);
-        // Count and page share one statement snapshot, including an empty requested page.
-        command.CommandText = $"""
-            WITH filtered AS (
-                SELECT v.id,v.baiDoXeId,v.bienSoXe,v.loaiXe,v.thoiGianBatDau,v.thoiGianKetThuc,v.tongTien,p.ma,p.ten
-                FROM SP_datTruocChoDoXe v JOIN DL_KTHT_baiDoXe p ON p.Id=v.baiDoXeId {where}
-            ), page AS (
-                SELECT * FROM filtered ORDER BY thoiGianBatDau DESC,id LIMIT $limit OFFSET $offset
-            )
-            SELECT (SELECT COUNT(*) FROM filtered),page.* FROM (SELECT 1) LEFT JOIN page ON 1=1
-            ORDER BY page.thoiGianBatDau DESC,page.id
-            """;
-        command.Parameters.AddWithValue("$limit", query.PageSize);
-        command.Parameters.AddWithValue("$offset", ((long)query.PageNumber - 1) * query.PageSize);
-        var items = new List<ParkingBookingItem>();
-        int total = 0;
-        using SqliteDataReader reader = command.ExecuteReader();
-        while (reader.Read())
-        {
-            total = checked((int)reader.GetInt64(0));
-            if (reader.IsDBNull(1)) continue;
-            items.Add(new(Guid.Parse(reader.GetString(1)), Guid.Parse(reader.GetString(2)), reader.GetString(3), reader.GetString(4),
-                DateTime.Parse(reader.GetString(5), CultureInfo.InvariantCulture),
-                reader.IsDBNull(6) ? null : DateTime.Parse(reader.GetString(6), CultureInfo.InvariantCulture),
-                reader.IsDBNull(7) ? null : Convert.ToDecimal(reader.GetValue(7), CultureInfo.InvariantCulture), Text(reader, 8), Text(reader, 9)));
-        }
+        using var db = ParkingContextFactory.Create(databasePath);
+        // COUNT and page are separate EF queries; this short read transaction keeps one database snapshot.
+        using var snapshot = db.Database.BeginTransaction();
+        var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), query.Access, query.ParkingLotId);
+        if (query.Status is not null) rows = query.Status == "PARKED" ? rows.Where(row => row.ThoiGianKetThuc == null) : rows.Where(row => row.ThoiGianKetThuc != null);
+        if (query.VehicleType is not null) rows = rows.Where(row => EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE") == query.VehicleType);
+        bool useExit = query.DateField == "exitedAt";
+        if (query.Day.HasValue) rows = rows.Where(row => (useExit ? row.ThoiGianKetThuc : row.ThoiGianBatDau)!.Value.Day == query.Day);
+        if (query.Month.HasValue) rows = rows.Where(row => (useExit ? row.ThoiGianKetThuc : row.ThoiGianBatDau)!.Value.Month == query.Month);
+        if (query.Year.HasValue) rows = rows.Where(row => (useExit ? row.ThoiGianKetThuc : row.ThoiGianBatDau)!.Value.Year == query.Year);
+        var joined = rows.Join(db.DlKthtBaiDoXe, row => row.BaiDoXeId, lot => lot.Id, (row, lot) => new { Row = row, Lot = lot });
+        int total = joined.Count();
+        long offset = ((long)query.PageNumber - 1) * query.PageSize;
+        var page = offset > int.MaxValue ? [] : joined.OrderByDescending(item => item.Row.ThoiGianBatDau).ThenBy(item => item.Row.Id)
+            .Skip((int)offset).Take(query.PageSize).Select(item => new { item.Row, Code = item.Lot.Ma, Name = item.Lot.Ten }).ToArray();
+        var items = page.Select(item => new ParkingBookingItem(Guid.Parse(item.Row.Id), Guid.Parse(item.Row.BaiDoXeId),
+            item.Row.BienSoXe, item.Row.LoaiXe, item.Row.ThoiGianBatDau, item.Row.ThoiGianKetThuc,
+            item.Row.TongTien.HasValue ? Convert.ToDecimal(item.Row.TongTien.Value) : null, item.Code, item.Name)).ToArray();
+        snapshot.Commit();
         return new(items, total, query.PageNumber, query.PageSize);
     }
 
     public IReadOnlyList<string> GetVehicleTypes(BusinessAccess access)
     {
-        using SqliteConnection connection = Open();
-        using SqliteCommand command = connection.CreateCommand();
-        var where = new StringBuilder(" WHERE 1=1");
-        AddScope(command, where, access, null);
-        command.CommandText = $"SELECT DISTINCT v.loaiXe COLLATE ORDINAL_NOCASE FROM SP_datTruocChoDoXe v {where} ORDER BY v.loaiXe COLLATE ORDINAL_NOCASE";
-        using SqliteDataReader reader = command.ExecuteReader();
-        var types = new List<string>();
-        while (reader.Read()) types.Add(reader.GetString(0));
-        return types;
+        using var db = ParkingContextFactory.Create(databasePath);
+        return Scope(db.SpDatTruocChoDoXe.AsNoTracking(), access, null)
+            .Select(row => EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE")).Distinct().OrderBy(type => type).ToArray();
     }
 
     public IReadOnlyList<CompletedParkingBooking> ListCompleted(ParkingBookingSummaryFilter filter)
     {
-        using SqliteConnection connection = Open();
-        using SqliteCommand command = connection.CreateCommand();
-        var where = new StringBuilder(" WHERE v.thoiGianKetThuc >= $from AND v.thoiGianKetThuc < $to");
-        command.Parameters.AddWithValue("$from", filter.FromInclusive.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-        command.Parameters.AddWithValue("$to", filter.ToExclusive.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-        AddScope(command, where, filter.Access, filter.ParkingLotId);
-        if (filter.ParkingLotIds is not null) AddIds(command, where, filter.ParkingLotIds, "selected");
+        using var db = ParkingContextFactory.Create(databasePath);
+        var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), filter.Access, filter.ParkingLotId)
+            .Where(row => row.ThoiGianKetThuc >= filter.FromInclusive && row.ThoiGianKetThuc < filter.ToExclusive);
+        if (filter.ParkingLotIds is not null)
+        {
+            string[] selected = filter.ParkingLotIds.Select(id => id.ToString()).ToArray();
+            rows = rows.Where(row => selected.Contains(row.BaiDoXeId));
+        }
+        var joined = rows.Join(db.DlKthtBaiDoXe, row => row.BaiDoXeId, lot => lot.Id, (row, lot) => new { Row = row, Lot = lot });
         if (!string.IsNullOrWhiteSpace(filter.District))
         {
-            where.Append(" AND contains_ignore_case(p.diaChi,$district)");
-            command.Parameters.AddWithValue("$district", filter.District.Trim());
+            string district = filter.District.Trim();
+            joined = joined.Where(item => ParkingDbContext.ContainsIgnoreCase(item.Lot.DiaChi, district));
         }
-        command.CommandText = $"SELECT v.baiDoXeId,v.tongTien,p.ma,p.ten,p.diaChi FROM SP_datTruocChoDoXe v JOIN DL_KTHT_baiDoXe p ON p.Id=v.baiDoXeId {where}";
-        using SqliteDataReader reader = command.ExecuteReader();
-        var bookings = new List<CompletedParkingBooking>();
-        while (reader.Read()) bookings.Add(new(Guid.Parse(reader.GetString(0)),
-            reader.IsDBNull(1) ? null : Convert.ToDecimal(reader.GetValue(1), CultureInfo.InvariantCulture), Text(reader, 2), Text(reader, 3), Text(reader, 4)));
-        return bookings;
+        return joined.Select(item => new { item.Row.BaiDoXeId, item.Row.TongTien, item.Lot.Ma, item.Lot.Ten, item.Lot.DiaChi })
+            .AsEnumerable().Select(item => new CompletedParkingBooking(Guid.Parse(item.BaiDoXeId),
+                item.TongTien.HasValue ? Convert.ToDecimal(item.TongTien.Value) : null, item.Ma, item.Ten, item.DiaChi)).ToArray();
     }
 
-    private static void AddDatePart(SqliteCommand command, StringBuilder where, string column, string format, string parameter, int? value)
+    private static IQueryable<SpDatTruocChoDoXe> Scope(IQueryable<SpDatTruocChoDoXe> rows, BusinessAccess access, Guid? lot)
     {
-        if (!value.HasValue) return;
-        where.Append($" AND CAST(strftime('{format}',{column}) AS INTEGER) = {parameter}");
-        command.Parameters.AddWithValue(parameter, value.Value);
-    }
-
-    private static void AddScope(SqliteCommand command, StringBuilder where, BusinessAccess access, Guid? lot)
-    {
-        if (!access.IsAdministrator) AddIds(command, where, access.ParkingLotIds, "allowed");
-        if (!lot.HasValue) return;
-        where.Append(" AND v.baiDoXeId=$lot");
-        command.Parameters.AddWithValue("$lot", lot.Value.ToString());
-    }
-
-    private static void AddIds(SqliteCommand command, StringBuilder where, IReadOnlySet<Guid> ids, string prefix)
-    {
-        if (ids.Count == 0) { where.Append(" AND 0=1"); return; }
-        var parameters = new List<string>();
-        foreach (Guid id in ids)
+        if (!access.IsAdministrator)
         {
-            string parameter = $"${prefix}{parameters.Count}";
-            parameters.Add(parameter);
-            command.Parameters.AddWithValue(parameter, id.ToString());
+            string[] allowed = access.ParkingLotIds.Select(id => id.ToString()).ToArray();
+            rows = rows.Where(row => allowed.Contains(row.BaiDoXeId));
         }
-        where.Append($" AND v.baiDoXeId IN ({string.Join(',', parameters)})");
+        if (lot.HasValue) { string id = lot.Value.ToString(); rows = rows.Where(row => row.BaiDoXeId == id); }
+        return rows;
     }
-
-    private SqliteConnection Open()
-    {
-        var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = databasePath, Mode = SqliteOpenMode.ReadOnly, DefaultTimeout = 15 }.ToString());
-        try
-        {
-            connection.Open();
-            connection.CreateCollation("ORDINAL_NOCASE", StringComparer.OrdinalIgnoreCase.Compare);
-            connection.CreateFunction<string?, string, bool>("contains_ignore_case", (value, keyword) => value?.Contains(keyword, StringComparison.OrdinalIgnoreCase) == true, isDeterministic: true);
-            return connection;
-        }
-        catch { connection.Dispose(); throw; }
-    }
-
-    private static string? Text(SqliteDataReader reader, int column) => reader.IsDBNull(column) ? null : reader.GetString(column);
 }

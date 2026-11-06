@@ -13,7 +13,7 @@
 - **Ngôn ngữ và nền tảng:** C#, ASP.NET Core, .NET 10.
 - **API:** Minimal API; endpoint nhận HTTP và gọi handler.
 - **Tổ chức xử lý:** Clean Architecture kết hợp CQRS: `Command` cho thao tác ghi, `Query` cho thao tác đọc. Hiện handler được gọi trực tiếp qua dependency injection, chưa dùng MediatR.
-- **Cơ sở dữ liệu:** SQLite cục bộ, truy cập bằng SQL qua repository; chưa dùng EF Core.
+- **Cơ sở dữ liệu:** SQLite, truy cập qua EF Core trong repository; DbContext, mapping và migration nằm trong Infrastructure/Data. Xem [EF Core và migrations](docs/EF_CORE.md).
 - **File:** ExcelDataReader đọc file nhập; dự án tạo Excel và dùng PDFsharp tạo PDF. Các package đọc/tạo file được đặt ở Infrastructure.
 
 ### 2.1. Cây thư mục

@@ -33,6 +33,15 @@ jobs:
           "PARKING_API_DLL=$env:GITHUB_WORKSPACE/Backend/ParkingBusinessResult.Api/bin/Release/net10.0/ParkingBusinessResult.Api.dll" >> $env:GITHUB_ENV
       - name: Build Release
         run: dotnet build SP_ParkingBusinessResult.sln -c Release --nologo
+      - name: Check EF migrations
+        run: |
+          dotnet tool restore
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:ParkingBusinessResult__DatabasePath = Join-Path $env:RUNNER_TEMP ('ef-schema-' + [guid]::NewGuid().ToString('N') + '.db')
+          dotnet ef database update --project Backend/ParkingBusinessResult.Infrastructure --configuration Release --no-build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet ef migrations has-pending-model-changes --project Backend/ParkingBusinessResult.Infrastructure --configuration Release --no-build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check architecture and migrations
         run: |
           $checks = @('test_architecture.py', 'test_sqlite_migration.py', 'test_soft_delete_migration.py', 'test_parking_visit_migration.py', 'test_booking_migration.py', 'test_development_parking_data.py', 'test_postman_collection.py')
