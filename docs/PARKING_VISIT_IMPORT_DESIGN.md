@@ -16,6 +16,8 @@ Gửi multipart `POST /gdci/parking/parkingLot/businessOperation/import`, trư�
 
 `GET /gdci/parking/parkingLot/parkingVisit` liệt kê lượt đã nhập trong phạm vi quyền, kèm mã và tên bãi; hỗ trợ kết hợp `parkingLotId`, `vehicleType`, `status=PARKED` (chưa ra) hoặc `status=COMPLETED` (đã ra), `pageNumber` và `pageSize` (mặc định 1/10, tối đa 100 dòng mỗi trang). Kết quả có `items` và `totalCount` sau khi lọc quyền. `GET /gdci/parking/parkingLot/parkingVisit/filters` cung cấp các bãi được phép truy cập và loại xe đã có trong phạm vi quyền.
 
+Danh sách còn hỗ trợ `day` (1–31), `month` (1–12), `year` (1–9999), kết hợp độc lập hoặc đồng thời. `dateField=enteredAt` (mặc định) lọc theo giờ vào; `dateField=exitedAt` lọc theo giờ ra. Lượt chưa ra không phù hợp khi lọc theo ngày/tháng/năm của giờ ra. Các tổ hợp ngày không tồn tại bị từ chối.
+
 `GET /gdci/parking/parkingLot/parkingVisit/summary?reportingPeriod=2026-11` tính trực tiếp từ các lượt **đã ra trong tháng**, không tính xe chưa ra. Có thể thay kỳ tháng bằng `fromDate=2026-11-01&toDate=2026-11-30` để tính theo ngày ra trong khoảng, gồm cả hai ngày đầu/cuối. `collectedRevenue` cộng các số tiền đã có; `missingAmountCount` là số lượt hoàn tất chưa có tiền nên doanh thu có thể chưa đầy đủ. Có thể lọc thêm `parkingLotId`. Bình quân ngày và top 5 bãi chỉ được tính khi không thiếu tiền; tăng trưởng tháng chỉ được tính khi cả hai tháng đủ tiền, có dữ liệu kỳ trước và doanh thu kỳ trước lớn hơn 0; các trường không đủ điều kiện là null. Kết quả này độc lập với các bản tổng hợp cũ và không cộng lẫn với dữ liệu giả lập.
 
 Thống kê không phân loại tiền mặt hay điện tử vì phương thức thanh toán không thuộc dữ liệu do chức năng này quản lý; lượt chưa có tiền được đếm bằng `missingAmountCount`.

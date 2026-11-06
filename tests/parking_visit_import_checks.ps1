@@ -64,6 +64,14 @@ try {
     if ($combined.data.totalCount -ne 1 -or $combined.data.items[0].licensePlate -ne '59A-1') { throw 'Combined visit filters failed.' }
     $noCombination = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?parkingLotId=$lotId&status=COMPLETED&vehicleType=$carType" -Headers $headers
     if ($noCombination.data.totalCount -ne 0) { throw 'Combined filters returned an unrelated visit.' }
+    $entryDay = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?day=4&month=11&year=2026&status=PARKED&parkingLotId=$lotId&vehicleType=$carType" -Headers $headers
+    if ($entryDay.data.totalCount -ne 1 -or $entryDay.data.items[0].licensePlate -ne '59A-1') { throw 'Combined date and visit filters failed.' }
+    $yearOnly = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?year=2026" -Headers $headers
+    if ($yearOnly.data.totalCount -ne 3) { throw 'Year filter failed.' }
+    foreach ($dateQuery in @('day=31&month=2', 'day=29&month=2&year=2025', 'year=0', 'month=13', 'dateField=invalid')) {
+        $badDate = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?$dateQuery" -Headers $headers
+        if ($badDate.code -ne 7) { throw "Invalid list date accepted: $dateQuery" }
+    }
     $invalidList = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?status=unknown" -Headers $headers
     if ($invalidList.code -ne 7) { throw 'Invalid visit status was accepted.' }
     $validComparison = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/$($first.data.importedIds[1])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
@@ -82,6 +90,8 @@ try {
     if ($afterDuplicate.data.totalCount -ne 1 -or $afterDuplicate.data.items[0].id -ne $first.data.importedIds[0] -or $null -ne $afterDuplicate.data.items[0].collectedAmount) { throw 'Duplicate import changed the existing visit.' }
     & $pythonPath -X utf8 (Join-Path $root 'tests/parking_visit_import_fixture.py') complete $databasePath
     if ($LASTEXITCODE -ne 0) { throw 'Could not prepare completed visit for report checks.' }
+    $exitDay = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit?day=5&month=11&year=2026&dateField=exitedAt&parkingLotId=$lotId" -Headers $headers
+    if ($exitDay.data.totalCount -ne 1 -or $exitDay.data.items[0].licensePlate -ne '59A-1') { throw 'Exit date filter failed.' }
     $overnight = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/$($first.data.importedIds[0])/tariff-comparison?dayType=WEEKDAY" -Headers $headers
     if ($overnight.data.canCompare -or $null -ne $overnight.data.expectedAmount) { throw 'Overnight charge should not be guessed.' }
     $bad = Import-File 'invalid.xlsx' $token

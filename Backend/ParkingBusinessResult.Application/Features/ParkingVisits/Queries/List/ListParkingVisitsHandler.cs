@@ -13,9 +13,19 @@ public sealed class ListParkingVisitsHandler(IParkingVisitListRepository reposit
             .Where(visit => query.ParkingLotId is null || visit.ParkingLotId == query.ParkingLotId)
             .Where(visit => query.Status is null || (query.Status == "PARKED" ? visit.ExitedAt is null : visit.ExitedAt is not null))
             .Where(visit => query.VehicleType is null || string.Equals(visit.VehicleType, query.VehicleType, StringComparison.OrdinalIgnoreCase))
+            .Where(visit => MatchesDate(visit, query))
             .OrderByDescending(visit => visit.EnteredAt).ThenBy(visit => visit.Id).ToArray();
         long offset = ((long)query.PageNumber - 1) * query.PageSize;
         ParkingVisitItem[] page = offset >= visits.Length ? [] : visits.Skip((int)offset).Take(query.PageSize).ToArray();
         return new(page, visits.Length, query.PageNumber, query.PageSize);
+    }
+
+    private static bool MatchesDate(ParkingVisitItem visit, ListParkingVisitsQuery query)
+    {
+        if (query.Day is null && query.Month is null && query.Year is null) return true;
+        DateTime? date = query.DateField == "exitedAt" ? visit.ExitedAt : visit.EnteredAt;
+        return date.HasValue && (query.Day is null || date.Value.Day == query.Day) &&
+            (query.Month is null || date.Value.Month == query.Month) &&
+            (query.Year is null || date.Value.Year == query.Year);
     }
 }
