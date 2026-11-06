@@ -67,7 +67,7 @@ API JSON dùng `{ "code": 0, "message": "Thành công", "data": ... }`; lỗi d�
 ## Tài liệu và kiểm tra
 
 - [Kiến trúc, cấu hình triển khai và giới hạn vận hành](docs/ENTERPRISE_DEPLOYMENT.md).
-- [Giải thích từng file](GIAI_THICH_TUNG_FILE.md), [tổng quan dự án](TONG_QUAN_DU_AN.md).
+- [Tổng quan dự án](TONG_QUAN_DU_AN.md).
 - [File import và nghiệp vụ booking](docs/PARKING_BOOKING_IMPORT_DESIGN.md), [báo cáo tổng hợp](docs/DEVELOPMENT_BUSINESS_REPORTS.md).
 - [Các khác biệt còn lại với ApiSpec/LLD](docs/API_CONTRACT_REVIEW.md), [Postman](postman/README.md).
 
