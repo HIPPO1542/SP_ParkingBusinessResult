@@ -1,24 +1,115 @@
 {
   "info": {
-    "name": "Parking Business Result - Development",
-    "description": "Kiểm thử các API Development hiện có. Đăng nhập trước; token và ID kết quả được lưu tự động trong biến collection. Cần bãi xe đã tồn tại trong SQLite trước khi tạo kết quả. API trả code 0 khi thành công, code 7 khi lỗi nghiệp vụ.",
+    "name": "SP_ParkingBusinessResult",
+    "description": "Điền baseUrl, adminUsername, adminPassword rồi gửi Đăng nhập. Token tự lưu. Gửi Lấy bãi xe và loại xe để lấy ID bãi thật. Chọn từng request để gửi; không chạy toàn bộ collection nếu không muốn tạo/sửa/xóa mềm dữ liệu. Booking và kết quả tổng hợp là hai nguồn riêng. Local JWT chạy ở Production; Authority dùng accessToken tự điền. HTTP 200/code 0: thành công, code 7: lỗi nghiệp vụ.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
     "type": "bearer",
-    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:5069", "type": "string" },
-    { "key": "adminUsername", "value": "", "type": "string" },
-    { "key": "adminPassword", "value": "", "type": "string" },
-    { "key": "accessToken", "value": "", "type": "string" },
-    { "key": "parkingLotId", "value": "00000000-0000-4000-8000-000000000002", "type": "string" },
-    { "key": "reportingPeriod", "value": "2026-10", "type": "string" },
-    { "key": "resultId", "value": "", "type": "string" },
-    { "key": "deletedResultId", "value": "", "type": "string" },
-    { "key": "operatorUsername", "value": "", "type": "string" },
-    { "key": "operatorPassword", "value": "", "type": "string" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5069",
+      "type": "string"
+    },
+    {
+      "key": "adminUsername",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "parkingLotId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reportingPeriod",
+      "value": "2026-11",
+      "type": "string"
+    },
+    {
+      "key": "resultId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "deletedResultId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "operatorUsername",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "operatorPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bookingId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "dayType",
+      "value": "WEEKDAY",
+      "type": "string"
+    },
+    {
+      "key": "fromDate",
+      "value": "2026-11-01",
+      "type": "string"
+    },
+    {
+      "key": "toDate",
+      "value": "2026-11-30",
+      "type": "string"
+    },
+    {
+      "key": "day",
+      "value": "6",
+      "type": "string"
+    },
+    {
+      "key": "month",
+      "value": "11",
+      "type": "string"
+    },
+    {
+      "key": "year",
+      "value": "2026",
+      "type": "string"
+    },
+    {
+      "key": "vehicleType",
+      "value": "CAR_9_SEATS",
+      "type": "string"
+    },
+    {
+      "key": "fileUrl",
+      "value": "",
+      "type": "string"
+    }
   ],
   "item": [
     {
@@ -26,35 +117,83 @@
       "item": [
         {
           "name": "Đăng nhập quản trị viên",
-          "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
-            "pm.request.body.update(JSON.stringify({ username: pm.variables.get('adminUsername') || '', password: pm.variables.get('adminPassword') || '' }));"
-          ] } }, { "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.collectionVariables.unset('accessToken');",
-            "const response = pm.response.json();",
-            "pm.test('HTTP 200 và đăng nhập thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); pm.expect(response.data.accessToken).to.be.a('string').and.not.empty; });",
-            "if (response.code === 0 && response.data && response.data.accessToken) pm.collectionVariables.set('accessToken', response.data.accessToken);"
-          ] } }],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.body.update(JSON.stringify({ username: pm.variables.get('adminUsername') || '', password: pm.variables.get('adminPassword') || '' }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('accessToken');",
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và đăng nhập thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); pm.expect(response.data.accessToken).to.be.a('string').and.not.empty; });",
+                  "if (response.code === 0 && response.data && response.data.accessToken) pm.collectionVariables.set('accessToken', response.data.accessToken);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
-            "auth": { "type": "noauth" },
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}" },
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
             "url": "{{baseUrl}}/auth/login",
             "description": "Nhập tài khoản quản trị đã khởi tạo vào biến adminUsername và adminPassword. Token hết hạn sau 30 phút."
           }
         },
         {
           "name": "Tạo tài khoản vận hành (không bắt buộc)",
-          "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
-            "pm.request.body.update(JSON.stringify({ username: pm.variables.get('operatorUsername') || '', password: pm.variables.get('operatorPassword') || '', role: 'ROLE_PARKING_OPERATOR', parkingLotId: pm.variables.get('parkingLotId') || '' }));"
-          ] } }, { "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "const response = pm.response.json();",
-            "pm.test('HTTP 200 và tạo tài khoản thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
-          ] } }],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.body.update(JSON.stringify({ username: pm.variables.get('operatorUsername') || '', password: pm.variables.get('operatorPassword') || '', role: 'ROLE_PARKING_OPERATOR', parkingLotId: pm.variables.get('parkingLotId') || '' }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và tạo tài khoản thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{operatorUsername}}\",\n  \"password\": \"{{operatorPassword}}\",\n  \"role\": \"ROLE_PARKING_OPERATOR\",\n  \"parkingLotId\": \"{{parkingLotId}}\"\n}" },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{operatorUsername}}\",\n  \"password\": \"{{operatorPassword}}\",\n  \"role\": \"ROLE_PARKING_OPERATOR\",\n  \"parkingLotId\": \"{{parkingLotId}}\"\n}"
+            },
             "url": "{{baseUrl}}/auth/users",
             "description": "Cần token quản trị. Đặt operatorUsername và operatorPassword, mật khẩu từ 12 đến 256 ký tự; mỗi tên chỉ tạo một lần."
           }
@@ -62,105 +201,594 @@
       ]
     },
     {
-      "name": "2. Kết quả kinh doanh",
+      "name": "2. Lượt xe booking",
       "item": [
         {
-          "name": "Kiểm tra route theo tài liệu",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "const response = pm.response.json();",
-            "pm.test('Route tài liệu trả danh sách', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); pm.expect(response.data).to.be.an('array'); });"
-          ] } }],
-          "request": { "method": "GET", "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation", "description": "Route theo ví dụ module parking trong tài liệu. Body, response và quyền vẫn cần đối chiếu riêng." }
+          "name": "Lấy bãi xe và loại xe",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/filters",
+            "description": "Tự điền parkingLotId bằng bãi đầu tiên nếu biến trống; có thể chọn ID khác từ response."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
+                  "if (response.code === 0 && response.data && response.data.parkingLots.length && !pm.variables.get('parkingLotId')) pm.collectionVariables.set('parkingLotId', response.data.parkingLots[0].id);"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "Danh sách kết quả",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "const response = pm.response.json();",
-            "pm.test('HTTP 200 và lấy danh sách thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); pm.expect(response.data).to.be.an('array'); });"
-          ] } }],
-          "request": { "method": "GET", "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation" }
-        },
-        {
-          "name": "Đối chiếu body thêm theo tài liệu (chưa hỗ trợ)",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "const response = pm.response.json();",
-            "pm.test('API thử nghiệm từ chối body tài liệu chưa hỗ trợ', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(7); });"
-          ] } }],
+          "name": "Import file lượt xe",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
+                  "pm.test('Có tổng kết import', () => pm.expect(response.data).to.include.all.keys('totalRows','successRows','errorRows','duplicateRows','importedIds','importedRows','errors'));",
+                  "if (response.code === 0 && response.data && response.data.importedIds.length) pm.collectionVariables.set('bookingId', response.data.importedIds[0]);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"parkingLotId\": \"{{parkingLotId}}\",\n  \"reportDate\": \"2026-10-01\",\n  \"periodType\": \"MONTHLY\",\n  \"totalCheckIn\": 125,\n  \"totalCheckOut\": 125,\n  \"averageOccupancyRate\": 50,\n  \"peakOccupancyRate\": 60,\n  \"totalRevenue\": 2500000,\n  \"cashRevenue\": 1000000,\n  \"electronicRevenue\": 1500000,\n  \"operatingExpenses\": 0,\n  \"notes\": \"Body theo ApiSpec\"\n}" },
-            "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation",
-            "description": "Kiểm tra sự khác biệt với ApiSpec. code 7 ở đây xác nhận API hiện tại CHƯA hỗ trợ body tài liệu, không có nghĩa là đã khớp tài liệu."
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/import",
+            "description": "Body > form-data > file: chọn Excel/CSV theo mẫu outputs/import-20261106/. Dòng hợp lệ ghi vào SP_datTruocChoDoXe; tiền lưu vào tongTien. Trùng bãi + biển số chuẩn hóa + giờ vào: báo lỗi, không cập nhật."
+          }
+        },
+        {
+          "name": "Danh sách lượt xe",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking?pageNumber=1&pageSize=10",
+            "description": "Mặc định 10 dòng/trang. Xem totalCount; tăng pageNumber hoặc pageSize (tối đa 100). Tự lưu bookingId từ dòng đầu."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
+                  "pm.test('Có phân trang', () => pm.expect(response.data).to.include.all.keys('items','totalCount','pageNumber','pageSize'));",
+                  "if (response.code === 0 && response.data && response.data.items.length) pm.collectionVariables.set('bookingId', response.data.items[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lọc kết hợp bãi, loại xe, trạng thái và ngày",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking?parkingLotId={{parkingLotId}}&vehicleType={{vehicleType}}&status=COMPLETED&day={{day}}&month={{month}}&year={{year}}&pageNumber=1&pageSize=10",
+            "description": "Bỏ tham số không dùng. status: PARKED/COMPLETED. Ngày/tháng/năm mặc định lọc theo giờ vào."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
+                  "pm.test('Có phân trang', () => pm.expect(response.data).to.include.all.keys('items','totalCount','pageNumber','pageSize'));",
+                  "if (response.code === 0 && response.data && response.data.items.length) pm.collectionVariables.set('bookingId', response.data.items[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Danh sách lượt đang trong bãi",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking?status=PARKED&pageNumber=1&pageSize=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Danh sách lượt đã ra",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking?status=COMPLETED&pageNumber=1&pageSize=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Thống kê theo tháng",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/summary?reportingPeriod={{reportingPeriod}}",
+            "description": "Tính theo ngày xe ra; missingAmountCount cho biết số lượt hoàn tất chưa có tiền thực thu."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Thống kê theo khoảng ngày",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/summary?fromDate=2026-11-01&toDate=2026-11-30"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đối chiếu bảng giá",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/{{bookingId}}/tariff-comparison?dayType={{dayType}}",
+            "description": "Chọn WEEKDAY, WEEKEND hoặc HOLIDAY; một số trường hợp chưa đủ quy tắc sẽ không tính."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Thống kê khoảng ngày và nhiều bãi",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/summary?fromDate={{fromDate}}&toDate={{toDate}}&parkingLotIds={{parkingLotId}}",
+            "description": "Nhiều bãi: thêm tham số parkingLotIds cùng tên với ID khác. Bỏ parkingLotIds: mọi bãi được phép. Không gửi reportingPeriod cùng khoảng ngày."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xuất booking EXCEL",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/export",
+            "description": "Nhận JSON metadata rồi gửi Tải báo cáo đã xuất. Mọi bãi: parkingLotIds=[]. Khoảng ngày: bỏ reportingPeriod, thêm fromDate/toDate yyyy-MM-dd. Quyền admin/district admin; PDF cần Windows/Arial.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileFormat\": \"EXCEL\",\n  \"reportingPeriod\": \"{{reportingPeriod}}\",\n  \"parkingLotIds\": [\n    \"{{parkingLotId}}\"\n  ],\n  \"reportTitle\": \"Báo cáo lượt xe\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
+                  "pm.test('Metadata đúng mẫu', () => pm.expect(response.data).to.have.all.keys('id','fileUrl','fileName','fileFormat','fileSize','recordCount','createdAt','createdBy','createdById','updatedAt','updatedBy','updatedById'));",
+                  "if (response.code === 0 && response.data && response.data.fileUrl) pm.collectionVariables.set('fileUrl', response.data.fileUrl);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xuất booking PDF",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/export",
+            "description": "Nhận JSON metadata rồi gửi Tải báo cáo đã xuất. Mọi bãi: parkingLotIds=[]. Khoảng ngày: bỏ reportingPeriod, thêm fromDate/toDate yyyy-MM-dd. Quyền admin/district admin; PDF cần Windows/Arial.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileFormat\": \"PDF\",\n  \"reportingPeriod\": \"{{reportingPeriod}}\",\n  \"parkingLotIds\": [\n    \"{{parkingLotId}}\"\n  ],\n  \"reportTitle\": \"Báo cáo lượt xe\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
+                  "pm.test('Metadata đúng mẫu', () => pm.expect(response.data).to.have.all.keys('id','fileUrl','fileName','fileFormat','fileSize','recordCount','createdAt','createdBy','createdById','updatedAt','updatedBy','updatedById'));",
+                  "if (response.code === 0 && response.data && response.data.fileUrl) pm.collectionVariables.set('fileUrl', response.data.fileUrl);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Kết quả kinh doanh tổng hợp",
+      "item": [
+        {
+          "name": "Danh sách kết quả",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và lấy danh sách thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); pm.expect(response.data).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation"
           }
         },
         {
           "name": "Thêm kết quả",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "pm.collectionVariables.unset('resultId');",
-            "const response = pm.response.json();",
-            "pm.test('HTTP 200 và thêm thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); pm.expect(response.data.id).to.be.a('string').and.not.empty; });",
-            "if (response.code === 0 && response.data && response.data.id) pm.collectionVariables.set('resultId', response.data.id);"
-          ] } }],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('resultId');",
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và thêm thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); pm.expect(response.data.id).to.be.a('string').and.not.empty; });",
+                  "if (response.code === 0 && response.data && response.data.id) pm.collectionVariables.set('resultId', response.data.id);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"parkingLotId\": \"{{parkingLotId}}\",\n  \"reportingPeriod\": \"{{reportingPeriod}}\",\n  \"revenue\": 2500000,\n  \"completedVehicleCount\": 125,\n  \"note\": \"Dữ liệu thử Postman\"\n}" },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parkingLotId\": \"{{parkingLotId}}\",\n  \"reportingPeriod\": \"{{reportingPeriod}}\",\n  \"revenue\": 2500000,\n  \"completedVehicleCount\": 125,\n  \"note\": \"Dữ liệu thử Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation",
-            "description": "Cần bãi xe có thật trong database. Một bãi xe chỉ có một bản ghi cho cùng kỳ báo cáo."
+            "description": "Ghi vào SP_ketQuaKinhDoanhBaiDoXe, không tạo booking. Cần bãi thật; một kết quả chưa xóa cho mỗi bãi/kỳ. Đổi reportingPeriod nếu đã tồn tại."
           }
         },
         {
           "name": "Xem chi tiết",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "const response = pm.response.json();",
-            "pm.test('HTTP 200 và xem chi tiết thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
-          ] } }],
-          "request": { "method": "GET", "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{resultId}}", "description": "Chạy Thêm kết quả trước hoặc tự điền resultId." }
-        },
-        {
-          "name": "Đối chiếu body sửa theo tài liệu (chưa hỗ trợ)",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "const response = pm.response.json();",
-            "pm.test('API thử nghiệm từ chối body tài liệu chưa hỗ trợ', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(7); });"
-          ] } }],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và xem chi tiết thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ],
           "request": {
-            "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"totalCheckIn\": 125,\n  \"totalCheckOut\": 125,\n  \"averageOccupancyRate\": 50,\n  \"peakOccupancyRate\": 60,\n  \"totalRevenue\": 2500000,\n  \"cashRevenue\": 1000000,\n  \"electronicRevenue\": 1500000,\n  \"operatingExpenses\": 0,\n  \"notes\": \"Body theo ApiSpec\"\n}" },
+            "method": "GET",
             "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{resultId}}",
-            "description": "Body theo ApiSpec chưa được API thử nghiệm hỗ trợ; phải từ chối và giữ nguyên bản ghi."
+            "description": "Chạy Thêm kết quả trước hoặc tự điền resultId."
           }
         },
         {
           "name": "Cập nhật kết quả",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "const response = pm.response.json();",
-            "pm.test('HTTP 200 và cập nhật thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
-          ] } }],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và cập nhật thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"revenue\": 3000000,\n  \"completedVehicleCount\": 150,\n  \"note\": \"Đã cập nhật bằng Postman\"\n}" },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revenue\": 3000000,\n  \"completedVehicleCount\": 150,\n  \"note\": \"Đã cập nhật bằng Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{resultId}}"
           }
         },
         {
           "name": "Xóa mềm kết quả",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "const response = pm.response.json();",
-            "pm.test('HTTP 200 và xóa thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
-            "if (response.code === 0 && response.data && response.data.id) { pm.collectionVariables.set('deletedResultId', response.data.id); pm.collectionVariables.unset('resultId'); }"
-          ] } }],
-          "request": { "method": "DELETE", "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{resultId}}", "description": "Đánh dấu bản ghi đã xóa và ẩn khỏi API; dữ liệu vẫn còn trong SQLite. Chỉ chạy khi muốn xóa mềm bản ghi đó." }
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và xóa thành công', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
+                  "if (response.code === 0 && response.data && response.data.id) { pm.collectionVariables.set('deletedResultId', response.data.id); pm.collectionVariables.unset('resultId'); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{resultId}}",
+            "description": "Đánh dấu bản ghi đã xóa và ẩn khỏi API; dữ liệu vẫn còn trong SQLite. Chỉ chạy khi muốn xóa mềm bản ghi đó."
+          }
         },
         {
           "name": "Kiểm tra bản ghi đã xóa mềm",
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-            "const response = pm.response.json();",
-            "pm.test('Bản ghi đã xóa mềm không còn hiển thị qua API', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(7); });"
-          ] } }],
-          "request": { "method": "GET", "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{deletedResultId}}", "description": "Chạy sau request xóa mềm; ID được lưu tự động vào deletedResultId." }
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('Bản ghi đã xóa mềm không còn hiển thị qua API', function () { pm.response.to.have.status(200); pm.expect(response.code).to.eql(7); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{deletedResultId}}",
+            "description": "Chạy sau request xóa mềm; ID được lưu tự động vào deletedResultId."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Báo cáo kết quả kinh doanh",
+      "item": [
+        {
+          "name": "Danh sách báo cáo theo kỳ",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod={{reportingPeriod}}&pageNumber=1&pageSize=10",
+            "description": "Nguồn SP_ketQuaKinhDoanhBaiDoXe. Có thể thêm parkingLotId, keyword, district. data là mảng."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Thống kê kết quả kinh doanh",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBusinessReport/summary?reportingPeriod={{reportingPeriod}}",
+            "description": "Nguồn kết quả tổng hợp, không tự cộng booking import. Có thể thêm parkingLotId/district."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xuất kết quả kinh doanh EXCEL",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBusinessReport/export",
+            "description": "Nhận metadata rồi gửi Tải báo cáo đã xuất. Bỏ parkingLotId để xuất mọi bãi được phép. Quyền admin/district admin.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileFormat\": \"EXCEL\",\n  \"reportingPeriod\": \"{{reportingPeriod}}\",\n  \"parkingLotId\": \"{{parkingLotId}}\",\n  \"reportTitle\": \"Báo cáo kết quả kinh doanh\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
+                  "pm.test('Metadata đúng mẫu', () => pm.expect(response.data).to.have.all.keys('id','fileUrl','fileName','fileFormat','fileSize','recordCount','createdAt','createdBy','createdById','updatedAt','updatedBy','updatedById'));",
+                  "if (response.code === 0 && response.data && response.data.fileUrl) pm.collectionVariables.set('fileUrl', response.data.fileUrl);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xuất kết quả kinh doanh PDF",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBusinessReport/export",
+            "description": "Nhận metadata rồi gửi Tải báo cáo đã xuất. Bỏ parkingLotId để xuất mọi bãi được phép. Quyền admin/district admin.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileFormat\": \"PDF\",\n  \"reportingPeriod\": \"{{reportingPeriod}}\",\n  \"parkingLotId\": \"{{parkingLotId}}\",\n  \"reportTitle\": \"Báo cáo kết quả kinh doanh\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
+                  "pm.test('Metadata đúng mẫu', () => pm.expect(response.data).to.have.all.keys('id','fileUrl','fileName','fileFormat','fileSize','recordCount','createdAt','createdBy','createdById','updatedAt','updatedBy','updatedById'));",
+                  "if (response.code === 0 && response.data && response.data.fileUrl) pm.collectionVariables.set('fileUrl', response.data.fileUrl);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Tải file xuất",
+      "item": [
+        {
+          "name": "Tải báo cáo đã xuất",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}{{fileUrl}}",
+            "description": "fileUrl tự lưu sau khi xuất thành công. Dùng Send and Download, cùng token của chính người xuất. Response thành công là file."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tải file thành công', () => { pm.response.to.have.status(200); pm.expect(pm.response.headers.get('Content-Type')).to.not.include('application/json'); });"
+                ]
+              }
+            }
+          ]
         }
       ]
     }

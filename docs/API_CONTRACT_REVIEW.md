@@ -27,15 +27,8 @@ Tài liệu này phân biệt nâng cấp chất lượng source với việc kh
 
 Chi phí vận hành, doanh thu tiền mặt/điện tử và tỷ lệ lấp đầy không có nguồn đầy đủ trong các bảng đã chốt. Không thể suy ra các giá trị đó chỉ từ tổng doanh thu/số lượt. Nâng cấp source không tự tạo cột hoặc số liệu giả cho các trường này. `daXoa` là phần mở rộng đã được người dùng yêu cầu trước đó.
 
-## Ma trận bằng chứng
+## Kiểm tra hiện tại
 
-| Yêu cầu | Bằng chứng | Trạng thái |
-|---|---|---|
-| Quy tắc tính, CRUD, audit, xóa mềm | `tests/RevenueMetrics.Checks`, `tests/api_sqlite_checks.ps1` | Verified cục bộ |
-| Migration bảo toàn dữ liệu và sao lưu | `test_sqlite_migration.py`, `test_soft_delete_migration.py`, `test_parking_visit_migration.py`, `test_booking_migration.py` | Kiểm tra trên database tạm |
-| Danh sách, tổng hợp, Excel/PDF, chủ file và quyền bãi | `tests/seeded_parking_api_checks.ps1` | Verified cục bộ trên Windows |
-| Import, trùng, lọc kết hợp, thống kê, xuất booking | `tests/parking_booking_import_checks.ps1` | Verified cục bộ; XLS chỉ chạy khi có xlwt |
-| Giao dịch rollback và hủy import | `tests/Enterprise.Checks` | Verified cục bộ |
-| Giao diện/đăng nhập/API Production, lỗi framework và health | `tests/runtime_checks.ps1` | Verified cục bộ bằng database tạm |
-| Ranh giới Clean Architecture | `tests/test_architecture.py` | Verified cục bộ |
-| Toàn bộ hợp đồng gốc, quyền theo tổ chức, SSO và tải thực | Cần nguồn dữ liệu và môi trường tích hợp phù hợp | Chưa xác minh |
+Thư mục `tests/` đã được loại bỏ theo yêu cầu. Các kiểm tra tự động trước đây được lưu trong lịch sử Git tại tag `vesion-3`, không còn là lệnh chạy của source hiện tại. Workflow chỉ build Release. Dùng [collection Postman](../postman/ParkingBusinessResult.postman_collection.json) để kiểm tra API thủ công; không xem việc có collection là bằng chứng API đã chạy đạt.
+
+Toàn bộ hợp đồng gốc, quyền theo tổ chức, SSO và tải thực vẫn cần môi trường tích hợp phù hợp để xác minh.

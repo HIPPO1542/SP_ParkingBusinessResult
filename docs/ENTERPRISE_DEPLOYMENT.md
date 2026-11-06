@@ -10,7 +10,7 @@ Api ──────────> Application ────────> Domain
  └─ cấu hình DI ─> Infrastructure
 ```
 
-Infrastructure tham chiếu Application và dùng các kiểu Domain qua tham chiếu bắc cầu. Domain không phụ thuộc framework. Endpoint chỉ gọi handler, không gọi bộ tạo Excel/PDF hoặc repository SQLite trực tiếp. Kiểm tra ranh giới này nằm trong `tests/test_architecture.py`.
+Infrastructure tham chiếu Application và dùng các kiểu Domain qua tham chiếu bắc cầu. Domain không phụ thuộc framework. Endpoint chỉ gọi handler, không gọi bộ tạo Excel/PDF hoặc repository SQLite trực tiếp. Kiểm tra kiến trúc tự động trước đây được lưu trong lịch sử Git tại tag `vesion-3`.
 
 Luồng đọc danh sách:
 
@@ -98,18 +98,8 @@ dotnet artifacts/api/ParkingBusinessResult.Api.dll --urls http://127.0.0.1:5069
 - File cũ theo UUID chỉ được tìm lại khi bật rõ `ParkingBusinessResult:AllowLegacyReportDownloads`; mặc định tắt để cách ly issuer/subject. Chỉ bật để chuyển tiếp trên bản cài Local tin cậy có dữ liệu cũ, không bật khi dùng nhiều issuer.
 - File xuất chưa có lịch dọn tự động. Đơn vị vận hành cần chọn thời gian lưu, sao lưu và dung lượng; không tự xóa báo cáo khi chưa có chính sách.
 
-## Bằng chứng kiểm tra và giới hạn
+## Kiểm tra và giới hạn
 
-| Nội dung | Kiểm tra | Trạng thái |
-|---|---|---|
-| Build Release, cảnh báo được xem là lỗi | `dotnet build SP_ParkingBusinessResult.sln -c Release` | Verified cục bộ |
-| Chiều phụ thuộc, Endpoint không gọi Infrastructure | `tests/test_architecture.py` | Verified cục bộ |
-| Rollback khi lỗi/hủy import, audit, phân trang rỗng, cách ly quyền và file | `tests/Enterprise.Checks` | Verified cục bộ |
-| Đăng nhập, JWT, phạm vi bãi, CRUD, xóa mềm | `tests/api_sqlite_checks.ps1` | Kiểm tra trên database tạm |
-| Nội dung Excel/PDF và chủ sở hữu file | `tests/seeded_parking_api_checks.ps1` | Kiểm tra trên database tạm |
-| Import, trùng, lọc kết hợp, thống kê và xuất booking | `tests/parking_booking_import_checks.ps1` | Kiểm tra trên database tạm |
-| Lỗi framework, request ID, storage lỗi, readiness, giao diện/đăng nhập/API Production và cách ly Authority | `tests/runtime_checks.ps1` | Verified cục bộ |
-| Chạy kiểm tra tự động khi push/PR | `.github/workflows/ci.yml` | Implemented; chưa chạy trên GitHub trong lần sửa này |
-| SSO thực, quyền theo tổ chức, tải thực tế và vận hành | Cần môi trường triển khai, IdP và mục tiêu tải của nhóm | Chưa xác minh |
+Workflow `.github/workflows/ci.yml` chỉ build Release. Thư mục `tests/` và hai project kiểm thử đã được bỏ theo yêu cầu; các kiểm tra trước đây còn trong lịch sử Git tại tag `vesion-3`. Kiểm tra thủ công bằng [collection Postman](../postman/ParkingBusinessResult.postman_collection.json).
 
-Các kiểm tra không chứng nhận toàn bộ ApiSpec/LLD đã khớp. Phạm vi và các khác biệt nghiệp vụ nằm trong [API_CONTRACT_REVIEW.md](API_CONTRACT_REVIEW.md). Cách chạy các bài kiểm tra nằm trong workflow; `tests/requirements.txt` cung cấp thư viện Python. Đặt `PARKING_API_DLL` nếu kiểm tra một bản build khác và `PARKING_PYTHON` nếu cần chọn Python cụ thể.
+Build thành công không chứng nhận toàn bộ ApiSpec/LLD đã khớp. Khác biệt nghiệp vụ nằm trong [API_CONTRACT_REVIEW.md](API_CONTRACT_REVIEW.md). SSO thực, quyền theo tổ chức, tải và vận hành vẫn cần môi trường phù hợp để xác minh.

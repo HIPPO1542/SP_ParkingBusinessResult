@@ -45,7 +45,7 @@ Backend/
     ├── Reports/                        # Tạo và lưu file Excel/PDF
     └── Persistence/                           # EF DbContext, mapping, migrations và storage
 database/sqlite/                        # Schema, migration và script dữ liệu mẫu
-tests/                                  # Kiểm tra bằng database tạm
+postman/                                # Một collection gọi toàn bộ API
 ```
 
 Luồng: `Endpoint → Command/Query → Handler → interface → Infrastructure → EF Core → SQLite/file`. Domain không phụ thuộc framework; Application không tham chiếu Infrastructure. Handler được gọi qua DI; Infrastructure dùng EF Core SQLite 10.0.14. Quy tắc không âm nằm trong entity; tính bình quân và kỳ báo cáo nằm trong Domain. Cách tạo/cập nhật schema tại [EF Core và migrations](docs/EF_CORE.md).
@@ -73,8 +73,6 @@ API JSON dùng `{ "code": 0, "message": "Thành công", "data": ... }`; lỗi d�
 
 ```powershell
 dotnet build SP_ParkingBusinessResult.sln -c Release
-dotnet run --project tests/RevenueMetrics.Checks -c Release
-dotnet run --project tests/Enterprise.Checks -c Release -- .
 ```
 
-Workflow `.github/workflows/ci.yml` chạy kiểm tra kiến trúc, migration, quyền, CRUD, import, báo cáo và Production trên database tạm. Không đưa database vận hành, khóa ký hay file xuất vào Git. Chưa có chứng nhận nghiệm thu toàn bộ hợp đồng, kiểm thử tải hoặc SSO thực; các giới hạn được ghi rõ trong tài liệu triển khai.
+Workflow `.github/workflows/ci.yml` chỉ build Release. Thư mục kiểm thử tự động đã bỏ theo yêu cầu; dùng [collection Postman](postman/ParkingBusinessResult.postman_collection.json) để kiểm tra thủ công. Không đưa database vận hành, khóa ký hay file xuất vào Git. Chưa có chứng nhận nghiệm thu toàn bộ hợp đồng, kiểm thử tải hoặc SSO thực; các giới hạn được ghi rõ trong tài liệu triển khai.
