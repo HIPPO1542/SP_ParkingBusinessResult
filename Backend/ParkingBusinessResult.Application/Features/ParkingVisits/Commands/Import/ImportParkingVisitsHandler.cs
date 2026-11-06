@@ -48,13 +48,7 @@ public sealed class ImportParkingVisitsHandler(IParkingVisitSpreadsheetReader re
                 }
                 amount = parsedAmount;
             }
-            string? paymentMethod = string.IsNullOrWhiteSpace(fields[6]) ? null : fields[6]!.Trim();
-            if (paymentMethod?.Length > 100)
-            {
-                errors.Add(new(row.RowNumber, parkingLotCode, "Phương thức thanh toán quá dài."));
-                continue;
-            }
-            ParkingVisitSaved? saved = repository.TryInsert(new ParkingVisitInput(lotId.Value, plate, type, entered, exited, amount, paymentMethod));
+            ParkingVisitSaved? saved = repository.TryInsert(new ParkingVisitInput(lotId.Value, plate, type, entered, exited, amount));
             if (saved is null)
             {
                 duplicates++;

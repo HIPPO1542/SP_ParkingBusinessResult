@@ -17,7 +17,7 @@ internal static class ParkingVisitPeriodParser
             DateTime.TryParseExact(fromDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime start) &&
             DateTime.TryParseExact(toDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime end) &&
             start <= end && end.Date < DateTime.MaxValue.Date)
-            return new(start, end.AddDays(1), $"{fromDate}/{toDate}", false);
+            return new(start, end.AddDays(1), $"{fromDate}/{toDate}", start.Day == 1 && end.Day == DateTime.DaysInMonth(end.Year, end.Month) && start.Year == end.Year && start.Month == end.Month);
 
         return null;
     }

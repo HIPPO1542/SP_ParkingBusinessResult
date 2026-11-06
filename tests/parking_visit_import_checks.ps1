@@ -14,6 +14,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Failed to seed database.' }
     & $pythonPath (Join-Path $root 'database/sqlite/apply_parking_visit_migration.py') --database $databasePath
     if ($LASTEXITCODE -ne 0) { throw 'Failed to apply visits migration.' }
+    & $pythonPath (Join-Path $root 'database/sqlite/migrate_visits_to_booking.py') --database $databasePath
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to migrate visits to booking.' }
     & $pythonPath -X utf8 (Join-Path $root 'tests/parking_visit_import_fixture.py') addresses $databasePath
     if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare parking lot addresses.' }
     & $pythonPath (Join-Path $root 'tests/parking_visit_import_fixture.py') make $testDir
@@ -86,7 +88,13 @@ try {
     if ($bad.code -ne 7) { throw 'Invalid file was not rejected.' }
     $updatedSummary = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?reportingPeriod=2026-11" -Headers $headers
     if ($updatedSummary.data.completedVehicleCount -ne 2 -or $updatedSummary.data.collectedRevenue -ne 35000 -or $updatedSummary.data.previousRevenue -ne 10000 -or $updatedSummary.data.growthRate -ne 250) { throw 'Updated visit summary or growth is incorrect.' }
-    if ($updatedSummary.data.cashRevenue -ne 5000 -or $updatedSummary.data.electronicRevenue -ne 30000 -or $updatedSummary.data.unclassifiedRevenue -ne 0) { throw 'Payment method totals are incorrect.' }
+    $secondLotId = ($filters.data.parkingLots | Where-Object { $_.code -eq 'DEMO-02' }).id
+    $twoLots = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?fromDate=2026-11-01&toDate=2026-11-30&parkingLotIds=$lotId&parkingLotIds=$secondLotId" -Headers $headers
+    if ($twoLots.data.completedVehicleCount -ne 2 -or $twoLots.data.collectedRevenue -ne 35000 -or $twoLots.data.growthRate -ne 250) { throw 'Multiple-lot date filtering failed.' }
+    $oneLot = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?fromDate=2026-11-01&toDate=2026-11-30&parkingLotIds=$lotId" -Headers $headers
+    if ($oneLot.data.completedVehicleCount -ne 1 -or $oneLot.data.collectedRevenue -ne 30000) { throw 'Single-lot date filtering failed.' }
+    $invalidLot = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?reportingPeriod=2026-11&parkingLotIds=not-a-guid" -Headers $headers
+    if ($invalidLot.code -ne 7) { throw 'Invalid multiple-lot filter accepted.' }
     if (@($updatedSummary.data.topRevenueParkingLots).Count -ne 2 -or $updatedSummary.data.topRevenueParkingLots[0].parkingLot.code -ne 'DEMO-01' -or $updatedSummary.data.topRevenueParkingLots[0].percentage -ne 85.71) { throw 'Imported visit ranking incorrect.' }
     if (@($updatedSummary.data.revenueByDistrict).Count -ne 2 -or $updatedSummary.data.revenueByDistrict[0].revenue -ne 30000 -or $updatedSummary.data.revenueByDistrict[0].parkingLotsCount -ne 1) { throw 'District revenue grouping failed.' }
     $districtSummary = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?reportingPeriod=2026-11&district=Qu%E1%BA%ADn%201" -Headers $headers
@@ -116,6 +124,10 @@ try {
     Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/export" -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($districtBody)) -OutFile $xlsxPath
     & $pythonPath (Join-Path $root 'tests/check_visit_district_export.py') $xlsxPath
     if ($LASTEXITCODE -ne 0) { throw 'Visit district export incorrect.' }
+    $lotBody = @{ fileFormat = 'EXCEL'; fromDate = '2026-11-01'; toDate = '2026-11-30'; parkingLotIds = @($lotId) } | ConvertTo-Json
+    Invoke-WebRequest -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/export" -Headers $headers -ContentType 'application/json' -Body $lotBody -OutFile $xlsxPath
+    & $pythonPath (Join-Path $root 'tests/check_visit_district_export.py') $xlsxPath
+    if ($LASTEXITCODE -ne 0) { throw 'Selected-lot export incorrect.' }
     $account = @{ username = 'visit-operator'; password = 'visit-password-only'; role = 'ROLE_PARKING_OPERATOR'; parkingLotId = $lotId } | ConvertTo-Json
     $created = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/users" -Headers $headers -ContentType 'application/json' -Body $account
     if ($created.code -ne 0) { throw 'Could not create operator.' }
@@ -151,9 +163,11 @@ try {
     $unclassified = Import-File 'unclassified.xlsx' $token
     if ($unclassified.code -ne 0 -or $unclassified.data.successRows -ne 1) { throw 'Unclassified payment import failed.' }
     $paymentSummary = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingVisit/summary?reportingPeriod=2026-11" -Headers $headers
-    if ($paymentSummary.data.unclassifiedRevenue -ne 9000 -or $paymentSummary.data.unclassifiedPaymentCount -ne 1) { throw 'Unknown payment method should be reported separately.' }
+    if ($paymentSummary.data.collectedRevenue -lt 9000) { throw 'Collected amount should be included regardless of legacy payment column.' }
     $csvResult = Import-File 'visit.csv' $token
     if ($csvResult.code -ne 0 -or $csvResult.data.successRows -ne 1) { throw 'CSV import failed.' }
+    $sixColumnCsv = Import-File 'six_columns.csv' $token
+    if ($sixColumnCsv.code -ne 0 -or $sixColumnCsv.data.successRows -ne 1) { throw 'Six-column CSV import failed.' }
     if (Test-Path -LiteralPath (Join-Path $testDir 'visit.xls')) {
         $xlsResult = Import-File 'visit.xls' $token
         if ($xlsResult.code -ne 0 -or $xlsResult.data.successRows -ne 1) { throw 'XLS import failed.' }

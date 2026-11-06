@@ -12,7 +12,7 @@ public sealed class SqliteParkingVisitTariffRepository(string databasePath) : IP
         using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = databasePath, Mode = SqliteOpenMode.ReadWrite, ForeignKeys = true }.ToString());
         connection.Open();
         using SqliteCommand visitCommand = connection.CreateCommand();
-        visitCommand.CommandText = "SELECT parkingLotId, vehicleType, enteredAt, exitedAt, collectedAmount FROM parking_visit WHERE id = $id";
+        visitCommand.CommandText = "SELECT baiDoXeId, loaiXe, thoiGianBatDau, thoiGianKetThuc, tongTien FROM \"SP_datTruocChoDoXe\" WHERE id = $id";
         visitCommand.Parameters.AddWithValue("$id", visitId.ToString());
         using SqliteDataReader reader = visitCommand.ExecuteReader();
         if (!reader.Read()) return null;
@@ -23,7 +23,7 @@ public sealed class SqliteParkingVisitTariffRepository(string databasePath) : IP
         string? exitedText = reader.IsDBNull(3) ? null : reader.GetString(3);
         DateTime entered = DateTime.ParseExact(enteredText, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
         DateTime? exited = exitedText is null ? null : DateTime.ParseExact(exitedText, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
-        decimal? collected = reader.IsDBNull(4) ? null : decimal.Parse(reader.GetString(4), CultureInfo.InvariantCulture);
+        decimal? collected = reader.IsDBNull(4) ? null : Convert.ToDecimal(reader.GetValue(4), CultureInfo.InvariantCulture);
         reader.Close();
         var rules = new List<ParkingTariffRule>();
         if (exitedText is null) return new(entered, null, collected, rules);

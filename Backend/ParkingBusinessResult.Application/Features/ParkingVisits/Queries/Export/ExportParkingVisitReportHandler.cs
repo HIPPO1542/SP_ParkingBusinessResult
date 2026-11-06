@@ -12,6 +12,7 @@ public sealed class ExportParkingVisitReportHandler(IParkingVisitSummaryReposito
         CompletedParkingVisit[] visits = repository.ListCompleted(query.FromInclusive, query.ToExclusive)
             .Where(visit => query.Access.CanAccess(visit.ParkingLotId))
             .Where(visit => query.ParkingLotId is null || visit.ParkingLotId == query.ParkingLotId)
+            .Where(visit => query.ParkingLotIds is null || query.ParkingLotIds.Contains(visit.ParkingLotId))
             .Where(visit => string.IsNullOrWhiteSpace(query.District) || (visit.ParkingLotAddress?.Contains(query.District.Trim(), StringComparison.OrdinalIgnoreCase) ?? false)).ToArray();
         int missing = visits.Count(visit => visit.CollectedAmount is null);
         BusinessReportRow[] rows = visits.GroupBy(visit => visit.ParkingLotId).OrderBy(group => group.Key)

@@ -86,9 +86,9 @@ SP_ParkingBusinessResult/
 | Nguồn | Dữ liệu | API chính | Cách hoạt động |
 | --- | --- | --- | --- |
 | **Kết quả đã tổng hợp** | Các bản ghi đã lưu trong `SP_ketQuaKinhDoanhBaiDoXe`, mỗi bản ghi có bãi, kỳ, tổng doanh thu và số lượt hoàn tất. | `businessOperation` và `parkingBusinessReport` | Đọc hoặc chỉnh sửa bản tổng hợp đã lưu. Bản này **không tự cập nhật** theo lượt xe import. |
-| **Lượt xe đã import** | Từng lượt trong `parking_visit`: bãi, biển số, loại xe, giờ vào/ra, tiền thực thu, phương thức thanh toán. | Import qua `businessOperation/import`; xem và thống kê qua `parkingVisit` | Tính trực tiếp từ các lượt xe đã lưu, không tự cộng thêm bản tổng hợp cũ hoặc lượt giả lập. |
+| **Lượt xe đã import** | Từng lượt trong `SP_datTruocChoDoXe`: bãi, biển số, loại xe, giờ vào/ra và số tiền đã thu. | Import qua `businessOperation/import`; xem và thống kê qua `parkingVisit` | Tính trực tiếp từ các lượt xe đã lưu, không tự cộng thêm bản tổng hợp cũ hoặc lượt giả lập. |
 
-Hai nguồn này được giữ riêng để tránh cộng trùng. Ví dụ, import thêm xe vào `parking_visit` sẽ thay đổi thống kê của `parkingVisit/summary`, nhưng không tự sửa số liệu đã có trong `SP_ketQuaKinhDoanhBaiDoXe`.
+Import thêm xe vào `SP_datTruocChoDoXe` sẽ thay đổi thống kê của `parkingVisit/summary`, nhưng không tự sửa số liệu đã có trong `SP_ketQuaKinhDoanhBaiDoXe`. Giao diện thống kê trực tiếp theo bảng booking, chọn khoảng ngày và một hoặc nhiều bãi.
 
 ## 4. Các chức năng đã làm
 
@@ -121,10 +121,10 @@ Trong bảng trên, các đường dẫn ngắn như `/businessOperation/{id}` n
 
 Gọi `POST /gdci/parking/parkingLot/businessOperation/import` dưới dạng `multipart/form-data`, với trường file tên `file` và Bearer token.
 
-1. Điền file theo [mẫu lượt xe](outputs/parking-import/mau-luot-xe.xlsx): mã bãi, biển số, loại xe, giờ vào, giờ ra, số tiền thực thu và phương thức thanh toán.
+1. Điền file theo [mẫu lượt xe](outputs/parking-import/mau-luot-xe.xlsx): mã bãi, biển số, loại xe, giờ vào, giờ ra và số tiền thực thu. Cột phương thức thanh toán trong mẫu cũ được bỏ qua.
 2. API đọc `.xlsx`, `.xls` hoặc `.csv`, tối đa 10 MB và 50.000 dòng; tên và thứ tự cột phải theo mẫu.
 3. Hệ thống kiểm tra từng dòng: mã bãi và quyền truy cập, biển số, loại xe, giờ vào, giờ ra sau giờ vào, số tiền không âm. Dòng lỗi được báo theo số dòng.
-4. Dòng hợp lệ được lưu trong `parking_visit`. Nếu cùng **bãi + biển số + giờ vào** đã có, hệ thống báo lỗi trùng và không thay đổi lượt cũ.
+4. Dòng hợp lệ được lưu trong `SP_datTruocChoDoXe`. Nếu cùng **bãi + biển số + giờ vào** đã có, hệ thống báo lỗi trùng và không thay đổi lượt cũ.
 5. Kết quả trả số dòng thành công, số dòng lỗi, số dòng trùng, ID và thông tin lượt đã lưu cùng danh sách lỗi. Dòng trùng được tính vào số lỗi. Giao diện hiển thị các dòng này và cho phép chọn tiếp file khác. Nếu xảy ra lỗi hệ thống khi đang ghi, một số dòng hợp lệ trước đó có thể đã được lưu.
 
 Giờ vào và giờ ra phải có ngày/tháng/năm và giờ/phút, ví dụ `2026-11-05 08:30` hoặc `05/11/2026 08:30`. Excel cũng có thể chứa ô ngày giờ thực. Giờ ra để trống nếu xe chưa ra; số tiền có thể để trống nếu chưa có thông tin thu.
@@ -139,7 +139,7 @@ Gọi `GET /gdci/parking/parkingLot/parkingVisit`:
 - `vehicleType`: lọc theo loại xe; có thể kết hợp với bãi và trạng thái.
 - `pageNumber` và `pageSize`: phân trang; mặc định trang 1, 10 dòng, tối đa 100 dòng/trang.
 
-API trả mã, tên bãi trong mỗi lượt, cùng `items` và `totalCount` sau khi lọc. API `parkingVisit/filters` cung cấp các bãi được phép truy cập và loại xe đã có; giao diện dùng các giá trị này để lọc. Đây là danh sách trong `parking_visit`, không tự bao gồm 250 lượt giả lập trong `dev_parking_sessions`.
+API trả mã, tên bãi trong mỗi lượt, cùng `items` và `totalCount` sau khi lọc. API `parkingVisit/filters` cung cấp các bãi được phép truy cập và loại xe đã có; giao diện dùng các giá trị này để lọc. Đây là danh sách trong `SP_datTruocChoDoXe`, không tự bao gồm 250 lượt giả lập trong `dev_parking_sessions`.
 
 ### 4.5. Thống kê từ lượt xe đã import
 
@@ -153,7 +153,7 @@ Gọi `GET /gdci/parking/parkingLot/parkingVisit/summary` và chọn **một tro
 Hệ thống chọn lượt theo **ngày xe ra**, gồm hai ngày đầu/cuối nếu lọc khoảng ngày. Có thể lọc thêm `parkingLotId` hoặc `district` theo chuỗi địa chỉ bãi. Kết quả gồm:
 
 - Số lượt đã hoàn tất; tổng tiền thực thu đã biết; số lượt hoàn tất chưa có số tiền (`missingAmountCount`).
-- Doanh thu tiền mặt, điện tử và khoản có phương thức chưa nhận diện được. Hệ thống nhận `CASH` hoặc `Tiền mặt`; `ELECTRONIC` hoặc `Điện tử`. Giá trị khác hoặc trống được tách riêng.
+- Phương thức thanh toán không được lưu hoặc phân loại trong chức năng này.
 - Doanh thu bình quân ngày và top 5 bãi khi không thiếu tiền thực thu. Tăng trưởng tháng chỉ tính khi có dữ liệu kỳ trước, hai kỳ không thiếu tiền và doanh thu kỳ trước lớn hơn 0; nếu không đủ điều kiện thì trả `null`.
 - Cơ cấu doanh thu theo quận/huyện khi không thiếu tiền. Hệ thống tìm thành phần bắt đầu bằng `Quận ` hoặc `Huyện ` trong địa chỉ phân tách bằng dấu phẩy; không nhận diện được thì nhóm `district: null`. Đây là cách suy từ địa chỉ chữ, chưa đối chiếu mã hành chính chính thức.
 
@@ -202,13 +202,13 @@ Database phát triển nằm ở `database/sqlite/parking_business_result.db`; f
 | `SP_khungGiaThuPhi` | Khung giá của bãi. |
 | `SP_chiTietMucThuKhungGia` | Mức giá theo loại xe và loại ngày. |
 | `SP_apDungKhungGia` | Thông tin áp dụng khung giá cho bãi. |
-| `parking_visit` | Lượt xe nhập từ file; bảng được bổ sung theo yêu cầu nhập từng lượt, không có trong Excel thiết kế gốc. |
+| `SP_datTruocChoDoXe` | Bảng booking theo Excel, dùng lưu các lượt xe vào/ra và số tiền đã thu. |
 | `dev_parking_sessions` | Lượt xe **giả lập** chỉ dùng phát triển, không phải dữ liệu vận hành. |
 | `dev_auth_users` | Tài khoản và mật khẩu băm phục vụ Development. |
 
 Script dữ liệu mẫu tạo 5 bãi, mỗi bãi có 50 lượt giả lập: 30 lượt hoàn tất và 20 lượt đang trong bãi tại thời điểm tạo. Đây là **dữ liệu minh họa**, không phải biển số, giá hoặc số liệu thực tế. Chi tiết ở [DEVELOPMENT_PARKING_DATA.md](docs/DEVELOPMENT_PARKING_DATA.md); phần mô tả chức năng tại cuối file đó có thể cũ, hãy dùng tài liệu này và mã hiện tại để xem trạng thái API.
 
-Các script migration nằm trong `database/sqlite/`. Riêng `apply_parking_visit_migration.py` tạo bản sao lưu trước khi bổ sung bảng lượt xe và từ chối chạy lại khi bảng đã tồn tại. Không đưa bản sao lưu hoặc database cục bộ lên Git.
+Các script migration nằm trong `database/sqlite/`. `migrate_visits_to_booking.py` sao lưu rồi chuyển bảng `parking_visit` cũ sang `SP_datTruocChoDoXe`; dữ liệu phương thức thanh toán cũ chỉ nằm trong bản sao lưu. Không đưa bản sao lưu hoặc database cục bộ lên Git.
 
 ## 6. Chạy và kiểm thử
 

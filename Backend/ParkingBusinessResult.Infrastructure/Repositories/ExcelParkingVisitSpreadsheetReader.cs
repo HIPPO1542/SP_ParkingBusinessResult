@@ -6,7 +6,8 @@ namespace ParkingBusinessResult.Infrastructure.Repositories;
 
 public sealed class ExcelParkingVisitSpreadsheetReader : IParkingVisitSpreadsheetReader
 {
-    private static readonly string[] Headers = ["Mã bãi", "Biển số", "Loại xe", "Giờ vào", "Giờ ra", "Số tiền đã thu (VND)", "Phương thức thanh toán"];
+    private static readonly string[] Headers = ["Mã bãi", "Biển số", "Loại xe", "Giờ vào", "Giờ ra", "Số tiền đã thu (VND)"];
+    private const string LegacyPaymentHeader = "Phương thức thanh toán";
 
     static ExcelParkingVisitSpreadsheetReader() => System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
@@ -24,8 +25,9 @@ public sealed class ExcelParkingVisitSpreadsheetReader : IParkingVisitSpreadshee
         using IExcelDataReader reader = extension.Equals(".csv", StringComparison.OrdinalIgnoreCase)
             ? ExcelReaderFactory.CreateCsvReader(content)
             : ExcelReaderFactory.CreateReader(content);
-        if (!reader.Read() || reader.FieldCount != Headers.Length ||
-            Headers.Where((header, index) => !string.Equals(reader.GetValue(index)?.ToString()?.Trim(), header, StringComparison.OrdinalIgnoreCase)).Any())
+        if (!reader.Read() || reader.FieldCount < Headers.Length || reader.FieldCount > Headers.Length + 1 ||
+            Headers.Where((header, index) => !string.Equals(reader.GetValue(index)?.ToString()?.Trim(), header, StringComparison.OrdinalIgnoreCase)).Any() ||
+            (reader.FieldCount == Headers.Length + 1 && !string.Equals(reader.GetValue(Headers.Length)?.ToString()?.Trim(), LegacyPaymentHeader, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidDataException("File không đúng các cột của mẫu nhập lượt xe.");
         var rows = new List<ParkingVisitRow>();
         int rowNumber = 1;

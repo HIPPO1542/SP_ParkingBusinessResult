@@ -8,7 +8,6 @@ public sealed record ParkingVisitDistrictRevenue(string? District, decimal Reven
 public sealed record ParkingVisitSummary(string ReportingPeriod, long CompletedVehicleCount,
     decimal CollectedRevenue, long MissingAmountCount, decimal? PreviousRevenue, decimal? GrowthRate,
     decimal? AverageDailyRevenue, IReadOnlyList<ParkingVisitTopLot>? TopRevenueParkingLots,
-    decimal CashRevenue, decimal ElectronicRevenue, decimal UnclassifiedRevenue, long UnclassifiedPaymentCount,
     IReadOnlyList<ParkingVisitDistrictRevenue>? RevenueByDistrict);
 
 public sealed class GetParkingVisitSummaryHandler(IParkingVisitSummaryRepository repository)
@@ -19,24 +18,6 @@ public sealed class GetParkingVisitSummaryHandler(IParkingVisitSummaryRepository
         CompletedParkingVisit[] permitted = Filter(visits, query);
         decimal collected = permitted.Where(visit => visit.CollectedAmount.HasValue).Sum(visit => visit.CollectedAmount!.Value);
         long missing = permitted.LongCount(visit => visit.CollectedAmount is null);
-        decimal cash = 0;
-        decimal electronic = 0;
-        decimal unclassified = 0;
-        long unclassifiedCount = 0;
-        foreach (CompletedParkingVisit visit in permitted.Where(visit => visit.CollectedAmount.HasValue))
-        {
-            string method = visit.PaymentMethod?.Trim() ?? "";
-            decimal amount = visit.CollectedAmount!.Value;
-            if (method.Equals("CASH", StringComparison.OrdinalIgnoreCase) || method.Equals("Tiền mặt", StringComparison.OrdinalIgnoreCase))
-                cash += amount;
-            else if (method.Equals("ELECTRONIC", StringComparison.OrdinalIgnoreCase) || method.Equals("Điện tử", StringComparison.OrdinalIgnoreCase))
-                electronic += amount;
-            else
-            {
-                unclassified += amount;
-                unclassifiedCount++;
-            }
-        }
         decimal? previousRevenue = null;
         decimal? growth = null;
         if (query.IsMonthly && query.FromInclusive > DateTime.MinValue)
@@ -72,13 +53,13 @@ public sealed class GetParkingVisitSummaryHandler(IParkingVisitSummaryRepository
                 }).OrderByDescending(group => group.Revenue).ThenBy(group => group.District, StringComparer.OrdinalIgnoreCase).ToArray();
         }
         return new(query.PeriodLabel,
-            permitted.LongLength, collected, missing, previousRevenue, growth, averageDailyRevenue, topLots,
-            cash, electronic, unclassified, unclassifiedCount, districts);
+            permitted.LongLength, collected, missing, previousRevenue, growth, averageDailyRevenue, topLots, districts);
     }
 
     private static CompletedParkingVisit[] Filter(IEnumerable<CompletedParkingVisit> visits, GetParkingVisitSummaryQuery query) =>
         visits.Where(visit => query.Access.CanAccess(visit.ParkingLotId))
             .Where(visit => query.ParkingLotId is null || visit.ParkingLotId == query.ParkingLotId)
+            .Where(visit => query.ParkingLotIds is null || query.ParkingLotIds.Contains(visit.ParkingLotId))
             .Where(visit => string.IsNullOrWhiteSpace(query.District) || (visit.ParkingLotAddress?.Contains(query.District.Trim(), StringComparison.OrdinalIgnoreCase) ?? false)).ToArray();
 
     private static string? FindDistrict(string? address)

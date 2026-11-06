@@ -56,6 +56,10 @@ def make_fixtures(directory):
         writer = csv.writer(file)
         writer.writerow(HEADERS)
         writer.writerow(['DEMO-02', '59K-9', 'MOTORBIKE', '2026-11-05 10:00', '2026-11-05 11:00', '5000', 'Tiền mặt'])
+    with (directory / 'six_columns.csv').open('w', encoding='utf-8-sig', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(HEADERS[:6])
+        writer.writerow(['DEMO-02', '59N-6', 'MOTORBIKE', '2026-11-05 11:00', '2026-11-05 12:00', '5000'])
     if importlib.util.find_spec('xlwt'):
         import xlwt
         workbook = xlwt.Workbook()
@@ -69,13 +73,13 @@ def make_fixtures(directory):
 
 def check(database_path):
     with sqlite3.connect(database_path) as database:
-        rows = database.execute('SELECT licensePlate, enteredAt, exitedAt, collectedAmount, paymentMethod FROM parking_visit ORDER BY licensePlate').fetchall()
+        rows = database.execute('SELECT bienSoXe, thoiGianBatDau, thoiGianKetThuc, tongTien FROM SP_datTruocChoDoXe ORDER BY bienSoXe').fetchall()
         assert len(rows) == 5, rows
-        assert rows[0] == ('59A-1', '2026-11-04 23:30:00', '2026-11-05 01:00:00', '30000', 'Điện tử'), rows[0]
-        assert rows[1][0] == '59B-2' and rows[1][3] == '5000', rows[1]
+        assert rows[0] == ('59A-1', '2026-11-04 23:30:00', '2026-11-05 01:00:00', 30000), rows[0]
+        assert rows[1][0] == '59B-2' and rows[1][3] == 5000, rows[1]
         assert rows[2][0] == '59E-5' and rows[2][2] is None, rows[2]
         assert rows[3][0] == '59G-7' and rows[3][3] is None, rows[3]
-        assert rows[4][0] == '59Z-9' and rows[4][3] == '10000', rows[4]
+        assert rows[4][0] == '59Z-9' and rows[4][3] == 10000, rows[4]
         assert not database.execute('PRAGMA foreign_key_check').fetchall()
     print('Imported visits verified directly in SQLite.')
 
@@ -88,7 +92,7 @@ elif sys.argv[1] == 'addresses':
         database.execute('UPDATE DL_KTHT_baiDoXe SET diaChi=? WHERE ma=?', ('2 Đường Mẫu, Quận 2, Thành phố Mẫu', 'DEMO-02'))
 elif sys.argv[1] == 'complete':
     with sqlite3.connect(sys.argv[2]) as database:
-        database.execute('UPDATE parking_visit SET exitedAt=?, collectedAmount=?, paymentMethod=? WHERE licensePlate=?',
-                         ('2026-11-05 01:00:00', '30000', 'Điện tử', '59A-1'))
+        database.execute('UPDATE SP_datTruocChoDoXe SET thoiGianKetThuc=?, tongTien=? WHERE bienSoXe=?',
+                         ('2026-11-05 01:00:00', 30000, '59A-1'))
 else:
     check(Path(sys.argv[2]))

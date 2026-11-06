@@ -1,6 +1,6 @@
 # Phương án nhập từng lượt xe từ Excel
 
-Trạng thái: có API import và thống kê lượt xe **thử nghiệm Development**. File [mẫu](../outputs/parking-import/mau-luot-xe.xlsx) gồm mã bãi, biển số, loại xe, giờ vào, giờ ra, số tiền đã thu và phương thức thanh toán. Giờ vào/ra gồm cả ngày, tháng, năm, giờ và phút; giờ ra để trống khi xe còn trong bãi.
+Trạng thái: có API import và thống kê lượt xe **Development**. File gồm mã bãi, biển số, loại xe, giờ vào, giờ ra và số tiền đã thu. File [mẫu cũ](../outputs/parking-import/mau-luot-xe.xlsx) có thêm cột phương thức thanh toán vẫn được đọc, nhưng cột này không được lưu. Giờ vào/ra gồm cả ngày, tháng, năm, giờ và phút; giờ ra để trống khi xe còn trong bãi.
 
 Đã xác nhận với người dùng:
 
@@ -8,9 +8,9 @@ Trạng thái: có API import và thống kê lượt xe **thử nghiệm Develo
 - Lượt có cùng bãi, biển số và giờ vào được coi là trùng; không lưu hoặc cập nhật, trả lỗi cho dòng đó.
 - Doanh thu báo cáo dùng số tiền thực thu trong file. Bảng giá dùng để đối chiếu, không tự thay thế số tiền thực thu.
 
-Lưu vào bảng SQLite riêng `parking_visit`, có ID, khóa ngoại bãi, biển số, loại xe, thời điểm vào/ra, số tiền thực thu và phương thức thanh toán; ràng buộc chống trùng theo bãi, biển số và giờ vào. Bảng này được bổ sung theo yêu cầu import từng lượt và không có trong Excel thiết kế. Bảng `dev_parking_sessions` hiện chỉ là dữ liệu giả lập, không được coi là bảng lượt xe vận hành.
+Lưu vào bảng SQLite `SP_datTruocChoDoXe` theo 16 cột của sheet `SP_ParkingBooking`: `thoiGianBatDau` là giờ vào, `thoiGianKetThuc` là giờ ra và `tongTien` là số tiền đã thu theo xác nhận của người dùng. Mỗi dòng import là một lượt xe và ghi `soLuongChoDat = 1`; trạng thái dùng mặc định `CONFIRMED` theo Excel. Giờ ra cho phép để trống để lưu xe chưa rời bãi, dù Excel đánh dấu trường này bắt buộc. Phương thức thanh toán không được quản lý. Bảng `dev_parking_sessions` chỉ chứa dữ liệu giả lập.
 
-Migration `database/sqlite/apply_parking_visit_migration.py` tạo bản sao lưu trước khi cập nhật và từ chối chạy lại khi bảng đã tồn tại. API kiểm tra từng dòng, quyền đối với bãi, thời điểm ra sau thời điểm vào và báo rõ các dòng lỗi. Khi nhập trùng, dữ liệu lượt đã lưu không thay đổi. Các dòng hợp lệ được lưu, dòng lỗi được trả về riêng; lỗi hệ thống trong lúc ghi có thể dừng yêu cầu sau khi một số dòng đã được lưu.
+Migration `database/sqlite/migrate_visits_to_booking.py` tạo bản sao lưu, chuyển các lượt từ `parking_visit` và kiểm tra dữ liệu trước khi xóa bảng cũ; thông tin phương thức thanh toán cũ chỉ còn trong bản sao lưu. API kiểm tra từng dòng, quyền đối với bãi, thời điểm ra sau thời điểm vào và báo rõ các dòng lỗi. Khi nhập trùng, dữ liệu lượt đã lưu không thay đổi. Các dòng hợp lệ được lưu, dòng lỗi được trả về riêng; lỗi hệ thống trong lúc ghi có thể dừng yêu cầu sau khi một số dòng đã được lưu.
 
 Gửi multipart `POST /gdci/parking/parkingLot/businessOperation/import`, trường file tên `file`, với Bearer token. Hỗ trợ `.xlsx`, `.xls`, `.csv` tối đa 10 MB và tối đa 50.000 dòng dữ liệu; cột phải đúng file mẫu. Giờ nhập dạng `yyyy-MM-dd HH:mm` hoặc `dd/MM/yyyy HH:mm`, hoặc ô ngày giờ thực của Excel. Không nhập dấu phân cách hàng nghìn trong ô văn bản tiền. Kết quả trả số dòng thành công, ID và dữ liệu các lượt đã lưu, số dòng trùng và danh sách dòng lỗi. Dòng trùng bao gồm lượt đã có trong database hoặc lặp lại trong cùng file; dòng trùng được tính vào số lỗi, không tính vào số thành công.
 
@@ -18,7 +18,7 @@ Gửi multipart `POST /gdci/parking/parkingLot/businessOperation/import`, trư�
 
 `GET /gdci/parking/parkingLot/parkingVisit/summary?reportingPeriod=2026-11` tính trực tiếp từ các lượt **đã ra trong tháng**, không tính xe chưa ra. Có thể thay kỳ tháng bằng `fromDate=2026-11-01&toDate=2026-11-30` để tính theo ngày ra trong khoảng, gồm cả hai ngày đầu/cuối. `collectedRevenue` cộng các số tiền đã có; `missingAmountCount` là số lượt hoàn tất chưa có tiền nên doanh thu có thể chưa đầy đủ. Có thể lọc thêm `parkingLotId`. Bình quân ngày và top 5 bãi chỉ được tính khi không thiếu tiền; tăng trưởng tháng chỉ được tính khi cả hai tháng đủ tiền, có dữ liệu kỳ trước và doanh thu kỳ trước lớn hơn 0; các trường không đủ điều kiện là null. Kết quả này độc lập với các bản tổng hợp cũ và không cộng lẫn với dữ liệu giả lập.
 
-Thống kê chia số tiền đã biết thành `cashRevenue` (phương thức `CASH` hoặc `Tiền mặt`), `electronicRevenue` (`ELECTRONIC` hoặc `Điện tử`) và `unclassifiedRevenue` cho phương thức khác hoặc để trống. `unclassifiedPaymentCount` cho biết số lượt có tiền nhưng chưa phân loại được; các lượt chưa có tiền được đếm riêng bằng `missingAmountCount`.
+Thống kê không phân loại tiền mặt hay điện tử vì phương thức thanh toán không thuộc dữ liệu do chức năng này quản lý; lượt chưa có tiền được đếm bằng `missingAmountCount`.
 
 Có thể lọc `district` theo chuỗi trong địa chỉ. `revenueByDistrict` thử lấy thành phần địa chỉ bắt đầu bằng `Quận ` hoặc `Huyện `, phân tách bằng dấu phẩy; địa chỉ thiếu hoặc có nhiều thành phần phù hợp được gom vào nhóm `district: null`. Đây là suy ra từ địa chỉ văn bản, không phải đối chiếu mã hành chính và có thể không nhận diện được cách ghi khác. Cơ cấu địa bàn chỉ hiển thị khi mọi lượt hoàn tất có số tiền.
 

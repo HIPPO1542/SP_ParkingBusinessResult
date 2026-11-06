@@ -11,13 +11,20 @@ public static class GetParkingVisitSummaryEndpoint
     private static IResult Handle(string? reportingPeriod, string? fromDate, string? toDate, Guid? parkingLotId, string? district,
         HttpRequest request, ClaimsPrincipal user, GetParkingVisitSummaryHandler handler)
     {
-        string[] allowed = ["reportingPeriod", "fromDate", "toDate", "parkingLotId", "district"];
+        string[] allowed = ["reportingPeriod", "fromDate", "toDate", "parkingLotId", "parkingLotIds", "district"];
         if (request.Query.Keys.Any(key => !allowed.Contains(key, StringComparer.OrdinalIgnoreCase)))
             return Results.Ok(ApiResponse<object>.BusinessError("Bộ lọc chưa được hỗ trợ."));
         ParkingVisitPeriod? period = ParkingVisitPeriodParser.Parse(reportingPeriod, fromDate, toDate);
         if (period is null)
             return Results.Ok(ApiResponse<object>.BusinessError("Cung cấp kỳ yyyy-MM hoặc khoảng fromDate và toDate hợp lệ (yyyy-MM-dd)."));
-        ParkingVisitSummary summary = handler.Handle(new GetParkingVisitSummaryQuery(period.From, period.ToExclusive, period.Label, parkingLotId, EndpointSupport.GetAccess(user), period.IsMonthly, district));
+        var parkingLotIds = new HashSet<Guid>();
+        foreach (string? id in request.Query["parkingLotIds"])
+        {
+            if (!Guid.TryParse(id, out Guid parsed) || parsed == Guid.Empty)
+                return Results.Ok(ApiResponse<object>.BusinessError("Danh sách bãi xe không hợp lệ."));
+            parkingLotIds.Add(parsed);
+        }
+        ParkingVisitSummary summary = handler.Handle(new GetParkingVisitSummaryQuery(period.From, period.ToExclusive, period.Label, parkingLotId, EndpointSupport.GetAccess(user), period.IsMonthly, district, parkingLotIds.Count == 0 ? null : parkingLotIds));
         return Results.Ok(ApiResponse<ParkingVisitSummary>.Success(summary));
     }
 }

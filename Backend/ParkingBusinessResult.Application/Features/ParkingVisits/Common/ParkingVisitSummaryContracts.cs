@@ -1,7 +1,7 @@
 namespace ParkingBusinessResult.Application.Features.ParkingVisits.Common;
 
 public sealed record CompletedParkingVisit(Guid ParkingLotId, decimal? CollectedAmount,
-    string? PaymentMethod, string? ParkingLotCode, string? ParkingLotName, string? ParkingLotAddress);
+    string? ParkingLotCode, string? ParkingLotName, string? ParkingLotAddress);
 
 public interface IParkingVisitSummaryRepository
 {
