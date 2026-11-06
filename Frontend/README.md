@@ -7,7 +7,7 @@ Giao diện nằm trong `index.html` và được API phục vụ ở trang gố
 3. Đăng nhập bằng tài khoản quản trị đã tạo. File mẫu nhập lượt xe nằm tại `outputs/parking-import/mau-luot-xe.xlsx`.
 4. Nhập file, chọn khoảng ngày và một hoặc nhiều bãi, sau đó xem thống kê, danh sách hoặc xuất báo cáo. Nếu không chọn bãi nào, thống kê sử dụng tất cả bãi được phép xem.
 
-Chọn bãi thống kê bằng nút xổ xuống và tích vào từng bãi; tích “Tất cả bãi” để bỏ giới hạn theo bãi. Danh sách lượt xe hỗ trợ kết hợp bãi, loại xe, trạng thái và ngày/tháng/năm. Chọn “Giờ vào” hoặc “Giờ ra” để xác định thời điểm dùng cho bộ lọc thời gian; để trống thành phần nào thì không giới hạn theo thành phần đó.
+Chọn bãi thống kê bằng nút xổ xuống và tích vào từng bãi; tích “Tất cả bãi” để bỏ giới hạn theo bãi. Danh sách lượt xe hỗ trợ kết hợp bãi, loại xe, trạng thái và ngày/tháng/năm của ngày vào bãi; để trống thành phần nào thì không giới hạn theo thành phần đó.
 
 Giao diện thống kê và xuất trực tiếp từ các lượt xe trong bảng booking; dữ liệu kết quả kinh doanh theo kỳ là nguồn riêng. Token chỉ được giữ trong bộ nhớ trang và sẽ bị xóa khi tải lại trang hoặc đăng xuất.
 

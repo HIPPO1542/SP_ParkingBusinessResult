@@ -36,7 +36,7 @@
   <section class="card">
     <h2>4. Danh sách</h2><p class="muted">Kết hợp các bộ lọc bên dưới để xem lượt xe.</p>
     <div class="row" id="visitFilters"><div class="field"><label for="listLot">Bãi xe</label><select id="listLot"><option value="">Tất cả bãi</option></select></div><div class="field"><label for="listVehicleType">Loại xe</label><select id="listVehicleType"><option value="">Tất cả loại xe</option></select></div><div class="field"><label for="listStatus">Trạng thái</label><select id="listStatus"><option value="">Tất cả trạng thái</option><option value="PARKED">Đang trong bãi</option><option value="COMPLETED">Đã ra</option></select></div></div>
-    <div class="row" style="margin-top:12px"><div class="field"><label for="listDateField">Lọc theo thời điểm</label><select id="listDateField"><option value="enteredAt">Giờ vào</option><option value="exitedAt">Giờ ra</option></select></div><div class="field"><label for="listDay">Ngày</label><select id="listDay"><option value="">Tất cả ngày</option></select></div><div class="field"><label for="listMonth">Tháng</label><select id="listMonth"><option value="">Tất cả tháng</option></select></div><div class="field"><label for="listYear">Năm</label><input id="listYear" type="number" min="1" max="9999" step="1" placeholder="Tất cả năm"></div></div>
+    <div class="row" style="margin-top:12px"><div class="field"><label for="listDay">Ngày</label><select id="listDay"><option value="">Tất cả ngày</option></select></div><div class="field"><label for="listMonth">Tháng</label><select id="listMonth"><option value="">Tất cả tháng</option></select></div><div class="field"><label for="listYear">Năm</label><input id="listYear" type="number" min="1" max="9999" step="1" placeholder="Tất cả năm"></div></div>
     <div class="inline" style="margin-top:12px"><button type="button" class="secondary" id="list">Xem danh sách</button></div>
     <p id="listMessage" class="notice hidden" role="status"></p><div id="listWrap" class="table-wrap hidden"><table><thead id="listHead"></thead><tbody id="listBody"></tbody></table></div><details><summary>Xem JSON danh sách</summary><pre id="listJson">Chưa có dữ liệu.</pre></details>
     <div id="listPaging" class="inline hidden" style="margin-top:12px"><button type="button" class="secondary" id="listPrev">Trang trước</button><span id="listPage"></span><button type="button" class="secondary" id="listNext">Trang sau</button></div>
@@ -192,7 +192,6 @@
         if (!Number.isInteger(year) || year < 1 || year > 9999) throw new Error('Năm phải là số nguyên từ 1 đến 9999.');
         parameters.set('year', String(year));
       }
-      parameters.set('dateField', $('listDateField').value);
       const result = await jsonRequest(`${base}/parkingBooking?${parameters}`); showJson('listJson', result); const items = result.data.items;
       const headings = ['Bãi xe','Biển số','Loại xe','Giờ vào','Giờ ra','Tiền đã thu'];
       const head = $('listHead'); head.replaceChildren(); const headerRow = head.insertRow(); headings.forEach(value => { const th = document.createElement('th'); th.textContent = value; headerRow.appendChild(th); });
