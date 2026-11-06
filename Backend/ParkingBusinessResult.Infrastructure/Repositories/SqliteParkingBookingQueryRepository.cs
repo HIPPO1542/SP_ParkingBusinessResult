@@ -1,17 +1,17 @@
 using Microsoft.EntityFrameworkCore;
-using ParkingBusinessResult.Infrastructure.Data;
-using ParkingBusinessResult.Infrastructure.Data.Models;
+using ParkingBusinessResult.Infrastructure.Persistence;
+using ParkingBusinessResult.Infrastructure.Persistence.Models;
 using ParkingBusinessResult.Application.Features.BusinessResults.Common;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Common;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.List;
 
 namespace ParkingBusinessResult.Infrastructure.Repositories;
 
-public sealed class SqliteParkingBookingQueryRepository(string databasePath) : IParkingBookingListRepository, IParkingBookingSummaryRepository
+public sealed class SqliteParkingBookingQueryRepository(IDbContextFactory<ParkingDbContext> contextFactory) : IParkingBookingListRepository, IParkingBookingSummaryRepository
 {
     public ParkingBookingPage GetPage(ListParkingBookingsQuery query)
     {
-        using var db = ParkingContextFactory.Create(databasePath);
+        using var db = contextFactory.CreateDbContext();
         // COUNT and page are separate EF queries; this short read transaction keeps one database snapshot.
         using var snapshot = db.Database.BeginTransaction();
         var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), query.Access, query.ParkingLotId);
@@ -35,14 +35,14 @@ public sealed class SqliteParkingBookingQueryRepository(string databasePath) : I
 
     public IReadOnlyList<string> GetVehicleTypes(BusinessAccess access)
     {
-        using var db = ParkingContextFactory.Create(databasePath);
+        using var db = contextFactory.CreateDbContext();
         return Scope(db.SpDatTruocChoDoXe.AsNoTracking(), access, null)
             .Select(row => EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE")).Distinct().OrderBy(type => type).ToArray();
     }
 
     public IReadOnlyList<CompletedParkingBooking> ListCompleted(ParkingBookingSummaryFilter filter)
     {
-        using var db = ParkingContextFactory.Create(databasePath);
+        using var db = contextFactory.CreateDbContext();
         var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), filter.Access, filter.ParkingLotId)
             .Where(row => row.ThoiGianKetThuc >= filter.FromInclusive && row.ThoiGianKetThuc < filter.ToExclusive);
         if (filter.ParkingLotIds is not null)

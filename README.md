@@ -28,13 +28,12 @@ Trên máy mới, cần database đã áp dụng migration và cấu hình `Auth
 Frontend/                               # Giao diện đăng nhập, import, thống kê và danh sách
 Backend/
 ├── ParkingBusinessResult.Api/
-│   ├── Endpoint/                       # Một endpoint cho mỗi route nghiệp vụ
+│   ├── Endpoints/                       # Một endpoint cho mỗi route nghiệp vụ
 │   ├── Contracts/                      # ApiResponse: code, message, data
 │   ├── Extensions/                     # DI, xác thực, cấu hình ứng dụng
 │   └── Middlewares/                    # Lỗi tập trung, request ID, log
 ├── ParkingBusinessResult.Application/
 │   ├── Common/                         # Thành phần dùng chung toàn Application
-│   ├── DTOs/
 │   └── Features/
 │       ├── BusinessResults/            # CRUD kết quả tổng hợp
 │       ├── BusinessReports/            # Query báo cáo; Command tạo file lưu
@@ -44,7 +43,7 @@ Backend/
 └── ParkingBusinessResult.Infrastructure/
     ├── Repositories/                   # Hiện thực đọc/ghi SQLite và đọc Excel
     ├── Reports/                        # Tạo và lưu file Excel/PDF
-    └── Data/                           # Kiểm tra storage sẵn sàng
+    └── Persistence/                           # EF DbContext, mapping, migrations và storage
 database/sqlite/                        # Schema, migration và script dữ liệu mẫu
 tests/                                  # Kiểm tra bằng database tạm
 ```

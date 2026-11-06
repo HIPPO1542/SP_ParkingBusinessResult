@@ -1,3 +1,4 @@
+using ParkingBusinessResult.Infrastructure.Persistence;
 using System.Collections;
 using Microsoft.Data.Sqlite;
 using ParkingBusinessResult.Application.Features.BusinessReports.Common;
@@ -49,7 +50,7 @@ try
         command.ExecuteNonQuery();
     }
     Execute(File.ReadAllText(Path.Combine(root, "database/sqlite/007_booking_table.sql")));
-    var repository = new SqliteParkingBookingImportRepository(path);
+    var repository = new SqliteParkingBookingImportRepository(new ParkingContextFactory(path));
     var reader = new TestReader([Row("TX-1"), Row("FAIL")]);
     var handler = new ImportParkingBookingsHandler(reader, repository);
     Execute("CREATE TRIGGER force_import_failure BEFORE INSERT ON SP_datTruocChoDoXe WHEN NEW.bienSoXe='FAIL' BEGIN SELECT RAISE(ABORT,'storage_failure'); END;");
@@ -78,7 +79,7 @@ try
     catch (OperationCanceledException) { cancelled = true; }
     Check(cancelled && Count() == 2, "Cancelled batch must roll back its writes.");
 
-    var queries = new SqliteParkingBookingQueryRepository(path);
+    var queries = new SqliteParkingBookingQueryRepository(new ParkingContextFactory(path));
     var page = queries.GetPage(new(null, null, "motorbike", 20, 1, access));
     Check(page.TotalCount == 2 && page.Items.Count == 0, "An empty page must retain the filtered total.");
     page = queries.GetPage(new(null, null, null, 1, 10, new(false, new HashSet<Guid>())));

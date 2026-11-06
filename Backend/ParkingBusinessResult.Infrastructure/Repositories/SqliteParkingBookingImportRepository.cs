@@ -1,24 +1,24 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using ParkingBusinessResult.Infrastructure.Data;
+using ParkingBusinessResult.Infrastructure.Persistence;
 using ParkingBusinessResult.Application.Features.BusinessResults.Common;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Common;
 
 namespace ParkingBusinessResult.Infrastructure.Repositories;
 
-public sealed class SqliteParkingBookingImportRepository(string databasePath) : IParkingBookingImportRepository
+public sealed class SqliteParkingBookingImportRepository(IDbContextFactory<ParkingDbContext> contextFactory) : IParkingBookingImportRepository
 {
-    public IParkingBookingImportSession BeginImport() => new ImportSession(databasePath);
+    public IParkingBookingImportSession BeginImport() => new ImportSession(contextFactory);
 
     private sealed class ImportSession : IParkingBookingImportSession
     {
         private readonly ParkingDbContext db;
         private readonly IDbContextTransaction transaction;
 
-        public ImportSession(string path)
+        public ImportSession(IDbContextFactory<ParkingDbContext> contextFactory)
         {
-            db = ParkingContextFactory.Create(path);
+            db = contextFactory.CreateDbContext();
             try { transaction = db.Database.BeginTransaction(); }
             catch { db.Dispose(); throw; }
         }

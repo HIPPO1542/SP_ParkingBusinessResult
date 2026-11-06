@@ -13,7 +13,7 @@
 - **Ngôn ngữ và nền tảng:** C#, ASP.NET Core, .NET 10.
 - **API:** Minimal API; endpoint nhận HTTP và gọi handler.
 - **Tổ chức xử lý:** Clean Architecture kết hợp CQRS: `Command` cho thao tác ghi, `Query` cho thao tác đọc. Hiện handler được gọi trực tiếp qua dependency injection, chưa dùng MediatR.
-- **Cơ sở dữ liệu:** SQLite, truy cập qua EF Core trong repository; DbContext, mapping và migration nằm trong Infrastructure/Data. Xem [EF Core và migrations](docs/EF_CORE.md).
+- **Cơ sở dữ liệu:** SQLite, truy cập qua EF Core trong repository; DbContext, mapping và migration nằm trong Infrastructure/Persistence. Xem [EF Core và migrations](docs/EF_CORE.md).
 - **File:** ExcelDataReader đọc file nhập; dự án tạo Excel và dùng PDFsharp tạo PDF. Các package đọc/tạo file được đặt ở Infrastructure.
 
 ### 2.1. Cây thư mục
@@ -26,7 +26,7 @@ SP_ParkingBusinessResult/
 ├── Backend/
 │   ├── ParkingBusinessResult.Api/
 │   │   ├── Contracts/                 # Cấu trúc response API
-│   │   ├── Endpoint/
+│   │   ├── Endpoints/
 │   │   │   ├── BusinessResults/      # Thêm, sửa, xóa, xem kết quả
 │   │   │   ├── BusinessReports/      # Danh sách, tổng hợp, xuất báo cáo tổng hợp
 │   │   │   ├── ParkingBookings/        # Import, xem, thống kê, xuất, đối chiếu lượt xe
@@ -37,7 +37,6 @@ SP_ParkingBusinessResult/
 │   │
 │   ├── ParkingBusinessResult.Application/
 │   │   ├── Common/                   # Dành cho thành phần dùng chung toàn Application
-│   │   ├── DTOs/                     # Các request hiện có
 │   │   └── Features/
 │   │       ├── BusinessResults/      # Commands, Queries, Common của kết quả kinh doanh
 │   │       ├── BusinessReports/      # Commands, Queries và Common của báo cáo tổng hợp
@@ -49,14 +48,12 @@ SP_ParkingBusinessResult/
 │   │   ├── Entities/                 # ParkingBusinessResultRecord
 │   │   ├── Repositories/             # Hợp đồng repository kết quả kinh doanh
 │   │   ├── Exceptions/
-│   │   ├── Enums/                    # Hiện là thư mục dự phòng
 │   │   └── ValueObjects/             # Kỳ báo cáo và tính kỳ trước
 │   │
 │   └── ParkingBusinessResult.Infrastructure/
 │       ├── Repositories/             # Đọc/ghi SQLite, đọc file Excel/CSV
 │       ├── Reports/                  # Tạo file Excel và PDF
-│       ├── Data/                     # Probe kiểm tra storage cho readiness
-│       └── EntityConfigs/            # Hiện là thư mục dự phòng
+│       ├── Persistence/                     # DbContext, mapping, Models và Migrations
 │
 ├── database/sqlite/                  # SQL, migration và script tạo dữ liệu mẫu
 ├── docs/                             # Tài liệu API, dữ liệu mẫu và import
@@ -69,7 +66,7 @@ SP_ParkingBusinessResult/
 └── TONG_QUAN_DU_AN.md                # Tài liệu này
 ```
 
-`bin/` và `obj/` là thư mục do .NET tạo khi build; chúng không phải mã nguồn nghiệp vụ. Những thư mục dự phòng ở trên hiện chỉ có `.gitkeep` để giữ cấu trúc.
+`bin/` và `obj/` là thư mục do .NET tạo khi build; chúng không phải mã nguồn nghiệp vụ.
 
 ### 2.2. Một request đi qua dự án như thế nào?
 

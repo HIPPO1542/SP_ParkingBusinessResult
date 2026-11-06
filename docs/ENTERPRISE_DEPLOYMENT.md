@@ -44,7 +44,7 @@ Không cần MediatR để thực hiện CQRS. Không thêm event bus, Outbox ho
 - Đọc file xong mới mở giao dịch, tái sử dụng một connection và tra cứu bãi có cache trong phạm vi file. Không mở connection mới cho từng dòng.
 - Thông tin người tạo/cập nhật lấy từ token, không lấy từ body. Import và CRUD kết quả kinh doanh ghi audit vào các cột đã có; sửa/xóa mềm giữ nguyên thông tin người tạo.
 - `tongTien` là tiền đã thu. Chỉ lượt có giờ ra được tính hoàn tất. Không quản lý phương thức thanh toán. Bảng booking và bảng kết quả tổng hợp không tự đồng bộ với nhau.
-- Danh sách booking lọc quyền và phân trang ở SQLite qua EF Core. COUNT và dữ liệu trang chạy trong một giao dịch đọc ngắn để cùng thấy một snapshot. Thống kê chỉ tải các lượt trong khoảng thời gian và phạm vi bãi được phép. Mapping và migrations nằm trong Infrastructure/Data; xem [EF_CORE.md](EF_CORE.md).
+- Danh sách booking lọc quyền và phân trang ở SQLite qua EF Core. COUNT và dữ liệu trang chạy trong một giao dịch đọc ngắn để cùng thấy một snapshot. Thống kê chỉ tải các lượt trong khoảng thời gian và phạm vi bãi được phép. Mapping và migrations nằm trong Infrastructure/Persistence; xem [EF_CORE.md](EF_CORE.md).
 - Không thêm `rowVersion` vì schema chưa có trường này. CRUD hiện chưa phát hiện mọi trường hợp người dùng sửa trên dữ liệu cũ; nếu nhóm yêu cầu optimistic concurrency cần chốt thêm hợp đồng request/schema.
 
 ## Xác thực theo môi trường

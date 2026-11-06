@@ -1,14 +1,14 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
-using ParkingBusinessResult.Infrastructure.Data;
+using ParkingBusinessResult.Infrastructure.Persistence;
 using ParkingBusinessResult.Application.Features.BusinessReports.Common;
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.List;
 namespace ParkingBusinessResult.Infrastructure.Repositories;
-public sealed class SqliteBusinessReportMetadataReader(string databasePath) : IBusinessReportMetadataReader
+public sealed class SqliteBusinessReportMetadataReader(IDbContextFactory<ParkingDbContext> contextFactory) : IBusinessReportMetadataReader
 {
     public IReadOnlyDictionary<Guid, BusinessReportMetadata> FindMany(IReadOnlySet<Guid> resultIds)
     {
-        using var db = ParkingContextFactory.Create(databasePath);
+        using var db = contextFactory.CreateDbContext();
         string[] ids = resultIds.Select(id => id.ToString()).ToArray();
         var rows = from row in db.SpKetQuaKinhDoanhBaiDoXe.AsNoTracking()
                    join lot in db.DlKthtBaiDoXe on row.BaiDoXeId equals lot.Id

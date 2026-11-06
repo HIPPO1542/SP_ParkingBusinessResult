@@ -1,14 +1,14 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
-using ParkingBusinessResult.Infrastructure.Data;
+using ParkingBusinessResult.Infrastructure.Persistence;
 using ParkingBusinessResult.Application.Features.BusinessResults.Common;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Common;
 namespace ParkingBusinessResult.Infrastructure.Repositories;
-public sealed class SqliteParkingBookingTariffRepository(string databasePath) : IParkingBookingTariffRepository
+public sealed class SqliteParkingBookingTariffRepository(IDbContextFactory<ParkingDbContext> contextFactory) : IParkingBookingTariffRepository
 {
     public ParkingBookingTariffData? Find(Guid bookingId, string dayType, BusinessAccess access)
     {
-        using var db = ParkingContextFactory.Create(databasePath);
+        using var db = contextFactory.CreateDbContext();
         var booking = db.SpDatTruocChoDoXe.AsNoTracking().SingleOrDefault(row => row.Id == bookingId.ToString());
         if (booking is null || !access.CanAccess(Guid.Parse(booking.BaiDoXeId))) return null;
         decimal? amount = booking.TongTien.HasValue ? Convert.ToDecimal(booking.TongTien.Value) : null;

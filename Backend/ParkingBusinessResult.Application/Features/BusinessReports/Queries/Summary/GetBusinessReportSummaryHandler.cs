@@ -1,3 +1,4 @@
+using ParkingBusinessResult.Application.Common;
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.List;
 using ParkingBusinessResult.Application.Features.BusinessReports.Common;
 using ParkingBusinessResult.Domain;
@@ -33,7 +34,7 @@ public sealed class GetBusinessReportSummaryHandler(ListBusinessReportHandler li
             if (sameLots && previousRevenue > 0)
                 growthRate = Math.Round((totals.TotalRevenue - previousRevenue) / previousRevenue * 100, 2, MidpointRounding.AwayFromZero);
         }
-        BusinessReportDistrict[] districts = records.GroupBy(record => DistrictOf(lots[record.ParkingLotId].Address) ?? "", StringComparer.OrdinalIgnoreCase)
+        BusinessReportDistrict[] districts = records.GroupBy(record => DistrictNames.FromAddress(lots[record.ParkingLotId].Address) ?? "", StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
                 decimal revenue = group.Sum(record => record.Revenue);
@@ -45,12 +46,4 @@ public sealed class GetBusinessReportSummaryHandler(ListBusinessReportHandler li
             totals.AverageRevenuePerVehicle, growthRate, averageDailyRevenue, topLots, districts);
     }
 
-    private static string? DistrictOf(string? address)
-    {
-        if (address is null) return null;
-        string[] matches = address.Split(',').Select(part => part.Trim())
-            .Where(part => part.StartsWith("Quận ", StringComparison.OrdinalIgnoreCase) || part.StartsWith("Huyện ", StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        return matches.Length == 1 ? matches[0] : null;
-    }
 }

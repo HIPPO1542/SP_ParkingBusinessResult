@@ -35,7 +35,7 @@ with sqlite3.connect(database_path.as_uri() + '?mode=rw', uri=True) as database,
     if signature(database) != signature(template):
         raise SystemExit('Schema differs from the EF baseline. No changes were made; review schema before adoption.')
     migration = template.execute('SELECT MigrationId,ProductVersion FROM __EFMigrationsHistory').fetchall()
-    migration_files = list((Path(__file__).resolve().parents[2] / 'Backend/ParkingBusinessResult.Infrastructure/Data/Migrations').glob('*_InitialParkingSchema.cs'))
+    migration_files = list((Path(__file__).resolve().parents[2] / 'Backend/ParkingBusinessResult.Infrastructure/Persistence/Migrations').glob('*_InitialParkingSchema.cs'))
     if len(migration) != 1 or len(migration_files) != 1 or migration[0][0] != migration_files[0].stem:
         raise SystemExit('Template must contain exactly the initial EF migration.')
     backup_path = database_path.with_name(database_path.stem + '.before-ef-' + datetime.now().strftime('%Y%m%d%H%M%S%f') + '.db')

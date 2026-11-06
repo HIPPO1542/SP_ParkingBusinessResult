@@ -23,7 +23,7 @@ class ArchitectureChecks(unittest.TestCase):
             self.assertEqual(dependencies, actual, layer)
 
     def test_endpoints_do_not_call_infrastructure(self):
-        for source in (BACKEND / (PREFIX + "Api") / "Endpoint").rglob("*.cs"):
+        for source in (BACKEND / (PREFIX + "Api") / "Endpoints").rglob("*.cs"):
             self.assertNotIn("ParkingBusinessResult.Infrastructure", source.read_text(encoding="utf-8-sig"), str(source))
 
     def test_inner_layers_have_no_technology_packages(self):

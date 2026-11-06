@@ -4,12 +4,12 @@
 
 ## Cấu trúc
 
-- `Infrastructure/Data/ParkingDbContext.cs`: DbSet, mapping tên bảng/cột, kiểu dữ liệu, quan hệ, index và default.
-- `Infrastructure/Data/Models/`: model lưu trữ của 9 bảng trong database hiện có; tách khỏi entity miền. Không chứa tài khoản hoặc dữ liệu seed.
-- `Infrastructure/Data/ParkingDbContext.Constraints.cs`: check constraint giữ các quy tắc đang có trong SQLite.
-- `Infrastructure/Data/ParkingDbContext.Functions.cs`: hàm SQL tìm chuỗi không phân biệt hoa/thường, giữ cách tìm tiếng Việt.
-- `Infrastructure/Data/ParkingContextFactory.cs`: tạo context riêng cho mỗi thao tác/session; cung cấp context cho công cụ migration.
-- `Infrastructure/Data/Migrations/`: initial migration, designer và model snapshot.
+- `Infrastructure/Persistence/ParkingDbContext.cs`: DbSet và đăng ký các configuration trong assembly.
+- `Infrastructure/Persistence/Models/`: model lưu trữ của 9 bảng trong database hiện có; tách khỏi entity miền. Không chứa tài khoản hoặc dữ liệu seed.
+- `Infrastructure/Persistence/Configurations/`: mỗi model có một IEntityTypeConfiguration, gồm cột, quan hệ, index, default và check constraint.
+- `Infrastructure/Persistence/ParkingDbContext.Functions.cs`: hàm SQL tìm chuỗi không phân biệt hoa/thường, giữ cách tìm tiếng Việt.
+- `Infrastructure/Persistence/ParkingContextFactory.cs`: factory runtime được đăng ký qua DI, tạo context riêng cho mỗi thao tác/session. `ParkingDesignTimeFactory.cs` cung cấp context cho công cụ migration.
+- `Infrastructure/Persistence/Migrations/`: initial migration, designer và model snapshot.
 
 Tất cả repository nghiệp vụ dùng DbContext. Phần đọc dùng LINQ và AsNoTracking; thêm bản ghi dùng SaveChanges; cập nhật/xóa mềm dùng ExecuteUpdate. Import dùng ExecuteSqlInterpolated trong transaction EF để giữ ON CONFLICT DO NOTHING của SQLite. Đối chiếu giá dùng SqlQuery có tham số để giữ cách tính ngày hiệu lực bằng julianday. Health probe dùng truy vấn SQLite nhỏ để kiểm tra storage.
 
@@ -39,7 +39,7 @@ Database cũ đã có bảng cần ghi nhận baseline trước khi cập nhật
 
 ```powershell
 $env:ParkingBusinessResult__DatabasePath = 'H:\ParkingData\ef-schema.db'
-dotnet ef database update --project Backend/ParkingBusinessResult.Infrastructure
+dotnet ef database update InitialParkingSchema --project Backend/ParkingBusinessResult.Infrastructure
 python database/sqlite/adopt_ef_baseline.py --database 'H:\ParkingData\parking_business_result.db' --template 'H:\ParkingData\ef-schema.db'
 $env:ParkingBusinessResult__DatabasePath = 'H:\ParkingData\parking_business_result.db'
 ```
@@ -49,8 +49,10 @@ Script đối chiếu bảng, cột, khóa ngoại, index, predicate và DDL. Sc
 Thay đổi schema tiếp theo phải có migration riêng:
 
 ```powershell
-dotnet ef migrations add TenThayDoi --project Backend/ParkingBusinessResult.Infrastructure --output-dir Data/Migrations
+dotnet ef migrations add TenThayDoi --project Backend/ParkingBusinessResult.Infrastructure --output-dir Persistence/Migrations
 dotnet ef migrations script --project Backend/ParkingBusinessResult.Infrastructure
 ```
 
 Review SQL và backup trước khi áp dụng. Ứng dụng Production không tự gọi Migrate hoặc EnsureCreated. Các script SQL/Python trước EF được giữ làm lịch sử chuyển đổi; không chạy lại sau khi đã ghi nhận baseline.
+
+Migration `AlignSoftDeleteIndex` đồng bộ model/snapshot với index đã lọc `daXoa = 0`. Sau khi ghi nhận baseline trên database cũ, chạy `database update` để áp dụng các migration tiếp theo. Báo cáo tổng hợp lọc quyền, kỳ, bãi, từ khóa và phân trang ngay trong truy vấn EF.

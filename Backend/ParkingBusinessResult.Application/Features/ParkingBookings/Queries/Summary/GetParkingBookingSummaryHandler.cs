@@ -1,3 +1,4 @@
+using ParkingBusinessResult.Application.Common;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Common;
 
 namespace ParkingBusinessResult.Application.Features.ParkingBookings.Queries.Summary;
@@ -44,7 +45,7 @@ public sealed class GetParkingBookingSummaryHandler(IParkingBookingSummaryReposi
                 decimal percentage = collected == 0 ? 0 : Math.Round(revenue / collected * 100, 2, MidpointRounding.AwayFromZero);
                 return new ParkingBookingTopLot(new(group.Key, first.ParkingLotCode, first.ParkingLotName, first.ParkingLotAddress), revenue, group.Count(), percentage);
             }).OrderByDescending(lot => lot.Revenue).ThenBy(lot => lot.ParkingLot.Id).Take(5).ToArray();
-            districts = permitted.GroupBy(booking => FindDistrict(booking.ParkingLotAddress) ?? "", StringComparer.OrdinalIgnoreCase)
+            districts = permitted.GroupBy(booking => DistrictNames.FromAddress(booking.ParkingLotAddress) ?? "", StringComparer.OrdinalIgnoreCase)
                 .Select(group =>
                 {
                     decimal revenue = group.Sum(booking => booking.CollectedAmount!.Value);
@@ -57,12 +58,4 @@ public sealed class GetParkingBookingSummaryHandler(IParkingBookingSummaryReposi
             permitted.LongLength, collected, missing, previousRevenue, growth, averageDailyRevenue, topLots, districts);
     }
 
-    private static string? FindDistrict(string? address)
-    {
-        if (address is null) return null;
-        string[] matches = address.Split(',').Select(part => part.Trim())
-            .Where(part => part.StartsWith("Quận ", StringComparison.OrdinalIgnoreCase) || part.StartsWith("Huyện ", StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        return matches.Length == 1 ? matches[0] : null;
-    }
 }

@@ -1,7 +1,12 @@
-﻿using ParkingBusinessResult.Domain;
+using ParkingBusinessResult.Checks;
+using ParkingBusinessResult.Infrastructure.Persistence;
+using ParkingBusinessResult.Domain;
 using ParkingBusinessResult.Application.Features.BusinessReports.Common;
 using ParkingBusinessResult.Infrastructure;
 using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 Check(2_450_000_000m, 112_500, 21_777.78m);
 Check(100m, 0, 0m);
@@ -96,16 +101,15 @@ Guid testLotId = Guid.NewGuid();
 try
 {
     SQLitePCL.Batteries_V2.Init();
+    using (var db = new ParkingContextFactory(databasePath).CreateDbContext())
+    {
+        string initial = db.Database.GetMigrations().Single(id => id.EndsWith("_InitialParkingSchema", StringComparison.Ordinal));
+        db.GetService<IMigrator>().Migrate(initial);
+    }
     using (var connection = new SqliteConnection($"Data Source={databasePath}"))
     {
         connection.Open();
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = File.ReadAllText("database/sqlite/001_create_business_result.sql");
-        command.ExecuteNonQuery();
-        command.CommandText = File.ReadAllText("database/sqlite/002_business_reference_tables.sql");
-        command.ExecuteNonQuery();
-        command.CommandText = File.ReadAllText("database/sqlite/003_soft_delete_business_result.sql");
-        command.ExecuteNonQuery();
         command.CommandText = """
             INSERT INTO "SP_donViKinhDoanhQuanLy" (id, tenDonVi, diaChi, nguoiLienHe) VALUES ('unit', 'Unit', 'Address', 'Contact');
             INSERT INTO "DL_KTHT_baiDoXe" (Id, quyHoachId, donViQuanLyId, geo, dienTichThucTe) VALUES ($lot, 'plan', 'unit', '{}', 1);
@@ -114,14 +118,14 @@ try
         command.ExecuteNonQuery();
     }
 
-    var sqliteRepository = new SqliteBusinessResultRepository(databasePath);
+    var sqliteRepository = new SqliteBusinessResultRepository(new ParkingContextFactory(databasePath));
     var persistentResult = new ParkingBusinessResultRecord(Guid.NewGuid(), testLotId, "2026-10", 123.45m, 4, "Test");
     if (!sqliteRepository.TryAdd(persistentResult, new("creator", "Creator")) || sqliteRepository.TryAdd(persistentResult))
     {
         throw new InvalidOperationException("SQLite insert or duplicate detection failed.");
     }
 
-    var reopenedRepository = new SqliteBusinessResultRepository(databasePath);
+    var reopenedRepository = new SqliteBusinessResultRepository(new ParkingContextFactory(databasePath));
     if (reopenedRepository.FindById(persistentResult.Id)?.Revenue != 123.45m ||
         reopenedRepository.List().Count != 1 ||
         !reopenedRepository.TryUpdate(persistentResult.Id, 500m, 5, null, new("editor", "Editor")) ||
@@ -154,6 +158,14 @@ try
 
     if (!reopenedRepository.TryAdd(new ParkingBusinessResultRecord(Guid.NewGuid(), testLotId, "2026-10", 200m, 2, null)))
         throw new InvalidOperationException("The period of a soft-deleted SQLite record could not be reused.");
+
+    using (var db = new ParkingContextFactory(databasePath).CreateDbContext())
+    {
+        // Upgrade with an active and a deleted row sharing the same lot/period: an unfiltered index would fail.
+        db.Database.Migrate();
+        if (db.SpKetQuaKinhDoanhBaiDoXe.Count() != 2 || reopenedRepository.List().Count != 1 || db.Database.HasPendingModelChanges())
+            throw new InvalidOperationException("Index alignment changed saved records or left the EF model inconsistent.");
+    }
 
     try
     {

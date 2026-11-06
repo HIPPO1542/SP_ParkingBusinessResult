@@ -58,11 +58,10 @@ Backend nhúng `index.html` vào project API và phục vụ tại `/` khi dùng
 | `Program.cs` | Điểm bắt đầu backend; đọc cấu hình, tùy chọn User Secrets, đăng ký ứng dụng và chạy web server. |
 | `ParkingBusinessResult.Api.csproj` | Khai báo project API, tham chiếu Application và Infrastructure, package JWT và tài nguyên giao diện được nhúng. |
 | `appsettings.json` | Cấu hình chung hiện có, gồm logging và host. |
-| `appsettings.Development.json` | Cấu hình logging dành cho Development. |
 | `Properties/launchSettings.json` | Các profile `http`/`https` chạy Production, cổng và tùy chọn đọc User Secrets. |
 | `Contracts/ApiResponse.cs` | Định nghĩa phong bì JSON `code`, `message`, `data` cho response của API. |
-| `Endpoint/EndpointRegistration.cs` | Nhóm và đăng ký các route; phục vụ trang `/` và route tải file báo cáo đã lưu. |
-| `Endpoint/EndpointSupport.cs` | Lấy phạm vi quyền từ thông tin người dùng và chuyển một số kết quả nghiệp vụ thành response chung. |
+| `Endpoints/EndpointRegistration.cs` | Nhóm và đăng ký các route; phục vụ trang `/` và route tải file báo cáo đã lưu. |
+| `Endpoints/EndpointSupport.cs` | Lấy phạm vi quyền từ thông tin người dùng và chuyển một số kết quả nghiệp vụ thành response chung. |
 | `Extensions/BusinessResultRegistration.cs` | Đăng ký các handler để endpoint có thể nhận chúng qua dependency injection. |
 | `Extensions/ApplicationSetup.cs` | Cấu hình repository đọc/ghi, reader/writer file, health, middleware và đăng ký API ở mọi môi trường. |
 | `Extensions/AuthenticationSetup.cs` | Cấu hình JWT Local hoặc Authority, chính sách quyền và giới hạn đăng nhập. |
@@ -71,7 +70,7 @@ Backend nhúng `index.html` vào project API và phục vụ tại `/` khi dùng
 
 ### 4.2. Endpoint kết quả kinh doanh
 
-Thư mục `Endpoint/BusinessResults/`:
+Thư mục `Endpoints/BusinessResults/`:
 
 | File | Chức năng |
 |---|---|
@@ -85,7 +84,7 @@ Nhóm này làm việc với bản tổng hợp trong `SP_ketQuaKinhDoanhBaiDoXe
 
 ### 4.3. Endpoint báo cáo từ kết quả đã tổng hợp
 
-Thư mục `Endpoint/BusinessReports/`:
+Thư mục `Endpoints/BusinessReports/`:
 
 | File | Chức năng |
 |---|---|
@@ -96,7 +95,7 @@ Thư mục `Endpoint/BusinessReports/`:
 
 ### 4.4. Endpoint lượt xe
 
-Thư mục `Endpoint/ParkingBookings/`:
+Thư mục `Endpoints/ParkingBookings/`:
 
 | File | Chức năng |
 |---|---|
@@ -110,7 +109,7 @@ Thư mục `Endpoint/ParkingBookings/`:
 
 ### 4.5. Endpoint tài khoản Local
 
-Thư mục `Endpoint/LocalAccounts/`:
+Thư mục `Endpoints/LocalAccounts/`:
 
 | File | Chức năng |
 |---|---|
@@ -126,9 +125,9 @@ Thư mục `Endpoint/LocalAccounts/`:
 | File | Chức năng |
 |---|---|
 | `ParkingBusinessResult.Application.csproj` | Khai báo project Application và tham chiếu Domain. |
-| `Common/.gitkeep` | Giữ thư mục chung rỗng trong Git; không có logic chạy. |
-| `DTOs/BusinessResultRequests.cs` | Định nghĩa dữ liệu request để thêm/sửa kết quả kinh doanh. |
-| `DTOs/LocalAccountRequests.cs` | Định nghĩa request đăng nhập và tạo tài khoản Local. |
+| `Common/DistrictNames.cs` | Tách tên quận/huyện từ địa chỉ, dùng chung cho hai luồng thống kê. |
+| `Features/BusinessResults/DTOs/BusinessResultRequests.cs` | Định nghĩa dữ liệu request để thêm/sửa kết quả kinh doanh. |
+| `Features/LocalAccounts/DTOs/LocalAccountRequests.cs` | Định nghĩa request đăng nhập và tạo tài khoản Local. |
 
 ### 5.2. Feature BusinessResults
 
@@ -223,7 +222,6 @@ Thư mục `Endpoint/LocalAccounts/`:
 | `Common/RevenueMetrics.cs` | Tính doanh thu bình quân trên lượt xe hoàn tất, xử lý trường hợp không có lượt. |
 | `Exceptions/ParkingLotNotFoundException.cs` | Kiểu lỗi báo bãi xe được tham chiếu không tồn tại. |
 | `ValueObjects/BusinessReportingPeriod.cs` | Biểu diễn kỳ báo cáo và hỗ trợ phân tích kỳ, kỳ trước, số ngày trong kỳ. |
-| `Enums/.gitkeep` | Giữ thư mục `Enums` rỗng trong Git; không có logic chạy. |
 
 ## 7. Backend — ParkingBusinessResult.Infrastructure
 
@@ -240,13 +238,11 @@ Thư mục `Endpoint/LocalAccounts/`:
 | `Repositories/SqliteParkingBookingTariffRepository.cs` | Lấy thông tin lượt xe và các quy tắc giá liên quan để đối chiếu. |
 | `Repositories/ExcelParkingBookingSpreadsheetReader.cs` | Đọc file `.xlsx`, `.xls`, `.csv`, kiểm tra tiêu đề và chuyển dữ liệu thành các dòng import. |
 | `Repositories/SqliteLocalAccountRepository.cs` | Lưu/tìm tài khoản Local trong bảng `dev_auth_users` cũ để giữ tài khoản hiện có; hoạt động cả Production. |
-| `Repositories/InMemoryBusinessResultRepository.cs` | Cài đặt repository lưu tạm trong bộ nhớ; được dùng trong kiểm tra, không phải kho SQLite đang cấu hình cho API. |
 | `Reports/BusinessReportExcelWriter.cs` | Tạo nội dung file báo cáo Excel từ các dòng kết quả. |
 | `Reports/BusinessReportPdfWriter.cs` | Tạo nội dung file báo cáo PDF từ các dòng kết quả; bản hiện tại cần Windows. |
 | `Reports/BusinessReportExportStore.cs` | Ghi file tạm rồi đổi tên, tạo metadata; chỉ cho chủ sở hữu issuer/subject tải lại. |
 | `Reports/BusinessReportDocumentWriter.cs` | Chọn bộ tạo Excel/PDF và trả nội dung qua hợp đồng Application. |
-| `Data/SqliteStorageProbe.cs` | Kiểm tra database đọc được và có ba bảng lõi cho readiness. |
-| `EntityConfigs/.gitkeep` | Thư mục dự phòng; mapping EF hiện nằm trong `Data/ParkingDbContext.cs` và các file partial của context. |
+| `Persistence/SqliteStorageProbe.cs` | Kiểm tra database đọc được và có ba bảng lõi cho readiness. |
 
 ## 8. Database và dữ liệu mẫu
 
@@ -306,6 +302,7 @@ Thư mục `tests/` không phải giao diện hay chức năng nghiệp vụ ch�
 |---|---|
 | `RevenueMetrics.Checks/RevenueMetrics.Checks.csproj` | Khai báo project kiểm tra quy tắc tính và repository. |
 | `RevenueMetrics.Checks/Program.cs` | Chạy các kiểm tra quy tắc doanh thu, dữ liệu và repository liên quan. |
+| `RevenueMetrics.Checks/InMemoryBusinessResultRepository.cs` | Implementation trong bộ nhớ chỉ phục vụ kiểm tra Domain; không nằm trong Infrastructure chạy Production. |
 | `Enterprise.Checks/Enterprise.Checks.csproj` và `Program.cs` | Kiểm tra rollback/hủy import, audit, phân trang, phạm vi bãi và quyền sở hữu file trên dữ liệu tạm. |
 | `runtime_checks.ps1` | Chạy host thật trên database tạm: lỗi JSON, lỗi storage, request ID, readiness, UI/đăng nhập/API Production và chế độ Authority. |
 | `test_architecture.py` | Chặn tham chiếu sai chiều, Endpoint gọi Infrastructure và thư viện công nghệ trong Domain/Application. |
