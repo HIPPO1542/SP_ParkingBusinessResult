@@ -14,7 +14,6 @@ public partial class ParkingDbContext : DbContext
 
     public virtual DbSet<DevAuthUsers> DevAuthUsers { get; set; }
 
-    public virtual DbSet<DevParkingSessions> DevParkingSessions { get; set; }
 
     public virtual DbSet<DlKthtBaiDoXe> DlKthtBaiDoXe { get; set; }
 

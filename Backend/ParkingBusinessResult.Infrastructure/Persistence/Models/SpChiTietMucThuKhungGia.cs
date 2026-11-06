@@ -33,7 +33,6 @@ public partial class SpChiTietMucThuKhungGia
 
     public string? GhiChu { get; set; }
 
-    public virtual ICollection<DevParkingSessions> DevParkingSessions { get; set; } = new List<DevParkingSessions>();
 
     public virtual SpKhungGiaThuPhi IdKhungGiaNavigation { get; set; } = null!;
 }

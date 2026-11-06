@@ -5,7 +5,7 @@
 ## Cấu trúc
 
 - `Infrastructure/Persistence/ParkingDbContext.cs`: DbSet và đăng ký các configuration trong assembly.
-- `Infrastructure/Persistence/Models/`: model lưu trữ của 9 bảng trong database hiện có; tách khỏi entity miền. Không chứa tài khoản hoặc dữ liệu seed.
+- `Infrastructure/Persistence/Models/`: model lưu trữ của 8 bảng đang được ứng dụng sử dụng, tách khỏi entity miền. Model lượt xe cũ `DevParkingSessions` đã được gỡ.
 - `Infrastructure/Persistence/Configurations/`: mỗi model có một IEntityTypeConfiguration, gồm cột, quan hệ, index, default và check constraint.
 - `Infrastructure/Persistence/ParkingDbContext.Functions.cs`: hàm SQL tìm chuỗi không phân biệt hoa/thường, giữ cách tìm tiếng Việt.
 - `Infrastructure/Persistence/ParkingContextFactory.cs`: factory runtime được đăng ký qua DI, tạo context riêng cho mỗi thao tác/session. `ParkingDesignTimeFactory.cs` cung cấp context cho công cụ migration.
@@ -15,9 +15,11 @@ Tất cả repository nghiệp vụ dùng DbContext. Phần đọc dùng LINQ v�
 
 Danh sách booking dùng COUNT và truy vấn trang riêng trong một giao dịch đọc ngắn, bảo đảm cùng một snapshot. Import giữ một giao dịch cho cả batch: lỗi hệ thống/hủy trước commit rollback toàn bộ phần đang ghi; dòng sai nghiệp vụ hoặc trùng trả lỗi riêng. Các trường audit lấy từ token.
 
-Bảng booking giữ 16 cột. ID và ngày audit dạng text, tiền dạng REAL được giữ theo schema cũ. Repository chuyển model lưu trữ string/double sang kiểu Guid/decimal của Domain/Application. Hai bảng lịch sử dev_auth_users và dev_parking_sessions được mapping để baseline phản ánh toàn bộ database cũ; không tự tạo số liệu giả.
+Bảng booking giữ 16 cột. ID và ngày audit dạng text, tiền dạng REAL được giữ theo schema cũ. Repository chuyển model lưu trữ string/double sang kiểu Guid/decimal của Domain/Application. `dev_auth_users` tiếp tục phục vụ tài khoản Local; `dev_parking_sessions` chỉ còn trong lịch sử migration và có thể còn vật lý trên database cũ, không thuộc EF model hiện tại.
 
 ## Công cụ và lệnh migration
+
+Migration mới `RemoveLegacyParkingSessions` chỉ xóa bảng `dev_parking_sessions`. Migration này chưa được áp dụng lên database có dữ liệu. Cần duyệt việc loại bỏ dữ liệu cũ và backup trước khi cho phép cập nhật database đến migration này; không tự chạy `database update` trên database đang sử dụng. `Down` chỉ tái tạo cấu trúc bảng, không phục hồi các dòng đã xóa.
 
 Chạy từ thư mục gốc:
 

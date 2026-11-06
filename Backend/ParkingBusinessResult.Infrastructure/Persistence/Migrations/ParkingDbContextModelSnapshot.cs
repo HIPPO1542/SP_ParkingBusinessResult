@@ -51,64 +51,6 @@ namespace ParkingBusinessResult.Infrastructure.Persistence.Migrations
                     b.ToTable("dev_auth_users", (string)null);
                 });
 
-            modelBuilder.Entity("ParkingBusinessResult.Infrastructure.Persistence.Models.DevParkingSessions", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<double?>("ChargedAmount")
-                        .HasColumnType("REAL")
-                        .HasColumnName("chargedAmount");
-
-                    b.Property<string>("EnteredAt")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("enteredAt");
-
-                    b.Property<string>("ExitedAt")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("exitedAt");
-
-                    b.Property<string>("ParkingLotId")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("parkingLotId");
-
-                    b.Property<string>("PaymentMethod")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("paymentMethod");
-
-                    b.Property<string>("PriceRuleId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("priceRuleId");
-
-                    b.Property<string>("TestPlate")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("testPlate");
-
-                    b.Property<string>("VehicleType")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("vehicleType");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ParkingLotId");
-
-                    b.HasIndex("PriceRuleId");
-
-                    b.ToTable("dev_parking_sessions", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_dev_parking_sessions_0", "julianday(\"enteredAt\") IS NOT NULL");
-
-                            t.HasCheckConstraint("CK_dev_parking_sessions_1", "\"exitedAt\" IS NULL OR (julianday(\"exitedAt\") IS NOT NULL AND julianday(\"exitedAt\") > julianday(\"enteredAt\"))");
-
-                            t.HasCheckConstraint("CK_dev_parking_sessions_2", "(\"exitedAt\" IS NULL AND \"priceRuleId\" IS NULL AND \"chargedAmount\" IS NULL AND \"paymentMethod\" IS NULL)\n        OR (\"exitedAt\" IS NOT NULL AND \"priceRuleId\" IS NOT NULL AND \"chargedAmount\" IS NOT NULL\n            AND \"chargedAmount\" >= 0 AND \"paymentMethod\" IS NOT NULL AND \"paymentMethod\" IN ('CASH', 'ELECTRONIC'))");
-                        });
-                });
-
             modelBuilder.Entity("ParkingBusinessResult.Infrastructure.Persistence.Models.DlKthtBaiDoXe", b =>
                 {
                     b.Property<string>("Id")
@@ -630,22 +572,6 @@ namespace ParkingBusinessResult.Infrastructure.Persistence.Migrations
                     b.ToTable("SP_khungGiaThuPhi", (string)null);
                 });
 
-            modelBuilder.Entity("ParkingBusinessResult.Infrastructure.Persistence.Models.DevParkingSessions", b =>
-                {
-                    b.HasOne("ParkingBusinessResult.Infrastructure.Persistence.Models.DlKthtBaiDoXe", "ParkingLot")
-                        .WithMany("DevParkingSessions")
-                        .HasForeignKey("ParkingLotId")
-                        .IsRequired();
-
-                    b.HasOne("ParkingBusinessResult.Infrastructure.Persistence.Models.SpChiTietMucThuKhungGia", "PriceRule")
-                        .WithMany("DevParkingSessions")
-                        .HasForeignKey("PriceRuleId");
-
-                    b.Navigation("ParkingLot");
-
-                    b.Navigation("PriceRule");
-                });
-
             modelBuilder.Entity("ParkingBusinessResult.Infrastructure.Persistence.Models.DlKthtBaiDoXe", b =>
                 {
                     b.HasOne("ParkingBusinessResult.Infrastructure.Persistence.Models.SpDonViKinhDoanhQuanLy", "DonViQuanLy")
@@ -715,8 +641,6 @@ namespace ParkingBusinessResult.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ParkingBusinessResult.Infrastructure.Persistence.Models.DlKthtBaiDoXe", b =>
                 {
-                    b.Navigation("DevParkingSessions");
-
                     b.Navigation("SpApDungKhungGia");
 
                     b.Navigation("SpDatTruocChoDoXe");
@@ -724,11 +648,6 @@ namespace ParkingBusinessResult.Infrastructure.Persistence.Migrations
                     b.Navigation("SpKetQuaKinhDoanhBaiDoXe");
 
                     b.Navigation("SpKhungGiaThuPhi");
-                });
-
-            modelBuilder.Entity("ParkingBusinessResult.Infrastructure.Persistence.Models.SpChiTietMucThuKhungGia", b =>
-                {
-                    b.Navigation("DevParkingSessions");
                 });
 
             modelBuilder.Entity("ParkingBusinessResult.Infrastructure.Persistence.Models.SpDonViKinhDoanhQuanLy", b =>

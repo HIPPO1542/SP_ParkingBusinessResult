@@ -47,7 +47,6 @@ public partial class DlKthtBaiDoXe
 
     public string? NgayCapNhat { get; set; }
 
-    public virtual ICollection<DevParkingSessions> DevParkingSessions { get; set; } = new List<DevParkingSessions>();
 
     public virtual SpDonViKinhDoanhQuanLy DonViQuanLy { get; set; } = null!;
 

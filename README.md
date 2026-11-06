@@ -60,7 +60,7 @@ Luồng: `Endpoint → Command/Query → Handler → interface → Infrastructur
 - Đối chiếu tiền thu với bảng giá khi có đủ điều kiện; không tự đoán quy tắc qua ngày, giờ lẻ hay ngày lễ.
 - Đăng nhập qua `/auth/login`, tạo tài khoản qua `/auth/users` bằng quyền admin. Mật khẩu băm, JWT có hạn 30 phút, giới hạn đăng nhập 5 lần/phút/IP trong tiến trình. Chế độ Authority/SSO là lựa chọn khi tích hợp, không bắt buộc chạy ứng dụng.
 
-Một xe đã vào rồi ra là một lượt hoàn tất. `thoiGianBatDau`/`thoiGianKetThuc` là giờ vào/ra; `tongTien` là tiền đã thu. Không quản lý phương thức thanh toán. Booking và kết quả tổng hợp là hai nguồn độc lập, không tự đồng bộ hay cộng lẫn. Dữ liệu `dev_parking_sessions` và bảng giá mẫu chỉ dùng minh họa, không phải dữ liệu thật.
+Một xe đã vào rồi ra là một lượt hoàn tất. `thoiGianBatDau`/`thoiGianKetThuc` là giờ vào/ra; `tongTien` là tiền đã thu. Không quản lý phương thức thanh toán. Booking và kết quả tổng hợp là hai nguồn độc lập, không tự đồng bộ hay cộng lẫn. `dev_parking_sessions` không còn được mapping hoặc tạo bởi seed; dữ liệu cũ chưa bị xóa. Migration xóa bảng này cần được duyệt riêng trước khi áp dụng lên database đang sử dụng. Các bảng giá và kết quả tổng hợp mẫu khác được giữ nguyên.
 
 API JSON dùng `{ "code": 0, "message": "Thành công", "data": ... }`; lỗi dùng HTTP 200, code 7, data null theo hợp đồng GDCI. `X-Request-Id` liên kết log. `/health/live` và `/health/ready` là route vận hành riêng, readiness trả 503 khi storage không sẵn sàng.
 

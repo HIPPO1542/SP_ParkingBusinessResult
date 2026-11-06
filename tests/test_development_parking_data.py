@@ -3,9 +3,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-import uuid
 from contextlib import closing
-from datetime import datetime
 from pathlib import Path
 
 
@@ -25,6 +23,9 @@ def prepare_database(path):
                          ("existing-lot", "existing-plan", "existing-unit", "{}", 10))
         database.execute('INSERT INTO "SP_ketQuaKinhDoanhBaiDoXe" (id, baiDoXeId, kyBaoCao, doanhThu, soLuotXe) VALUES (?, ?, ?, ?, ?)',
                          ("existing-result", "existing-lot", "2026-10", 777, 3))
+        database.executescript((SQLITE / "007_booking_table.sql").read_text(encoding="utf-8"))
+        database.execute('INSERT INTO SP_datTruocChoDoXe (id,baiDoXeId,loaiXe,thoiGianBatDau,thoiGianKetThuc,bienSoXe,soLuongChoDat,tongTien) VALUES (?,?,?,?,?,?,?,?)',
+                         ("existing-booking", "existing-lot", "MOTORBIKE", "2026-11-04 08:00:00", "2026-11-04 09:00:00", "BOOKING-EXISTING", 1, 12345))
         database.commit()
 
 
@@ -34,7 +35,7 @@ def run_seed(path):
 
 
 class DevelopmentParkingDataTests(unittest.TestCase):
-    def test_counts_tariffs_totals_backup_and_repeat(self):
+    def test_counts_tariffs_totals_backup_and_repeat_without_creating_visits(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             database_path = Path(temporary_directory) / "parking.db"
             prepare_database(database_path)
@@ -61,74 +62,46 @@ class DevelopmentParkingDataTests(unittest.TestCase):
                 self.assertEqual(database.execute('SELECT COUNT(*) FROM "SP_khungGiaThuPhi"').fetchone(), (5,))
                 self.assertEqual(database.execute('SELECT COUNT(*) FROM "SP_chiTietMucThuKhungGia"').fetchone(), (20,))
                 self.assertEqual(database.execute('SELECT COUNT(*) FROM "SP_apDungKhungGia"').fetchone(), (5,))
-                self.assertEqual(database.execute(
-                    'SELECT COUNT(*) FROM dev_parking_sessions WHERE exitedAt IS NULL '
-                    'AND (priceRuleId IS NOT NULL OR chargedAmount IS NOT NULL OR paymentMethod IS NOT NULL)'
-                ).fetchone(), (0,))
-                for (entered,) in database.execute('SELECT enteredAt FROM dev_parking_sessions WHERE exitedAt IS NULL'):
-                    self.assertLess(datetime.fromisoformat(entered), datetime.fromisoformat(AS_OF))
-                groups = database.execute(
-                    'SELECT parkingLotId, COUNT(*), SUM(exitedAt IS NOT NULL), SUM(exitedAt IS NULL) '
-                    'FROM dev_parking_sessions GROUP BY parkingLotId'
+                names = {row[0] for row in database.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                self.assertNotIn("dev_parking_sessions", names)
+                summaries = database.execute(
+                    'SELECT r.doanhThu,r.soLuotXe FROM SP_ketQuaKinhDoanhBaiDoXe r JOIN DL_KTHT_baiDoXe p ON p.Id=r.baiDoXeId WHERE p.ma LIKE ? AND r.kyBaoCao=?',
+                    ("DEMO-%", "2026-11"),
                 ).fetchall()
-                self.assertEqual(len(groups), 5)
-                for lot_id, total, completed, parked in groups:
-                    self.assertEqual((total, completed, parked), (50, 30, 20))
-                    self.assertEqual(uuid.UUID(lot_id).version, 4)
-                    cash, electronic, revenue, count = database.execute(
-                        "SELECT SUM(CASE WHEN paymentMethod = 'CASH' THEN chargedAmount ELSE 0 END), "
-                        "SUM(CASE WHEN paymentMethod = 'ELECTRONIC' THEN chargedAmount ELSE 0 END), "
-                        "SUM(chargedAmount), COUNT(*) FROM dev_parking_sessions WHERE parkingLotId = ? AND exitedAt IS NOT NULL",
-                        (lot_id,),
-                    ).fetchone()
-                    summary = database.execute(
-                        'SELECT doanhThu, soLuotXe FROM "SP_ketQuaKinhDoanhBaiDoXe" WHERE baiDoXeId = ? AND kyBaoCao = ?',
-                        (lot_id, "2026-11"),
-                    ).fetchone()
-                    self.assertGreater(cash, 0)
-                    self.assertGreater(electronic, 0)
-                    self.assertEqual(cash + electronic, revenue)
-                    self.assertEqual(summary, (revenue, count))
-
-                finished = database.execute(
-                    'SELECT s.enteredAt, s.exitedAt, s.vehicleType, s.chargedAmount, r.loaiPhuongTien, r.loaiNgay, '
-                    'r.soGioDau, r.giaGioDau, r.giaGioTiepTheo, f.baiDoXeId, s.parkingLotId, '
-                    'f.ngayHieuLuc, f.ngayHetHieuLuc, a.ngayApDung, f.trangThai, a.trangThaiApDung '
-                    'FROM dev_parking_sessions s JOIN "SP_chiTietMucThuKhungGia" r ON r.id = s.priceRuleId '
-                    'JOIN "SP_khungGiaThuPhi" f ON f.id = r.idKhungGia '
-                    'JOIN "SP_apDungKhungGia" a ON a.khungGiaId = f.id AND a.baiDoXeId = s.parkingLotId '
-                    'WHERE s.exitedAt IS NOT NULL'
-                ).fetchall()
-                self.assertEqual(len(finished), 150)
-                for (entered, exited, vehicle, charge, rule_vehicle, rule_day, first_hours, first_price, next_price,
-                     frame_lot, session_lot, effective_from, effective_until, applied_from, frame_status, application_status) in finished:
-                    start = datetime.fromisoformat(entered)
-                    end = datetime.fromisoformat(exited)
-                    self.assertLess(end, datetime.fromisoformat(AS_OF))
-                    self.assertEqual(vehicle, rule_vehicle)
-                    self.assertEqual(frame_lot, session_lot)
-                    self.assertEqual((frame_status, application_status), ("ACTIVE", "APPLIED"))
-                    self.assertLessEqual(datetime.fromisoformat(effective_from), start)
-                    self.assertLessEqual(datetime.fromisoformat(applied_from), start)
-                    self.assertGreaterEqual(datetime.fromisoformat(effective_until), end)
-                    self.assertEqual(rule_day, "WEEKEND" if start.weekday() >= 5 else "WEEKDAY")
-                    hours = (end - start).total_seconds() / 3600
-                    self.assertEqual(charge, first_price + (hours - first_hours) * next_price)
+                self.assertEqual(summaries, [(555000, 30)] * 5)
+                rates = set(database.execute('SELECT loaiPhuongTien,loaiNgay,soGioDau,giaGioDau,giaGioTiepTheo FROM SP_chiTietMucThuKhungGia'))
+                self.assertEqual(rates, {("MOTORBIKE", "WEEKDAY", 1, 5000, 2000), ("MOTORBIKE", "WEEKEND", 1, 7000, 3000),
+                                         ("CAR_9_SEATS", "WEEKDAY", 1, 20000, 10000), ("CAR_9_SEATS", "WEEKEND", 1, 25000, 12000)})
+                booking = database.execute('SELECT id,bienSoXe,tongTien FROM SP_datTruocChoDoXe').fetchall()
+                self.assertEqual(booking, [("existing-booking", "BOOKING-EXISTING", 12345)])
 
                 self.assertEqual(database.execute(
                     'SELECT doanhThu, soLuotXe FROM "SP_ketQuaKinhDoanhBaiDoXe" WHERE id = ?', ("existing-result",)
                 ).fetchone(), (777, 3))
-                with self.assertRaises(sqlite3.IntegrityError):
-                    database.execute(
-                        'INSERT INTO dev_parking_sessions (id, parkingLotId, vehicleType, testPlate, enteredAt, chargedAmount) '
-                        'VALUES (?, ?, ?, ?, ?, ?)',
-                        (str(uuid.uuid4()), groups[0][0], "MOTORBIKE", "DEMO-INVALID", AS_OF, 1000),
-                    )
 
             repeated = run_seed(database_path)
             self.assertNotEqual(repeated.returncode, 0)
             with closing(sqlite3.connect(database_path)) as database:
-                self.assertEqual(database.execute("SELECT COUNT(*) FROM dev_parking_sessions").fetchone(), (250,))
+                self.assertEqual(database.execute("SELECT COUNT(*) FROM SP_ketQuaKinhDoanhBaiDoXe").fetchone(), (6,))
+                self.assertEqual(database.execute("SELECT COUNT(*) FROM SP_datTruocChoDoXe").fetchone(), (1,))
+
+    def test_refusal_preserves_legacy_visits_and_bookings(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_path = Path(temporary_directory) / "parking.db"
+            prepare_database(database_path)
+            with closing(sqlite3.connect(database_path)) as database:
+                for name in ("004_parking_price_tables.sql", "005_dev_parking_sessions.sql"):
+                    database.executescript((SQLITE / name).read_text(encoding="utf-8"))
+                database.execute('INSERT INTO dev_parking_sessions (id,parkingLotId,vehicleType,testPlate,enteredAt) VALUES (?,?,?,?,?)',
+                                 ("legacy-session", "existing-lot", "MOTORBIKE", "LEGACY-EXISTING", "2026-11-04T08:00:00+07:00"))
+                database.commit()
+                legacy_before = database.execute('SELECT * FROM dev_parking_sessions').fetchall()
+                booking_before = database.execute('SELECT * FROM SP_datTruocChoDoXe').fetchall()
+            process = run_seed(database_path)
+            self.assertNotEqual(process.returncode, 0)
+            with closing(sqlite3.connect(database_path)) as database:
+                self.assertEqual(database.execute('SELECT * FROM dev_parking_sessions').fetchall(), legacy_before)
+                self.assertEqual(database.execute('SELECT * FROM SP_datTruocChoDoXe').fetchall(), booking_before)
 
     def test_rolls_back_schema_and_data_when_insert_fails(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

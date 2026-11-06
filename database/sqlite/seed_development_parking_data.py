@@ -1,7 +1,6 @@
-"""Add explicitly simulated parking lots, prices and visits to a local SQLite DB.
+"""Add simulated parking lots, price references and independent business totals.
 
-The price tables come from the workbook. dev_parking_sessions is a development
-fixture only and must not be treated as an approved production schema.
+This script does not create or modify parking bookings or legacy visit data.
 """
 
 import argparse
@@ -9,8 +8,7 @@ import json
 import sqlite3
 import uuid
 from contextlib import closing
-from datetime import datetime, time, timedelta, timezone
-from decimal import Decimal
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -18,7 +16,7 @@ DIRECTORY = Path(__file__).resolve().parent
 LOCAL_ZONE = timezone(timedelta(hours=7))
 CREATOR = "du_lieu_gia_lap"
 NEW_TABLES = (
-    "SP_khungGiaThuPhi", "SP_chiTietMucThuKhungGia", "SP_apDungKhungGia", "dev_parking_sessions",
+    "SP_khungGiaThuPhi", "SP_chiTietMucThuKhungGia", "SP_apDungKhungGia",
 )
 RATES = {
     ("MOTORBIKE", "WEEKDAY"): (5000, 2000),
@@ -88,60 +86,17 @@ def seed(database, as_of):
                  initial_price, extra_price, created_at, CREATOR, note),
             )
 
-        for index in range(50):
-            vehicle_type = "MOTORBIKE" if index % 2 == 0 else "CAR_9_SEATS"
-            session_id = new_id()
-            plate = f"DEMO-{lot_number:02d}-{index + 1:03d}"
-            if index < 30:
-                entered = datetime.combine(completed_day, time(8, 0), tzinfo=LOCAL_ZONE) + timedelta(minutes=index * 5)
-                duration_hours = 1 + index % 3
-                exited = entered + timedelta(hours=duration_hours)
-                applicable_rates = database.execute(
-                    'SELECT r.id, r.soGioDau, r.giaGioDau, r.giaGioTiepTheo '
-                    'FROM "SP_chiTietMucThuKhungGia" r '
-                    'JOIN "SP_khungGiaThuPhi" f ON f.id = r.idKhungGia '
-                    'JOIN "SP_apDungKhungGia" a ON a.khungGiaId = f.id AND a.baiDoXeId = f.baiDoXeId '
-                    'WHERE a.baiDoXeId = ? AND a.trangThaiApDung = ? AND f.trangThai = ? '
-                    'AND julianday(a.ngayApDung) <= julianday(?) AND julianday(f.ngayHieuLuc) <= julianday(?) '
-                    'AND julianday(f.ngayHetHieuLuc) >= julianday(?) AND r.loaiPhuongTien = ? AND r.loaiNgay = ?',
-                    (lot_id, "APPLIED", "ACTIVE", entered.isoformat(), entered.isoformat(), exited.isoformat(), vehicle_type, day_type),
-                ).fetchall()
-                if len(applicable_rates) != 1 or Decimal(str(applicable_rates[0][1])) != 1:
-                    raise ValueError("Exactly one applicable simulated tariff is required.")
-                rate = applicable_rates[0]
-                charge = Decimal(str(rate[2])) + Decimal(duration_hours - 1) * Decimal(str(rate[3]))
-                payment_method = "CASH" if (index // 2) % 2 == 0 else "ELECTRONIC"
-                database.execute(
-                    'INSERT INTO dev_parking_sessions (id, parkingLotId, vehicleType, testPlate, enteredAt, exitedAt, '
-                    'priceRuleId, chargedAmount, paymentMethod) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    (session_id, lot_id, vehicle_type, plate, entered.isoformat(), exited.isoformat(), rate[0], float(charge), payment_method),
-                )
-            else:
-                entered = as_of - timedelta(minutes=index - 29)
-                database.execute(
-                    'INSERT INTO dev_parking_sessions (id, parkingLotId, vehicleType, testPlate, enteredAt) VALUES (?, ?, ?, ?, ?)',
-                    (session_id, lot_id, vehicle_type, plate, entered.isoformat()),
-                )
-
-        monthly_totals = database.execute(
-            'SELECT substr(exitedAt, 1, 7), COUNT(*), SUM(chargedAmount) FROM dev_parking_sessions '
-            'WHERE parkingLotId = ? AND exitedAt IS NOT NULL GROUP BY substr(exitedAt, 1, 7)',
-            (lot_id,),
-        ).fetchall()
-        for period, vehicle_count, revenue in monthly_totals:
-            database.execute(
-                'INSERT INTO "SP_ketQuaKinhDoanhBaiDoXe" (id, baiDoXeId, kyBaoCao, doanhThu, soLuotXe, ngayTao, nguoiTao, ghiChu) '
-                'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                (new_id(), lot_id, period, revenue, vehicle_count, created_at, CREATOR,
-                 "Synthetic total from completed demo sessions only."),
-            )
-
-        completed, parked = database.execute(
-            'SELECT SUM(exitedAt IS NOT NULL), SUM(exitedAt IS NULL) FROM dev_parking_sessions WHERE parkingLotId = ?',
-            (lot_id,),
-        ).fetchone()
-        if (completed, parked) != (30, 20):
-            raise ValueError(f"Unexpected session counts for demo lot {lot_number}.")
+        # Independent report fixture: five 1/2/3-hour examples per vehicle type; no visits are persisted.
+        revenue = 0
+        for vehicle_type in ("MOTORBIKE", "CAR_9_SEATS"):
+            first_price, extra_price = RATES[(vehicle_type, day_type)]
+            revenue += 5 * sum(first_price + extra_hours * extra_price for extra_hours in range(3))
+        database.execute(
+            'INSERT INTO "SP_ketQuaKinhDoanhBaiDoXe" (id, baiDoXeId, kyBaoCao, doanhThu, soLuotXe, ngayTao, nguoiTao, ghiChu) '
+            'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            (new_id(), lot_id, completed_day.strftime("%Y-%m"), revenue, 30, created_at, CREATOR,
+             "Independent synthetic monthly result; not aggregated from parking bookings."),
+        )
 
 
 def main():
@@ -165,7 +120,7 @@ def main():
         if not required_tables.issubset(existing_tables):
             raise SystemExit("Required business tables are missing; apply migrations 001, 002 and 003 first.")
         if existing_tables.intersection(NEW_TABLES):
-            raise SystemExit("A price or demo-session table already exists; no changes were applied.")
+            raise SystemExit("A price table already exists; no changes were applied.")
         if "daXoa" not in {row[1] for row in database.execute('PRAGMA table_info("SP_ketQuaKinhDoanhBaiDoXe")')}:
             raise SystemExit("Soft-delete migration 003 is missing; no changes were applied.")
         if database.execute("PRAGMA foreign_key_check").fetchall():
@@ -178,8 +133,7 @@ def main():
 
         try:
             database.execute("BEGIN IMMEDIATE")
-            for filename in ("004_parking_price_tables.sql", "005_dev_parking_sessions.sql"):
-                execute_schema(database, DIRECTORY / filename)
+            execute_schema(database, DIRECTORY / "004_parking_price_tables.sql")
             seed(database, as_of)
             if database.execute("PRAGMA foreign_key_check").fetchall():
                 raise ValueError("Foreign-key validation failed.")
@@ -188,7 +142,7 @@ def main():
             database.rollback()
             raise
 
-    print(f"Created 5 simulated lots and 250 sessions (150 completed, 100 parked). Backup: {backup_path}")
+    print(f"Created 5 simulated lots, price references and independent business totals; no visits created. Backup: {backup_path}")
 
 
 if __name__ == "__main__":
