@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Parking API",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "Build Parking API",
+      "program": "${workspaceFolder}/Backend/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll",
+      "cwd": "${workspaceFolder}/Backend/ParkingBusinessResult.Api",
+      "console": "integratedTerminal",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5069",
+        "ParkingBusinessResult__DatabasePath": "${workspaceFolder}/database/sqlite/parking_business_result.db"
+      }
+    }
+  ]
+}
