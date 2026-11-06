@@ -126,6 +126,10 @@ try
     }
 
     var reopenedRepository = new SqliteBusinessResultRepository(new ParkingContextFactory(databasePath));
+    if (reopenedRepository.List(new HashSet<Guid> { testLotId }).Count != 1 ||
+        reopenedRepository.List(new HashSet<Guid>()).Count != 0 ||
+        reopenedRepository.List(new HashSet<Guid> { Guid.Empty }).Count != 0)
+        throw new InvalidOperationException("Parking-lot scope must include only permitted active results.");
     if (reopenedRepository.FindById(persistentResult.Id)?.Revenue != 123.45m ||
         reopenedRepository.List().Count != 1 ||
         !reopenedRepository.TryUpdate(persistentResult.Id, 500m, 5, null, new("editor", "Editor")) ||
@@ -141,6 +145,8 @@ try
     {
         throw new InvalidOperationException("A soft-deleted SQLite result remained active.");
     }
+    if (reopenedRepository.List(new HashSet<Guid> { testLotId }).Count != 0)
+        throw new InvalidOperationException("Scoped results must exclude soft-deleted records.");
 
     using (var connection = new SqliteConnection($"Data Source={databasePath}"))
     {

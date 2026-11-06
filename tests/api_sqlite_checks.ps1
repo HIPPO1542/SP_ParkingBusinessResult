@@ -90,6 +90,9 @@ try {
     $otherHeaders = @{ Authorization = "Bearer $(New-TestToken 'ROLE_PARKING_OPERATOR' ([guid]::NewGuid().ToString()))" }
     if ((Invoke-RestMethod -Uri "$baseUrl/$id" -Headers $otherHeaders).code -ne 7) { throw 'Access to an unassigned parking lot was allowed.' }
     if (@((Invoke-RestMethod -Uri $baseUrl -Headers $otherHeaders).data).Count -ne 0) { throw 'List included records from an unassigned parking lot.' }
+    $adminList = Invoke-RestMethod -Uri $baseUrl -Headers $headers
+    $assignedList = Invoke-RestMethod -Uri $baseUrl -Headers $operatorHeaders
+    if (@($adminList.data).Count -ne 1 -or @($assignedList.data).Count -ne 1 -or $assignedList.data[0].id -ne $id) { throw 'Administrator or assigned parking-lot list access was changed.' }
     if ((Invoke-RestMethod -Method Post -Uri $baseUrl -Headers $otherHeaders -ContentType 'application/json' -Body $request).code -ne 7) { throw 'Creating a result for an unassigned parking lot was allowed.' }
     if ((Invoke-RestMethod -Method Put -Uri "$baseUrl/$id" -Headers $otherHeaders -ContentType 'application/json' -Body $update).code -ne 7) { throw 'Updating a result for an unassigned parking lot was allowed.' }
     if ((Invoke-RestMethod -Method Delete -Uri "$baseUrl/$id" -Headers $otherHeaders).code -ne 7) { throw 'Deleting a result for an unassigned parking lot was allowed.' }

@@ -25,10 +25,15 @@ public sealed class SqliteParkingBookingQueryRepository(IDbContextFactory<Parkin
         int total = joined.Count();
         long offset = ((long)query.PageNumber - 1) * query.PageSize;
         var page = offset > int.MaxValue ? [] : joined.OrderByDescending(item => item.Row.ThoiGianBatDau).ThenBy(item => item.Row.Id)
-            .Skip((int)offset).Take(query.PageSize).Select(item => new { item.Row, Code = item.Lot.Ma, Name = item.Lot.Ten }).ToArray();
-        var items = page.Select(item => new ParkingBookingItem(Guid.Parse(item.Row.Id), Guid.Parse(item.Row.BaiDoXeId),
-            item.Row.BienSoXe, item.Row.LoaiXe, item.Row.ThoiGianBatDau, item.Row.ThoiGianKetThuc,
-            item.Row.TongTien.HasValue ? Convert.ToDecimal(item.Row.TongTien.Value) : null, item.Code, item.Name)).ToArray();
+            .Skip((int)offset).Take(query.PageSize).Select(item => new
+            {
+                item.Row.Id, item.Row.BaiDoXeId, item.Row.BienSoXe, item.Row.LoaiXe,
+                item.Row.ThoiGianBatDau, item.Row.ThoiGianKetThuc, item.Row.TongTien,
+                Code = item.Lot.Ma, Name = item.Lot.Ten
+            }).ToArray();
+        var items = page.Select(item => new ParkingBookingItem(Guid.Parse(item.Id), Guid.Parse(item.BaiDoXeId),
+            item.BienSoXe, item.LoaiXe, item.ThoiGianBatDau, item.ThoiGianKetThuc,
+            item.TongTien.HasValue ? Convert.ToDecimal(item.TongTien.Value) : null, item.Code, item.Name)).ToArray();
         snapshot.Commit();
         return new(items, total, query.PageNumber, query.PageSize);
     }

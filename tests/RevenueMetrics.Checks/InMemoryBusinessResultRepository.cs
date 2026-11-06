@@ -36,11 +36,12 @@ public sealed class InMemoryBusinessResultRepository : IBusinessResultRepository
         }
     }
 
-    public IReadOnlyList<ParkingBusinessResultRecord> List()
+    public IReadOnlyList<ParkingBusinessResultRecord> List(IReadOnlySet<Guid>? parkingLotIds = null)
     {
         lock (sync)
         {
-            return records.Values.Where(record => !deletedIds.Contains(record.Id)).Select(Copy).ToArray();
+            return records.Values.Where(record => !deletedIds.Contains(record.Id))
+                .Where(record => parkingLotIds is null || parkingLotIds.Contains(record.ParkingLotId)).Select(Copy).ToArray();
         }
     }
 

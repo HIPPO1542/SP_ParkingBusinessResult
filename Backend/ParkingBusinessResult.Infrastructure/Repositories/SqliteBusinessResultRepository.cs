@@ -32,10 +32,17 @@ public sealed class SqliteBusinessResultRepository(IDbContextFactory<ParkingDbCo
         return row is null ? null : Map(row);
     }
 
-    public IReadOnlyList<ParkingBusinessResultRecord> List()
+    public IReadOnlyList<ParkingBusinessResultRecord> List(IReadOnlySet<Guid>? parkingLotIds = null)
     {
+        if (parkingLotIds is { Count: 0 }) return [];
         using var db = contextFactory.CreateDbContext();
-        return db.SpKetQuaKinhDoanhBaiDoXe.AsNoTracking().Where(row => row.DaXoa == 0).AsEnumerable().Select(Map).ToArray();
+        var records = db.SpKetQuaKinhDoanhBaiDoXe.AsNoTracking().Where(row => row.DaXoa == 0);
+        if (parkingLotIds is not null)
+        {
+            string[] allowed = parkingLotIds.Select(id => id.ToString()).ToArray();
+            records = records.Where(row => allowed.Contains(row.BaiDoXeId));
+        }
+        return records.AsEnumerable().Select(Map).ToArray();
     }
 
     public bool TryUpdate(Guid id, decimal revenue, int completedVehicleCount, string? note, AuditActor? actor = null)
