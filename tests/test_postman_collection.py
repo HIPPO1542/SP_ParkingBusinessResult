@@ -15,17 +15,17 @@ SQLITE = ROOT / "database/sqlite"
 
 class PostmanCollectionTests(unittest.TestCase):
     def test_visit_collection_requests_and_scripts(self):
-        collection = json.loads((POSTMAN / 'ParkingVisits.postman_collection.json').read_text(encoding='utf-8'))
+        collection = json.loads((POSTMAN / 'ParkingBookings.postman_collection.json').read_text(encoding='utf-8'))
         self.assertEqual(collection['info']['schema'], 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json')
         requests = collection['item']
         routes = {(item['request']['method'], item['request']['url'].split('?')[0]) for item in requests}
         self.assertEqual(routes, {
             ('POST', '{{baseUrl}}/dev/auth/login'),
             ('POST', '{{baseUrl}}/gdci/parking/parkingLot/businessOperation/import'),
-            ('GET', '{{baseUrl}}/gdci/parking/parkingLot/parkingVisit'),
-            ('GET', '{{baseUrl}}/gdci/parking/parkingLot/parkingVisit/summary'),
-            ('GET', '{{baseUrl}}/gdci/parking/parkingLot/parkingVisit/{{visitId}}/tariff-comparison'),
-            ('POST', '{{baseUrl}}/gdci/parking/parkingLot/parkingVisit/export'),
+            ('GET', '{{baseUrl}}/gdci/parking/parkingLot/parkingBooking'),
+            ('GET', '{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/summary'),
+            ('GET', '{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/{{bookingId}}/tariff-comparison'),
+            ('POST', '{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/export'),
         })
         for item in requests:
             for event in item.get('event', []):

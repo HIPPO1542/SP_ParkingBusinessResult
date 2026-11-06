@@ -1,7 +1,7 @@
 using ParkingBusinessResult.Application.Features.DevelopmentAccounts.Common;
 using ParkingBusinessResult.Application.Features.BusinessReports.Common;
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.List;
-using ParkingBusinessResult.Application.Features.ParkingVisits.Common;
+using ParkingBusinessResult.Application.Features.ParkingBookings.Common;
 using ParkingBusinessResult.Api.Endpoint;
 using ParkingBusinessResult.Application.Features.DevelopmentAccounts.Commands.Bootstrap;
 using ParkingBusinessResult.Domain;
@@ -26,12 +26,12 @@ public static class DevelopmentSetup
         builder.Services.AddSingleton(new BusinessReportExportStore(databasePath, Path.GetFullPath(exportDirectory)));
         builder.Services.AddSingleton<IBusinessReportParkingLotSearch>(new SqliteBusinessReportParkingLotSearch(databasePath));
         builder.Services.AddSingleton<IBusinessReportMetadataReader>(new SqliteBusinessReportMetadataReader(databasePath));
-        builder.Services.AddSingleton<IParkingVisitSpreadsheetReader, ExcelParkingVisitSpreadsheetReader>();
-        var visitRepository = new SqliteParkingVisitImportRepository(databasePath);
-        builder.Services.AddSingleton<IParkingVisitImportRepository>(visitRepository);
-        builder.Services.AddSingleton<IParkingVisitSummaryRepository>(visitRepository);
-        builder.Services.AddSingleton<IParkingVisitListRepository>(visitRepository);
-        builder.Services.AddSingleton<IParkingVisitTariffRepository>(new SqliteParkingVisitTariffRepository(databasePath));
+        builder.Services.AddSingleton<IParkingBookingSpreadsheetReader, ExcelParkingBookingSpreadsheetReader>();
+        var visitRepository = new SqliteParkingBookingImportRepository(databasePath);
+        builder.Services.AddSingleton<IParkingBookingImportRepository>(visitRepository);
+        builder.Services.AddSingleton<IParkingBookingSummaryRepository>(visitRepository);
+        builder.Services.AddSingleton<IParkingBookingListRepository>(visitRepository);
+        builder.Services.AddSingleton<IParkingBookingTariffRepository>(new SqliteParkingBookingTariffRepository(databasePath));
         builder.Services.AddSingleton<IDevelopmentAccountRepository>(new SqliteDevelopmentAccountRepository(databasePath));
         builder.Services.AddSingleton<IDevelopmentCredentials, DevelopmentCredentials>();
     }

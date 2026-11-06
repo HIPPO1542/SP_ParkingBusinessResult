@@ -1,7 +1,7 @@
 using ParkingBusinessResult.Api.Endpoint.BusinessResults;
 using ParkingBusinessResult.Api.Endpoint.BusinessReports;
 using ParkingBusinessResult.Api.Endpoint.DevelopmentAccounts;
-using ParkingBusinessResult.Api.Endpoint.ParkingVisits;
+using ParkingBusinessResult.Api.Endpoint.ParkingBookings;
 using ParkingBusinessResult.Infrastructure.Reports;
 using System.Security.Claims;
 
@@ -23,7 +23,7 @@ public static class EndpointRegistration
         CreateBusinessResultEndpoint.Map(businessResults);
         UpdateBusinessResultEndpoint.Map(businessResults);
         DeleteBusinessResultEndpoint.Map(businessResults);
-        ImportParkingVisitsEndpoint.Map(businessResults);
+        ImportParkingBookingsEndpoint.Map(businessResults);
 
         RouteGroupBuilder businessReports = app.MapGroup("/gdci/parking/parkingLot/parkingBusinessReport").RequireAuthorization("BusinessResultAccess");
         ListBusinessReportEndpoint.Map(businessReports);
@@ -40,12 +40,12 @@ public static class EndpointRegistration
             return Results.File(path, contentType, fileName);
         }).RequireAuthorization("BusinessResultAccess");
 
-        RouteGroupBuilder parkingVisits = app.MapGroup("/gdci/parking/parkingLot/parkingVisit").RequireAuthorization("BusinessResultAccess");
-        ListParkingVisitsEndpoint.Map(parkingVisits);
-        GetParkingVisitFiltersEndpoint.Map(parkingVisits);
-        GetParkingVisitSummaryEndpoint.Map(parkingVisits);
-        ExportParkingVisitReportEndpoint.Map(parkingVisits);
-        CompareParkingVisitTariffEndpoint.Map(parkingVisits);
+        RouteGroupBuilder parkingBookings = app.MapGroup("/gdci/parking/parkingLot/parkingBooking").RequireAuthorization("BusinessResultAccess");
+        ListParkingBookingsEndpoint.Map(parkingBookings);
+        GetParkingBookingFiltersEndpoint.Map(parkingBookings);
+        GetParkingBookingSummaryEndpoint.Map(parkingBookings);
+        ExportParkingBookingReportEndpoint.Map(parkingBookings);
+        CompareParkingBookingTariffEndpoint.Map(parkingBookings);
 
         RouteGroupBuilder accounts = app.MapGroup("/dev/auth");
         LoginEndpoint.Map(accounts);

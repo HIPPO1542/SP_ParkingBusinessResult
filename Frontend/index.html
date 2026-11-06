@@ -112,7 +112,7 @@
   }
   async function refreshVisitFilters() {
     try {
-      const {data} = await jsonRequest(`${base}/parkingVisit/filters`);
+      const {data} = await jsonRequest(`${base}/parkingBooking/filters`);
       setOptions('listLot', 'Tất cả bãi', data.parkingLots.map(lot => ({value:lot.id, label:[lot.code, lot.name].filter(Boolean).join(' · ') || lot.id})));
       setOptions('listVehicleType', 'Tất cả loại xe', data.vehicleTypes.map(type => ({value:type, label:type})));
       const selected = new Set(selectedStatsLots());
@@ -151,10 +151,10 @@
       $('importErrorsWrap').classList.toggle('hidden', !result.data.errors?.length);
       const imported = $('importedRows'); imported.replaceChildren();
       (result.data.importedRows || []).forEach(item => {
-        const visit = item.visit;
-        addRow(imported, [item.rowNumber, item.parkingLotCode, visit.licensePlate, visit.vehicleType,
-          visit.enteredAt?.replace('T', ' '), visit.exitedAt?.replace('T', ' '),
-          visit.collectedAmount == null ? null : `${number(visit.collectedAmount)} đ`,
+        const booking = item.booking;
+        addRow(imported, [item.rowNumber, item.parkingLotCode, booking.licensePlate, booking.vehicleType,
+          booking.enteredAt?.replace('T', ' '), booking.exitedAt?.replace('T', ' '),
+          booking.collectedAmount == null ? null : `${number(booking.collectedAmount)} đ`,
           'Đã thêm mới'], [6]);
       });
       $('importedRowsWrap').classList.toggle('hidden', !result.data.importedRows?.length);
@@ -168,7 +168,7 @@
     try {
       const filters = reportFilters(); const parameters = new URLSearchParams({fromDate:filters.fromDate, toDate:filters.toDate});
       filters.parkingLotIds.forEach(id => parameters.append('parkingLotIds', id));
-      const result = await jsonRequest(`${base}/parkingVisit/summary?${parameters}`); const data = result.data; showJson('summaryJson', result);
+      const result = await jsonRequest(`${base}/parkingBooking/summary?${parameters}`); const data = result.data; showJson('summaryJson', result);
       $('revenue').textContent = `${number(data.collectedRevenue)} đ`; $('vehicles').textContent = number(data.completedVehicleCount);
       $('daily').textContent = data.averageDailyRevenue == null ? '—' : `${number(data.averageDailyRevenue)} đ`; $('growth').textContent = data.growthRate == null ? '—' : `${number(data.growthRate)}%`;
       $('stats').classList.remove('hidden'); const body = $('lots'); body.replaceChildren();
@@ -193,7 +193,7 @@
         parameters.set('year', String(year));
       }
       parameters.set('dateField', $('listDateField').value);
-      const result = await jsonRequest(`${base}/parkingVisit?${parameters}`); showJson('listJson', result); const items = result.data.items;
+      const result = await jsonRequest(`${base}/parkingBooking?${parameters}`); showJson('listJson', result); const items = result.data.items;
       const headings = ['Bãi xe','Biển số','Loại xe','Giờ vào','Giờ ra','Tiền đã thu'];
       const head = $('listHead'); head.replaceChildren(); const headerRow = head.insertRow(); headings.forEach(value => { const th = document.createElement('th'); th.textContent = value; headerRow.appendChild(th); });
       const body = $('listBody'); body.replaceChildren(); items.forEach(item => addRow(body, [[item.parkingLotCode,item.parkingLotName].filter(Boolean).join(' · '),item.licensePlate,item.vehicleType,item.enteredAt,item.exitedAt,item.collectedAmount == null ? null : `${number(item.collectedAmount)} đ`], [5]));
@@ -209,7 +209,7 @@
     $('exportJson').textContent = 'Chưa có dữ liệu.';
     try {
       const format = $('format').value; const filters = reportFilters();
-      const response = await request(`${base}/parkingVisit/export`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileFormat:format,...filters})});
+      const response = await request(`${base}/parkingBooking/export`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileFormat:format,...filters})});
       if ((response.headers.get('content-type') || '').includes('application/json')) {
         const result = await response.json(); showJson('exportJson', result); if (result.code !== 0) throw new Error(result.message || 'Không thể xuất báo cáo.');
         notify('exportMessage', result.message, 'success');

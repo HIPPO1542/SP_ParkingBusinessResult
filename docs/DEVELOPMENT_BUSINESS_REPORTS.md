@@ -28,4 +28,4 @@ Gửi `POST /gdci/parking/parkingLot/parkingBusinessReport/export` với Bearer 
 
 Cả ba API danh sách, tổng hợp và xuất hỗ trợ `district`, đối chiếu chuỗi không phân biệt hoa/thường trong địa chỉ bãi theo LLD. Đây không phải phân loại bằng mã địa bàn chính thức; địa chỉ thiếu hoặc ghi khác có thể không khớp.
 
-Các endpoint này chỉ chạy Development và chưa phải hợp đồng chính thức UC 3.4. PDF thử nghiệm hiện cần Windows và font Arial. Chưa hỗ trợ lọc ngày; các tham số xuất chưa hỗ trợ bị từ chối. Import lượt xe và thống kê từ lượt import nằm ở các API riêng, xem `PARKING_VISIT_IMPORT_DESIGN.md`. Không dùng các lượt thử nghiệm để coi là dữ liệu vận hành thực tế.
+Các endpoint này chỉ chạy Development và chưa phải hợp đồng chính thức UC 3.4. PDF thử nghiệm hiện cần Windows và font Arial. Chưa hỗ trợ lọc ngày; các tham số xuất chưa hỗ trợ bị từ chối. Import lượt xe và thống kê từ lượt import nằm ở các API riêng, xem `PARKING_BOOKING_IMPORT_DESIGN.md`. Không dùng các lượt thử nghiệm để coi là dữ liệu vận hành thực tế.

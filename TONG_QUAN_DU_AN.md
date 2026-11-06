@@ -29,7 +29,7 @@ SP_ParkingBusinessResult/
 │   │   ├── Endpoint/
 │   │   │   ├── BusinessResults/      # Thêm, sửa, xóa, xem kết quả
 │   │   │   ├── BusinessReports/      # Danh sách, tổng hợp, xuất báo cáo tổng hợp
-│   │   │   ├── ParkingVisits/        # Import, xem, thống kê, xuất, đối chiếu lượt xe
+│   │   │   ├── ParkingBookings/        # Import, xem, thống kê, xuất, đối chiếu lượt xe
 │   │   │   └── DevelopmentAccounts/  # Đăng nhập, tạo tài khoản thử nghiệm
 │   │   ├── Extensions/               # Đăng ký handler, repository và xác thực
 │   │   ├── Middlewares/              # Thư mục dự phòng, hiện chưa có middleware riêng
@@ -41,7 +41,7 @@ SP_ParkingBusinessResult/
 │   │   └── Features/
 │   │       ├── BusinessResults/      # Commands, Queries, Common của kết quả kinh doanh
 │   │       ├── BusinessReports/      # Queries và Common của báo cáo tổng hợp
-│   │       ├── ParkingVisits/        # Import và các query theo từng lượt xe
+│   │       ├── ParkingBookings/        # Import và các query theo từng lượt xe
 │   │       └── DevelopmentAccounts/  # Commands và Common của tài khoản thử nghiệm
 │   │
 │   ├── ParkingBusinessResult.Domain/
@@ -86,9 +86,9 @@ SP_ParkingBusinessResult/
 | Nguồn | Dữ liệu | API chính | Cách hoạt động |
 | --- | --- | --- | --- |
 | **Kết quả đã tổng hợp** | Các bản ghi đã lưu trong `SP_ketQuaKinhDoanhBaiDoXe`, mỗi bản ghi có bãi, kỳ, tổng doanh thu và số lượt hoàn tất. | `businessOperation` và `parkingBusinessReport` | Đọc hoặc chỉnh sửa bản tổng hợp đã lưu. Bản này **không tự cập nhật** theo lượt xe import. |
-| **Lượt xe đã import** | Từng lượt trong `SP_datTruocChoDoXe`: bãi, biển số, loại xe, giờ vào/ra và số tiền đã thu. | Import qua `businessOperation/import`; xem và thống kê qua `parkingVisit` | Tính trực tiếp từ các lượt xe đã lưu, không tự cộng thêm bản tổng hợp cũ hoặc lượt giả lập. |
+| **Lượt xe đã import** | Từng lượt trong `SP_datTruocChoDoXe`: bãi, biển số, loại xe, giờ vào/ra và số tiền đã thu. | Import qua `businessOperation/import`; xem và thống kê qua `parkingBooking` | Tính trực tiếp từ các lượt xe đã lưu, không tự cộng thêm bản tổng hợp cũ hoặc lượt giả lập. |
 
-Import thêm xe vào `SP_datTruocChoDoXe` sẽ thay đổi thống kê của `parkingVisit/summary`, nhưng không tự sửa số liệu đã có trong `SP_ketQuaKinhDoanhBaiDoXe`. Giao diện thống kê trực tiếp theo bảng booking, chọn khoảng ngày và một hoặc nhiều bãi.
+Import thêm xe vào `SP_datTruocChoDoXe` sẽ thay đổi thống kê của `parkingBooking/summary`, nhưng không tự sửa số liệu đã có trong `SP_ketQuaKinhDoanhBaiDoXe`. Giao diện thống kê trực tiếp theo bảng booking, chọn khoảng ngày và một hoặc nhiều bãi.
 
 ## 4. Các chức năng đã làm
 
@@ -131,7 +131,7 @@ Giờ vào và giờ ra phải có ngày/tháng/năm và giờ/phút, ví dụ `
 
 ### 4.4. Xem các lượt đã import
 
-Gọi `GET /gdci/parking/parkingLot/parkingVisit`:
+Gọi `GET /gdci/parking/parkingLot/parkingBooking`:
 
 - `status=PARKED`: lượt chưa có giờ ra, tức xe đang được ghi nhận trong bãi.
 - `status=COMPLETED`: lượt đã có giờ ra.
@@ -139,11 +139,11 @@ Gọi `GET /gdci/parking/parkingLot/parkingVisit`:
 - `vehicleType`: lọc theo loại xe; có thể kết hợp với bãi và trạng thái.
 - `pageNumber` và `pageSize`: phân trang; mặc định trang 1, 10 dòng, tối đa 100 dòng/trang.
 
-API trả mã, tên bãi trong mỗi lượt, cùng `items` và `totalCount` sau khi lọc. API `parkingVisit/filters` cung cấp các bãi được phép truy cập và loại xe đã có; giao diện dùng các giá trị này để lọc. Đây là danh sách trong `SP_datTruocChoDoXe`, không tự bao gồm 250 lượt giả lập trong `dev_parking_sessions`.
+API trả mã, tên bãi trong mỗi lượt, cùng `items` và `totalCount` sau khi lọc. API `parkingBooking/filters` cung cấp các bãi được phép truy cập và loại xe đã có; giao diện dùng các giá trị này để lọc. Đây là danh sách trong `SP_datTruocChoDoXe`, không tự bao gồm 250 lượt giả lập trong `dev_parking_sessions`.
 
 ### 4.5. Thống kê từ lượt xe đã import
 
-Gọi `GET /gdci/parking/parkingLot/parkingVisit/summary` và chọn **một trong hai cách**:
+Gọi `GET /gdci/parking/parkingLot/parkingBooking/summary` và chọn **một trong hai cách**:
 
 ```text
 ?reportingPeriod=2026-11
@@ -171,7 +171,7 @@ Nhóm API này và nhóm thống kê theo lượt import có nguồn dữ liệu
 
 ### 4.7. Xuất báo cáo từ lượt xe import
 
-Gọi `POST /gdci/parking/parkingLot/parkingVisit/export` với body ví dụ:
+Gọi `POST /gdci/parking/parkingLot/parkingBooking/export` với body ví dụ:
 
 ```json
 {
@@ -184,7 +184,7 @@ Có thể đổi `EXCEL` thành `PDF`, dùng `fromDate` và `toDate` thay cho `r
 
 ### 4.8. Đối chiếu tiền thực thu với bảng giá
 
-Gọi `GET /gdci/parking/parkingLot/parkingVisit/{id}/tariff-comparison?dayType=WEEKDAY`. `dayType` phải là `WEEKDAY`, `WEEKEND` hoặc `HOLIDAY`; hệ thống chưa có lịch ngày lễ để tự xác định.
+Gọi `GET /gdci/parking/parkingLot/parkingBooking/{id}/tariff-comparison?dayType=WEEKDAY`. `dayType` phải là `WEEKDAY`, `WEEKEND` hoặc `HOLIDAY`; hệ thống chưa có lịch ngày lễ để tự xác định.
 
 API tìm mức giá theo bãi, loại xe, loại ngày và thời gian hiệu lực. Nếu có duy nhất một mức giá phù hợp, lượt đỗ trong cùng một ngày và tròn giờ, hệ thống tính số tiền theo giờ đầu và các giờ tiếp theo, rồi so với tiền thực thu. Trường hợp xe chưa ra, qua ngày, giờ lẻ, không có giá hoặc nhiều giá phù hợp thì trả `canCompare: false` cùng lý do. Không tự thay số tiền thực thu trong database.
 
@@ -221,13 +221,13 @@ Các script migration nằm trong `database/sqlite/`. `migrate_visits_to_booking
    dotnet run --project Backend/ParkingBusinessResult.Api
    ```
 
-4. Import [collection kết quả kinh doanh](postman/ParkingBusinessResult.postman_collection.json) hoặc [collection lượt xe](postman/ParkingVisits.postman_collection.json) vào Postman. Cách cấu hình biến, đăng nhập và chọn file nằm ở [postman/README.md](postman/README.md).
+4. Import [collection kết quả kinh doanh](postman/ParkingBusinessResult.postman_collection.json) hoặc [collection lượt xe](postman/ParkingBookings.postman_collection.json) vào Postman. Cách cấu hình biến, đăng nhập và chọn file nằm ở [postman/README.md](postman/README.md).
 
 Một số bài kiểm tra liên quan:
 
 ```powershell
 dotnet run --project tests/RevenueMetrics.Checks/RevenueMetrics.Checks.csproj
-powershell -NoProfile -ExecutionPolicy Bypass -File tests/parking_visit_import_checks.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/parking_booking_import_checks.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/seeded_parking_api_checks.ps1
 ```
 

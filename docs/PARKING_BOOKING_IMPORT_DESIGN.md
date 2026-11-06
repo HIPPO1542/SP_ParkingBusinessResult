@@ -1,0 +1,29 @@
+# Phương án nhập từng lượt xe từ Excel
+
+Trạng thái: có API import và thống kê lượt xe **Development**. File gồm mã bãi, biển số, loại xe, giờ vào, giờ ra và số tiền đã thu. File [mẫu cũ](../outputs/parking-import/mau-luot-xe.xlsx) có thêm cột phương thức thanh toán vẫn được đọc, nhưng cột này không được lưu. Giờ vào/ra gồm cả ngày, tháng, năm, giờ và phút; giờ ra để trống khi xe còn trong bãi.
+
+Đã xác nhận với người dùng:
+
+- Một lượt xe hoàn tất khi đã vào rồi ra. Một dòng thể hiện một lượt.
+- Lượt có cùng bãi, biển số và giờ vào được coi là trùng; không lưu hoặc cập nhật, trả lỗi cho dòng đó.
+- Doanh thu báo cáo dùng số tiền thực thu trong file. Bảng giá dùng để đối chiếu, không tự thay thế số tiền thực thu.
+
+Lưu vào bảng SQLite `SP_datTruocChoDoXe` theo 16 cột của sheet `SP_ParkingBooking`: `thoiGianBatDau` là giờ vào, `thoiGianKetThuc` là giờ ra và `tongTien` là số tiền đã thu theo xác nhận của người dùng. Mỗi dòng import là một lượt xe và ghi `soLuongChoDat = 1`; trạng thái dùng mặc định `CONFIRMED` theo Excel. Giờ ra cho phép để trống để lưu xe chưa rời bãi, dù Excel đánh dấu trường này bắt buộc. Phương thức thanh toán không được quản lý. Bảng `dev_parking_sessions` chỉ chứa dữ liệu giả lập.
+
+Migration `database/sqlite/migrate_visits_to_booking.py` tạo bản sao lưu, chuyển các lượt từ `parking_visit` và kiểm tra dữ liệu trước khi xóa bảng cũ; thông tin phương thức thanh toán cũ chỉ còn trong bản sao lưu. API kiểm tra từng dòng, quyền đối với bãi, thời điểm ra sau thời điểm vào và báo rõ các dòng lỗi. Khi nhập trùng, dữ liệu lượt đã lưu không thay đổi. Các dòng hợp lệ được lưu, dòng lỗi được trả về riêng; lỗi hệ thống trong lúc ghi có thể dừng yêu cầu sau khi một số dòng đã được lưu.
+
+Gửi multipart `POST /gdci/parking/parkingLot/businessOperation/import`, trường file tên `file`, với Bearer token. Hỗ trợ `.xlsx`, `.xls`, `.csv` tối đa 10 MB và tối đa 50.000 dòng dữ liệu; cột phải đúng file mẫu. Giờ nhập dạng `yyyy-MM-dd HH:mm` hoặc `dd/MM/yyyy HH:mm`, hoặc ô ngày giờ thực của Excel. Không nhập dấu phân cách hàng nghìn trong ô văn bản tiền. Kết quả trả số dòng thành công, ID và dữ liệu các lượt đã lưu, số dòng trùng và danh sách dòng lỗi. Dòng trùng bao gồm lượt đã có trong database hoặc lặp lại trong cùng file; dòng trùng được tính vào số lỗi, không tính vào số thành công.
+
+`GET /gdci/parking/parkingLot/parkingBooking` liệt kê lượt đã nhập trong phạm vi quyền, kèm mã và tên bãi; hỗ trợ kết hợp `parkingLotId`, `vehicleType`, `status=PARKED` (chưa ra) hoặc `status=COMPLETED` (đã ra), `pageNumber` và `pageSize` (mặc định 1/10, tối đa 100 dòng mỗi trang). Kết quả có `items` và `totalCount` sau khi lọc quyền. `GET /gdci/parking/parkingLot/parkingBooking/filters` cung cấp các bãi được phép truy cập và loại xe đã có trong phạm vi quyền.
+
+Danh sách còn hỗ trợ `day` (1–31), `month` (1–12), `year` (1–9999), kết hợp độc lập hoặc đồng thời. `dateField=enteredAt` (mặc định) lọc theo giờ vào; `dateField=exitedAt` lọc theo giờ ra. Lượt chưa ra không phù hợp khi lọc theo ngày/tháng/năm của giờ ra. Các tổ hợp ngày không tồn tại bị từ chối.
+
+`GET /gdci/parking/parkingLot/parkingBooking/summary?reportingPeriod=2026-11` tính trực tiếp từ các lượt **đã ra trong tháng**, không tính xe chưa ra. Có thể thay kỳ tháng bằng `fromDate=2026-11-01&toDate=2026-11-30` để tính theo ngày ra trong khoảng, gồm cả hai ngày đầu/cuối. `collectedRevenue` cộng các số tiền đã có; `missingAmountCount` là số lượt hoàn tất chưa có tiền nên doanh thu có thể chưa đầy đủ. Có thể lọc thêm `parkingLotId`. Bình quân ngày và top 5 bãi chỉ được tính khi không thiếu tiền; tăng trưởng tháng chỉ được tính khi cả hai tháng đủ tiền, có dữ liệu kỳ trước và doanh thu kỳ trước lớn hơn 0; các trường không đủ điều kiện là null. Kết quả này độc lập với các bản tổng hợp cũ và không cộng lẫn với dữ liệu giả lập.
+
+Thống kê không phân loại tiền mặt hay điện tử vì phương thức thanh toán không thuộc dữ liệu do chức năng này quản lý; lượt chưa có tiền được đếm bằng `missingAmountCount`.
+
+Có thể lọc `district` theo chuỗi trong địa chỉ. `revenueByDistrict` thử lấy thành phần địa chỉ bắt đầu bằng `Quận ` hoặc `Huyện `, phân tách bằng dấu phẩy; địa chỉ thiếu hoặc có nhiều thành phần phù hợp được gom vào nhóm `district: null`. Đây là suy ra từ địa chỉ văn bản, không phải đối chiếu mã hành chính và có thể không nhận diện được cách ghi khác. Cơ cấu địa bàn chỉ hiển thị khi mọi lượt hoàn tất có số tiền.
+
+`POST /gdci/parking/parkingLot/parkingBooking/export` nhận JSON `{"fileFormat":"EXCEL","reportingPeriod":"2026-11"}` (có thể thay kỳ tháng bằng `fromDate` và `toDate` định dạng `yyyy-MM-dd`, thay `EXCEL` bằng `PDF`, thêm `parkingLotId`, `district` hoặc `reportTitle`) và tải trực tiếp báo cáo theo các lượt đã ra. Chỉ admin hoặc district admin được xuất trong phạm vi quyền; nếu có lượt hoàn tất thiếu số tiền, API trả lỗi thay vì xuất một báo cáo doanh thu không đầy đủ. PDF hiện chỉ hỗ trợ Windows.
+
+Đối chiếu một lượt bằng `GET /gdci/parking/parkingLot/parkingBooking/{id}/tariff-comparison?dayType=WEEKDAY`. Cần chọn rõ `WEEKDAY`, `WEEKEND` hoặc `HOLIDAY` vì chưa có lịch ngày lễ; `loại xe` trong file cần khớp mã trong bảng giá, ví dụ `MOTORBIKE` hoặc `CAR_9_SEATS`. Nếu tìm được duy nhất một mức giá đang áp dụng, thời gian gửi nằm trong cùng một ngày và tròn giờ, API so sánh giá tính được với tiền thực thu. Khi qua ngày, có giờ lẻ, không có giá hoặc có nhiều giá phù hợp, API trả `canCompare: false` và lý do; không đoán quy tắc. Giá mẫu hiện có chỉ là giả lập, không phải biểu giá thực tế. Tích hợp hợp đồng chính thức vẫn chưa hoàn thành.

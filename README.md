@@ -1,4 +1,4 @@
-﻿# SP_ParkingBusinessResult
+# SP_ParkingBusinessResult
 
 Khung ASP.NET Core theo DDD, CQRS và Clean Architecture. Bốn project nằm trong `Backend/`; dự án dùng .NET 10 SDK hiện có trên máy, phiên bản dùng chung của nhóm cần được xác nhận trước khi tích hợp.
 
@@ -54,7 +54,7 @@ Database SQLite cục bộ nằm tại `database/sqlite/parking_business_result.
 
 Database Development còn có ba bảng giá theo Excel và bảng lượt xe giả lập `dev_parking_sessions`. Xem [nguồn gốc, giới hạn và cách truy vấn dữ liệu giả lập](docs/DEVELOPMENT_PARKING_DATA.md); bảng lượt xe này không phải thiết kế production được xác nhận. Các mức giá và biển số mẫu không phải dữ liệu thật.
 
-API Development có thể nhập lượt xe từng dòng từ Excel và thống kê trực tiếp số lượt hoàn tất, tiền thực thu. Dữ liệu nằm trong bảng `SP_datTruocChoDoXe` theo sheet `SP_ParkingBooking`; `tongTien` được dùng làm số tiền đã thu theo xác nhận nghiệp vụ. Chi tiết tại [hướng dẫn import lượt xe](docs/PARKING_VISIT_IMPORT_DESIGN.md). Script `database/sqlite/migrate_visits_to_booking.py` sao lưu và chuyển dữ liệu từ bảng `parking_visit` cũ.
+API Development có thể nhập lượt xe từng dòng từ Excel và thống kê trực tiếp số lượt hoàn tất, tiền thực thu. Dữ liệu nằm trong bảng `SP_datTruocChoDoXe` theo sheet `SP_ParkingBooking`; `tongTien` được dùng làm số tiền đã thu theo xác nhận nghiệp vụ. Chi tiết tại [hướng dẫn import lượt xe](docs/PARKING_BOOKING_IMPORT_DESIGN.md). Script `database/sqlite/migrate_visits_to_booking.py` sao lưu và chuyển dữ liệu từ bảng `parking_visit` cũ.
 
 Migration `003_soft_delete_business_result.sql` bổ sung `daXoa` theo yêu cầu xóa mềm; đây là cột mở rộng không có trong Excel gốc. API đánh dấu bản ghi đã xóa và ẩn khỏi danh sách/chi tiết; bản ghi vẫn còn trong SQLite và kỳ báo cáo có thể được tạo lại. Để cập nhật database đã áp dụng `002`, chạy `python database/sqlite/apply_soft_delete_migration.py`; script sao lưu trước và dừng khi phát hiện schema hoặc quan hệ cần rà soát. Với database mới, áp dụng lần lượt `001`, `002`, `003`. Đối chiếu API với tài liệu tại [`docs/API_CONTRACT_REVIEW.md`](docs/API_CONTRACT_REVIEW.md).
 

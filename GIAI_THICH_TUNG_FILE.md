@@ -93,17 +93,17 @@ Thư mục `Endpoint/BusinessReports/`:
 
 ### 4.4. Endpoint lượt xe
 
-Thư mục `Endpoint/ParkingVisits/`:
+Thư mục `Endpoint/ParkingBookings/`:
 
 | File | Chức năng |
 |---|---|
-| `ImportParkingVisitsEndpoint.cs` | Nhận file Excel/CSV, kiểm tra định dạng/kích thước, gọi command import và trả số dòng thành công/lỗi. |
-| `ListParkingVisitsEndpoint.cs` | Nhận điều kiện bãi, loại xe, trạng thái và phân trang để lấy danh sách lượt. |
-| `GetParkingVisitFiltersEndpoint.cs` | Cung cấp danh sách bãi và loại xe theo phạm vi quyền để giao diện tạo bộ lọc. |
-| `GetParkingVisitSummaryEndpoint.cs` | Nhận kỳ hoặc khoảng ngày, một/nhiều bãi và gọi handler thống kê lượt xe. |
-| `ExportParkingVisitReportEndpoint.cs` | Nhận điều kiện thời gian/bãi, kiểm tra quyền và trả file Excel/PDF từ lượt xe đã ra. |
-| `CompareParkingVisitTariffEndpoint.cs` | Nhận yêu cầu đối chiếu tiền một lượt xe với bảng giá theo loại ngày. |
-| `ParkingVisitPeriodParser.cs` | Chuyển tháng hoặc khoảng ngày từ request thành khoảng thời gian dùng cho thống kê/xuất. |
+| `ImportParkingBookingsEndpoint.cs` | Nhận file Excel/CSV, kiểm tra định dạng/kích thước, gọi command import và trả số dòng thành công/lỗi. |
+| `ListParkingBookingsEndpoint.cs` | Nhận điều kiện bãi, loại xe, trạng thái và phân trang để lấy danh sách lượt. |
+| `GetParkingBookingFiltersEndpoint.cs` | Cung cấp danh sách bãi và loại xe theo phạm vi quyền để giao diện tạo bộ lọc. |
+| `GetParkingBookingSummaryEndpoint.cs` | Nhận kỳ hoặc khoảng ngày, một/nhiều bãi và gọi handler thống kê lượt xe. |
+| `ExportParkingBookingReportEndpoint.cs` | Nhận điều kiện thời gian/bãi, kiểm tra quyền và trả file Excel/PDF từ lượt xe đã ra. |
+| `CompareParkingBookingTariffEndpoint.cs` | Nhận yêu cầu đối chiếu tiền một lượt xe với bảng giá theo loại ngày. |
+| `ParkingBookingPeriodParser.cs` | Chuyển tháng hoặc khoảng ngày từ request thành khoảng thời gian dùng cho thống kê/xuất. |
 
 ### 4.5. Endpoint tài khoản Development
 
@@ -168,27 +168,27 @@ Thư mục `Endpoint/DevelopmentAccounts/`:
 | `Queries/Export/ExportBusinessReportQuery.cs` | Mang điều kiện lấy dữ liệu xuất báo cáo tổng hợp. |
 | `Queries/Export/ExportBusinessReportHandler.cs` | Lấy các bản tổng hợp phù hợp để endpoint chuyển thành file. |
 
-### 5.4. Feature ParkingVisits
+### 5.4. Feature ParkingBookings
 
-Đường dẫn gốc: `Features/ParkingVisits/`. Tên feature là ParkingVisits, còn dữ liệu hiện được lưu trong bảng booking `SP_datTruocChoDoXe`.
+Đường dẫn gốc: `Features/ParkingBookings/`. Tên feature là ParkingBookings, còn dữ liệu hiện được lưu trong bảng booking `SP_datTruocChoDoXe`.
 
 | File | Chức năng |
 |---|---|
-| `Commands/Import/ImportParkingVisitsCommand.cs` | Mang file, định dạng và phạm vi quyền cho yêu cầu nhập lượt xe. |
-| `Commands/Import/ImportParkingVisitsHandler.cs` | Đọc từng dòng, kiểm tra dữ liệu, từ chối dòng trùng, lưu dòng hợp lệ và tổng hợp kết quả import. |
-| `Common/ParkingVisitImportContracts.cs` | Định nghĩa dữ liệu dòng import, kết quả/lỗi và hợp đồng đọc file, lưu lượt xe. |
-| `Common/ParkingVisitListContracts.cs` | Định nghĩa một lượt xe trong danh sách và hợp đồng đọc danh sách. |
-| `Common/ParkingVisitSummaryContracts.cs` | Định nghĩa dữ liệu lượt hoàn tất và hợp đồng lấy chúng cho thống kê. |
-| `Common/ParkingVisitTariffContracts.cs` | Định nghĩa dữ liệu lượt xe, mức giá và hợp đồng đọc dữ liệu phục vụ đối chiếu. |
-| `Queries/List/ListParkingVisitsQuery.cs` | Mang bãi, loại xe, trạng thái, phân trang và quyền cho danh sách. |
-| `Queries/List/ListParkingVisitsHandler.cs` | Lọc, sắp xếp và phân trang danh sách lượt xe. |
-| `Queries/Filters/GetParkingVisitFiltersHandler.cs` | Chứa query và handler lấy các bãi, loại xe có thể chọn theo quyền người dùng. |
-| `Queries/Summary/GetParkingVisitSummaryQuery.cs` | Mang khoảng thời gian, bãi và quyền cho yêu cầu thống kê. |
-| `Queries/Summary/GetParkingVisitSummaryHandler.cs` | Thống kê các lượt đã ra, tiền thực thu, số lượt thiếu tiền, bình quân, tăng trưởng khi đủ dữ liệu, top bãi và địa bàn. |
-| `Queries/Export/ExportParkingVisitReportQuery.cs` | Mang thời gian, bãi và quyền cho báo cáo từ lượt xe. |
-| `Queries/Export/ExportParkingVisitReportHandler.cs` | Lọc lượt đã ra, nhóm theo bãi thành các dòng cho báo cáo và đếm lượt thiếu tiền. |
-| `Queries/CompareTariff/CompareParkingVisitTariffQuery.cs` | Mang ID lượt xe, loại ngày và quyền cho yêu cầu đối chiếu. |
-| `Queries/CompareTariff/CompareParkingVisitTariffHandler.cs` | Áp dụng các điều kiện hỗ trợ, tính giá dự kiến và so với tiền thực thu nếu đủ dữ liệu. |
+| `Commands/Import/ImportParkingBookingsCommand.cs` | Mang file, định dạng và phạm vi quyền cho yêu cầu nhập lượt xe. |
+| `Commands/Import/ImportParkingBookingsHandler.cs` | Đọc từng dòng, kiểm tra dữ liệu, từ chối dòng trùng, lưu dòng hợp lệ và tổng hợp kết quả import. |
+| `Common/ParkingBookingImportContracts.cs` | Định nghĩa dữ liệu dòng import, kết quả/lỗi và hợp đồng đọc file, lưu lượt xe. |
+| `Common/ParkingBookingListContracts.cs` | Định nghĩa một lượt xe trong danh sách và hợp đồng đọc danh sách. |
+| `Common/ParkingBookingSummaryContracts.cs` | Định nghĩa dữ liệu lượt hoàn tất và hợp đồng lấy chúng cho thống kê. |
+| `Common/ParkingBookingTariffContracts.cs` | Định nghĩa dữ liệu lượt xe, mức giá và hợp đồng đọc dữ liệu phục vụ đối chiếu. |
+| `Queries/List/ListParkingBookingsQuery.cs` | Mang bãi, loại xe, trạng thái, phân trang và quyền cho danh sách. |
+| `Queries/List/ListParkingBookingsHandler.cs` | Lọc, sắp xếp và phân trang danh sách lượt xe. |
+| `Queries/Filters/GetParkingBookingFiltersHandler.cs` | Chứa query và handler lấy các bãi, loại xe có thể chọn theo quyền người dùng. |
+| `Queries/Summary/GetParkingBookingSummaryQuery.cs` | Mang khoảng thời gian, bãi và quyền cho yêu cầu thống kê. |
+| `Queries/Summary/GetParkingBookingSummaryHandler.cs` | Thống kê các lượt đã ra, tiền thực thu, số lượt thiếu tiền, bình quân, tăng trưởng khi đủ dữ liệu, top bãi và địa bàn. |
+| `Queries/Export/ExportParkingBookingReportQuery.cs` | Mang thời gian, bãi và quyền cho báo cáo từ lượt xe. |
+| `Queries/Export/ExportParkingBookingReportHandler.cs` | Lọc lượt đã ra, nhóm theo bãi thành các dòng cho báo cáo và đếm lượt thiếu tiền. |
+| `Queries/CompareTariff/CompareParkingBookingTariffQuery.cs` | Mang ID lượt xe, loại ngày và quyền cho yêu cầu đối chiếu. |
+| `Queries/CompareTariff/CompareParkingBookingTariffHandler.cs` | Áp dụng các điều kiện hỗ trợ, tính giá dự kiến và so với tiền thực thu nếu đủ dữ liệu. |
 
 ### 5.5. Feature DevelopmentAccounts
 
@@ -230,9 +230,9 @@ Thư mục `Endpoint/DevelopmentAccounts/`:
 | `Repositories/SqliteBusinessResultRepository.cs` | Đọc/ghi kết quả kinh doanh tổng hợp trong SQLite, gồm xóa mềm và kiểm tra dữ liệu liên quan. |
 | `Repositories/SqliteBusinessReportParkingLotSearch.cs` | Tìm bãi hoặc lấy thông tin bãi phục vụ danh sách và báo cáo. |
 | `Repositories/SqliteBusinessReportMetadataReader.cs` | Ghép dữ liệu kết quả kinh doanh với bãi, đơn vị quản lý và thông tin audit để trả danh sách báo cáo. |
-| `Repositories/SqliteParkingVisitImportRepository.cs` | Đọc/ghi lượt xe trong bảng booking; cung cấp dữ liệu cho import, danh sách và thống kê. |
-| `Repositories/SqliteParkingVisitTariffRepository.cs` | Lấy thông tin lượt xe và các quy tắc giá liên quan để đối chiếu. |
-| `Repositories/ExcelParkingVisitSpreadsheetReader.cs` | Đọc file `.xlsx`, `.xls`, `.csv`, kiểm tra tiêu đề và chuyển dữ liệu thành các dòng import. |
+| `Repositories/SqliteParkingBookingImportRepository.cs` | Đọc/ghi lượt xe trong bảng booking; cung cấp dữ liệu cho import, danh sách và thống kê. |
+| `Repositories/SqliteParkingBookingTariffRepository.cs` | Lấy thông tin lượt xe và các quy tắc giá liên quan để đối chiếu. |
+| `Repositories/ExcelParkingBookingSpreadsheetReader.cs` | Đọc file `.xlsx`, `.xls`, `.csv`, kiểm tra tiêu đề và chuyển dữ liệu thành các dòng import. |
 | `Repositories/SqliteDevelopmentAccountRepository.cs` | Tạo kho tài khoản Development và thực hiện lưu/tìm tài khoản trong SQLite. |
 | `Repositories/InMemoryBusinessResultRepository.cs` | Cài đặt repository lưu tạm trong bộ nhớ; được dùng trong kiểm tra, không phải kho SQLite đang cấu hình cho API. |
 | `Reports/BusinessReportExcelWriter.cs` | Tạo nội dung file báo cáo Excel từ các dòng kết quả. |
@@ -278,14 +278,14 @@ Thư mục `docs/`:
 | `API_CONTRACT_REVIEW.md` | Đối chiếu các API hiện tại với đặc tả và ghi lại các chỗ chưa khớp. |
 | `DEVELOPMENT_BUSINESS_REPORTS.md` | Hướng dẫn gọi API danh sách, tổng hợp và xuất bản báo cáo kinh doanh. |
 | `DEVELOPMENT_PARKING_DATA.md` | Giải thích dữ liệu bãi, bảng giá và lượt giả lập dùng trong Development. |
-| `PARKING_VISIT_IMPORT_DESIGN.md` | Hướng dẫn cấu trúc file nhập, bảng booking, thống kê và các giới hạn hiện tại. |
+| `PARKING_BOOKING_IMPORT_DESIGN.md` | Hướng dẫn cấu trúc file nhập, bảng booking, thống kê và các giới hạn hiện tại. |
 
 Thư mục `postman/`:
 
 | File | Chức năng |
 |---|---|
 | `ParkingBusinessResult.postman_collection.json` | Collection gọi các API kết quả kinh doanh và tài khoản Development. |
-| `ParkingVisits.postman_collection.json` | Collection gọi API import, danh sách, thống kê và đối chiếu lượt xe. |
+| `ParkingBookings.postman_collection.json` | Collection gọi API import, danh sách, thống kê và đối chiếu lượt xe. |
 | `README.md` | Hướng dẫn cấu hình và sử dụng các collection. |
 | `seed-demo-parking-lot.sql` | SQL tạo dữ liệu bãi mẫu phục vụ Postman. |
 | `seed_demo.py` | Script hỗ trợ đưa bãi mẫu vào database Development. |
@@ -307,8 +307,8 @@ Thư mục `tests/` không phải giao diện hay chức năng nghiệp vụ ch�
 | `test_development_parking_data.py` | Kiểm tra cấu trúc và số liệu dữ liệu giả lập Development. |
 | `api_sqlite_checks.ps1` | Chạy các kiểm tra API kết quả kinh doanh với database tạm. |
 | `seeded_parking_api_checks.ps1` | Kiểm tra các API báo cáo bằng dữ liệu giả lập, gồm phân quyền, xuất file và xóa mềm. |
-| `parking_visit_import_fixture.py` | Tạo file và dữ liệu mẫu phục vụ kiểm tra luồng import lượt xe. |
-| `parking_visit_import_checks.ps1` | Kiểm tra import, dữ liệu trùng, danh sách, thống kê, xuất và quyền trên database tạm. |
+| `parking_booking_import_fixture.py` | Tạo file và dữ liệu mẫu phục vụ kiểm tra luồng import lượt xe. |
+| `parking_booking_import_checks.ps1` | Kiểm tra import, dữ liệu trùng, danh sách, thống kê, xuất và quyền trên database tạm. |
 | `check_business_report_xlsx.py` | Kiểm tra nội dung Excel báo cáo kết quả kinh doanh tổng hợp. |
 | `check_business_report_pdf.py` | Kiểm tra nội dung PDF báo cáo kết quả kinh doanh tổng hợp. |
 | `check_visit_export.py` | Kiểm tra nội dung file xuất từ lượt xe. |
@@ -322,14 +322,14 @@ Các thư mục `bin/` và `obj/` trong project do .NET tạo khi build; không 
 ## 11. Ví dụ đi qua các file khi nhập Excel
 
 1. Người dùng chọn file trong `Frontend/index.html`.
-2. JavaScript gửi file tới `ImportParkingVisitsEndpoint.cs`.
-3. Endpoint tạo `ImportParkingVisitsCommand.cs` và gọi `ImportParkingVisitsHandler.cs`.
-4. Handler dùng hợp đồng trong `ParkingVisitImportContracts.cs`; `ExcelParkingVisitSpreadsheetReader.cs` thực sự đọc file.
-5. Handler kiểm tra từng dòng; `SqliteParkingVisitImportRepository.cs` ghi dòng hợp lệ vào `SP_datTruocChoDoXe`.
+2. JavaScript gửi file tới `ImportParkingBookingsEndpoint.cs`.
+3. Endpoint tạo `ImportParkingBookingsCommand.cs` và gọi `ImportParkingBookingsHandler.cs`.
+4. Handler dùng hợp đồng trong `ParkingBookingImportContracts.cs`; `ExcelParkingBookingSpreadsheetReader.cs` thực sự đọc file.
+5. Handler kiểm tra từng dòng; `SqliteParkingBookingImportRepository.cs` ghi dòng hợp lệ vào `SP_datTruocChoDoXe`.
 6. Handler trả số dòng thành công, trùng và lỗi; endpoint bọc bằng `ApiResponse.cs`.
 7. `Frontend/index.html` nhận JSON và hiển thị các dòng, lỗi cho người dùng.
 
-Phần thống kê đi tương tự nhưng dùng **Query**: `GetParkingVisitSummaryEndpoint.cs` → `GetParkingVisitSummaryQuery.cs` → `GetParkingVisitSummaryHandler.cs` → repository đọc bảng booking → trả kết quả cho giao diện.
+Phần thống kê đi tương tự nhưng dùng **Query**: `GetParkingBookingSummaryEndpoint.cs` → `GetParkingBookingSummaryQuery.cs` → `GetParkingBookingSummaryHandler.cs` → repository đọc bảng booking → trả kết quả cho giao diện.
 
 ## 12. Những giới hạn cần nói đúng khi báo cáo
 
