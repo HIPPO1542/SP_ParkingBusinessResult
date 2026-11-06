@@ -1,57 +1,41 @@
-# Đối chiếu API kết quả kinh doanh với tài liệu
+# Đối chiếu hợp đồng API và các yêu cầu đã chốt
 
-Phạm vi: API thử nghiệm Development hiện có, đối chiếu ApiSpec/LLD của UC 1.5 và UC 3.4 trong thư mục `Giai_phap_bai_do_xe_thong_minh_theo_UC_final`, cùng sheet `SP_ParkingBusinessResult` trong Excel. Kết quả này không xác nhận API đã nghiệm thu.
+Tài liệu này phân biệt nâng cấp chất lượng source với việc khớp toàn bộ ApiSpec/LLD gốc. Nâng cấp kiến trúc không tự thay đổi các quyết định nghiệp vụ người dùng đã xác nhận. API, giao diện và đăng nhập cục bộ hiện chạy được ở **Production**. Xem [cấu hình triển khai](ENTERPRISE_DEPLOYMENT.md).
 
-| Hạng mục | Tài liệu yêu cầu | API hiện tại | Trạng thái |
-| --- | --- | --- | --- |
-| Route kết quả kinh doanh | `/gdci/{module}/parkingLot/businessOperation` | `/gdci/parking/parkingLot/businessOperation` | Đã theo mẫu tài liệu với module `parking`; hiện chỉ đăng ký trong Development. |
-| Body thêm | `parkingLotId`, `reportDate`, `periodType`, `totalCheckIn`, `totalCheckOut`, `averageOccupancyRate`, `peakOccupancyRate`, `totalRevenue`, `cashRevenue`, `electronicRevenue`; có thêm `operatingExpenses`, `notes` tùy chọn | `parkingLotId`, `reportingPeriod`, `revenue`, `completedVehicleCount`, `note` | Chưa khớp. Body tài liệu bị từ chối với code 7 thay vì bị ghi sai. |
-| Body sửa | `totalCheckIn`, `totalCheckOut`, các tỷ lệ lấp đầy, `totalRevenue`, `cashRevenue`, `electronicRevenue`; có `operatingExpenses`, `notes` tùy chọn | `revenue`, `completedVehicleCount`, `note` | Chưa khớp. Body thiếu trường hoặc chứa trường không hỗ trợ bị từ chối với code 7. |
-| Dữ liệu trả về | ApiSpec đưa `parkingLot` dạng object, `periodType`, `periodValue`, doanh thu kỳ trước, tăng trưởng, nguồn dữ liệu và thông tin audit | Object phẳng gồm `id`, `parkingLotId`, `reportingPeriod`, `revenue`, `completedVehicleCount`, `note` | Chưa khớp. ApiSpec và LLD của chức năng xem theo thời gian cũng mô tả các cấu trúc khác nhau. |
-| Xem theo thời gian | Lọc, phân trang, kỳ và sắp xếp theo ApiSpec | Danh sách thử nghiệm chưa hỗ trợ các tham số đó | Chưa hoàn thành. |
-| Nhập file và báo cáo UC 3.4 | Import tổng hợp, danh sách báo cáo, xem tổng hợp và xuất Excel/PDF | Có import lượt xe `.xlsx`, danh sách, tổng hợp và xuất Excel/PDF thử nghiệm | Chưa hoàn thành; import khác tài liệu gốc theo yêu cầu người dùng, route, bộ lọc và response xuất file chưa khớp ApiSpec. |
-| Quyền | Các tài liệu liệt kê các vai trò khác nhau, trong đó API xóa đề cập `ROLE_BUSINESS_MANAGER` | Môi trường Development hỗ trợ `ROLE_ADMIN`, `ROLE_DISTRICT_ADMIN`, `ROLE_PARKING_OPERATOR` và phạm vi bãi theo token | Chưa thể xem là khớp chính sách quyền chính thức. |
-| Xóa | LLD mô tả xóa vật lý | Theo yêu cầu mới của người dùng, API đánh dấu `daXoa = 1`, ẩn bản ghi và giữ lại dữ liệu | Đã thay đổi so với LLD theo yêu cầu trực tiếp; cần đồng bộ tài liệu khi chốt hợp đồng. |
+| Hạng mục | Hiện tại | Phạm vi / khác biệt |
+|---|---|---|
+| Route kết quả tổng hợp | `/gdci/parking/parkingLot/businessOperation` và `/{id}` | Theo ví dụ module `parking`; CRUD chạy mọi môi trường |
+| Body thêm/sửa kết quả | `parkingLotId`, `reportingPeriod`, `revenue`, `completedVehicleCount`, `note`; sửa không đổi bãi/kỳ | Chưa phải body có `reportDate`, `periodType`, các chỉ số lấp đầy, tiền mặt/điện tử và chi phí trong tài liệu gốc. Trường lạ bị từ chối, không ghi thành 0 |
+| Response CRUD kết quả | Entity phẳng với id, bãi, kỳ, doanh thu, lượt và ghi chú | Khác mẫu CRUD có nhiều chỉ số bổ sung. Không nhầm với response danh sách báo cáo ở hàng dưới |
+| Danh sách báo cáo UC 3.4 | `/parkingBusinessReport`: bãi dạng object, đơn vị, doanh thu, lượt, bình quân và audit | Đã có cấu trúc người dùng cung cấp. Lọc kỳ chính xác, bãi, từ khóa/địa chỉ, district và phân trang; chưa lọc khoảng ngày trên nguồn tổng hợp |
+| Tổng hợp báo cáo UC 3.4 | `/parkingBusinessReport/summary`: tổng, bình quân/lượt, tăng trưởng, bình quân/ngày, top bãi, cơ cấu địa bàn | Tăng trưởng chỉ có khi đủ dữ liệu đối chiếu cùng tập bãi; district suy từ địa chỉ, không phải mã địa bàn chính thức |
+| Xuất báo cáo UC 3.4 | `/parkingBusinessReport/export`: JSON metadata gồm id, URL, tên/định dạng/kích thước, số bản ghi và audit | Đã trả mẫu người dùng yêu cầu. File có mã/tên bãi. Chủ sở hữu tải bằng token qua URL riêng; PDF cần Windows |
+| Import | `/businessOperation/import`: nhận file từng lượt xe; trả totalRows, successRows, errorRows, importedIds, errors có parkingLotCode; thêm duplicateRows và importedRows để giao diện hiển thị | Theo yêu cầu mới của người dùng, khác import tổng hợp 12 cột và hai chế độ trong tài liệu gốc |
+| Booking | `/parkingBooking`: danh sách, filters, summary, export và đối chiếu bảng giá | Bảng `SP_datTruocChoDoXe` theo sheet `SP_ParkingBooking`; giờ bắt đầu/kết thúc là vào/ra theo xác nhận |
+| Xóa | Xóa mềm kết quả tổng hợp, giữ bản ghi và audit | Yêu cầu trực tiếp của người dùng, khác LLD mô tả xóa vật lý |
+| Quyền | Admin mọi bãi; district admin/operator theo claim parking_lot_id; xuất chỉ admin/district admin | Chính sách hiện có. Các tài liệu gốc không thống nhất vai trò, có chỗ yêu cầu ROLE_BUSINESS_MANAGER; cần đồng bộ hợp đồng khi tích hợp nhóm |
+| Xác thực | Local JWT cho ứng dụng độc lập hoặc Authority JWT khi chọn SSO | Local chạy Production, dùng lại tài khoản trong database. Authority chưa xác minh với IdP thực |
+| Lỗi | HTTP 200, code 7, data null cho lỗi nghiệp vụ, xác thực, bind request và lỗi trong pipeline đã kiểm tra | Không bao gồm lỗi kết nối/proxy/Kestrel trước pipeline, hoặc response đã gửi dở; health readiness dùng 503 riêng |
 
-## Chi tiết những chỗ chưa khớp
+## Quyết định nghiệp vụ được giữ lại
 
-1. **Địa chỉ và môi trường:** kết quả kinh doanh dùng `/gdci/parking/parkingLot/businessOperation`, báo cáo tổng hợp dùng `/gdci/parking/parkingLot/parkingBusinessReport` và import dùng `/gdci/parking/parkingLot/businessOperation/import`, theo ví dụ module `parking` trong tài liệu. Các route hiện chỉ được đăng ký trong Development. Các route mở rộng cho lượt xe dùng `/gdci/parking/parkingLot/parkingBooking`, không có trong ApiSpec gốc.
-2. **Thêm và sửa:** API thử nghiệm nhận `reportingPeriod`, `revenue`, `completedVehicleCount`, `note`; API thêm còn cần `parkingLotId`. ApiSpec yêu cầu `reportDate`, `periodType`, `totalCheckIn`, `totalCheckOut`, `averageOccupancyRate`, `peakOccupancyRate`, `totalRevenue`, `cashRevenue`, `electronicRevenue`, `operatingExpenses`, `notes` (trong đó chi phí và ghi chú tùy chọn). Sửa không được đổi bãi/ngày/loại kỳ. Các trường chưa hỗ trợ bị từ chối.
-3. **Xem kết quả theo thời gian:** ApiSpec yêu cầu `parkingLotId`, `fromDate`, `toDate`, `periodType`, `pageNumber`, `pageSize`, `sortBy` và thứ tự sắp xếp. Danh sách thử nghiệm chưa thực hiện các bộ lọc và phân trang này. Dữ liệu trả về cũng thiếu thông tin bãi dạng object, kỳ trước/tăng trưởng và audit theo mẫu; ApiSpec và LLD mô tả response khác nhau.
-4. **Import:** đã có endpoint Development nhập các lượt xe `.xlsx`, `.xls`, `.csv` tối đa 10 MB theo yêu cầu mới của người dùng; lượt trùng được báo lỗi và không ghi đè. Khác ApiSpec gốc vốn mô tả nhập số liệu tổng hợp 12 cột và hai chế độ import. Xem `docs/PARKING_BOOKING_IMPORT_DESIGN.md`.
-5. **Danh sách báo cáo:** endpoint Development yêu cầu chuỗi `reportingPeriod` chính xác, hỗ trợ `parkingLotId`, `keyword`, `district`, `pageNumber` và `pageSize`; chưa hỗ trợ `fromDate`, `toDate`. Từ khóa tìm trong tên và địa chỉ, không phân biệt chữ hoa/thường; `district` tìm chuỗi trong địa chỉ theo LLD, không phải mã địa bàn chính thức. Response còn phẳng, thiếu object bãi, tên đơn vị, doanh thu bình quân và audit theo ApiSpec. Các tham số chưa hỗ trợ được báo lỗi thay vì bỏ qua.
-6. **Tổng hợp báo cáo:** hiện trả tổng doanh thu, tổng lượt hoàn tất, bình quân/lượt và top 5 bãi theo doanh thu của một kỳ, có lọc địa chỉ theo `district`; chưa hỗ trợ lọc ngày, tăng trưởng, bình quân ngày và cơ cấu theo địa bàn như tài liệu. Endpoint không tự tổng hợp lại từ lượt xe thực tế.
-7. **Xuất báo cáo:** đã xuất trực tiếp Excel/PDF ở Development với kỳ, bãi và `district`; chưa lọc ngày. Tài liệu yêu cầu trả JSON gồm `id`, `fileUrl`, tên file, kích thước, số bản ghi và audit để tải sau. File hiện có mã bãi và các tổng, chưa đầy đủ tên bãi, đơn vị, địa chỉ và chỉ số theo LLD; PDF thử nghiệm cần Windows.
-8. **Vai trò:** danh sách/tổng hợp báo cáo hiện cho `ROLE_ADMIN`, `ROLE_DISTRICT_ADMIN`, `ROLE_PARKING_OPERATOR`; xuất chỉ cho `ROLE_ADMIN` và `ROLE_DISTRICT_ADMIN`. ApiSpec báo cáo yêu cầu `ROLE_DISTRICT_ADMIN`. API kết quả dùng chung ba vai trò thử nghiệm, trong khi đặc tả xóa yêu cầu `ROLE_DISTRICT_ADMIN` hoặc `ROLE_BUSINESS_MANAGER`; chính sách chưa trùng.
-9. **Lỗi và xóa:** mẫu tài liệu có chỗ nêu HTTP 400/401/403, nhưng cũng quy định HTTP 200; ứng dụng thử nghiệm trả 200/code 7 cho lỗi nghiệp vụ và lỗi xác thực đã xử lý. Chưa xác minh mọi lỗi framework đều như vậy. Xóa mềm là yêu cầu mới của người dùng, khác LLD mô tả xóa vật lý.
+- Một dòng Excel là một lượt xe. Cùng bãi + biển số chuẩn hóa + giờ vào là trùng: báo lỗi và không cập nhật, kể cả trùng trong cùng file.
+- Lượt hoàn tất cần có giờ ra. `tongTien` là số tiền đã thu; không tự tính lại doanh thu theo bảng giá và không quản lý phương thức thanh toán.
+- Giờ ra được phép trống để thể hiện xe còn trong bãi, khác đánh dấu bắt buộc trong Excel gốc. Bảng booking vẫn giữ 16 cột đã chốt.
+- Booking và bảng kết quả tổng hợp không tự đồng bộ. Không cộng chồng hai nguồn khi báo cáo.
+- Dòng sai nghiệp vụ trả lỗi riêng. Lỗi lưu trữ/hủy yêu cầu trước commit làm rollback batch; không giữ một phần batch rồi báo thất bại toàn bộ.
 
-Ngoài các endpoint tổng hợp cũ, `GET /gdci/parking/parkingLot/parkingBooking/summary` tính từ lượt trong bảng booking, có lọc khoảng ngày, nhiều bãi, kỳ trước, top bãi và cơ cấu địa bàn suy ra từ địa chỉ; `POST /gdci/parking/parkingLot/parkingBooking/export` xuất dữ liệu lượt xe. Phương thức thanh toán không được quản lý. Hai endpoint này vẫn là Development và chưa thay thế hợp đồng chính thức được mô tả ở trên.
+Chi phí vận hành, doanh thu tiền mặt/điện tử và tỷ lệ lấp đầy không có nguồn đầy đủ trong các bảng đã chốt. Không thể suy ra các giá trị đó chỉ từ tổng doanh thu/số lượt. Nâng cấp source không tự tạo cột hoặc số liệu giả cho các trường này. `daXoa` là phần mở rộng đã được người dùng yêu cầu trước đó.
 
-Sheet Excel chỉ có một trường tổng số lượt và một trường tổng doanh thu. Nó không cung cấp riêng dữ liệu lượt vào/lượt ra, doanh thu tiền mặt/điện tử, chi phí vận hành hay tỷ lệ lấp đầy. Không thể suy ra chính xác các trường đó từ tổng doanh thu và tổng lượt; cần thống nhất nguồn dữ liệu hoặc thay đổi hợp đồng trước khi triển khai đầy đủ body/response theo tài liệu. `daXoa` là cột bổ sung theo yêu cầu xóa mềm, không có trong sheet gốc.
-
-Để kiểm thử, SQLite cục bộ có thêm ba bảng giá theo Excel và `dev_parking_sessions` chứa các lượt giả lập. Các lượt xe hiện dùng bảng `SP_datTruocChoDoXe` theo Excel; không có thông tin phương thức thanh toán trong bảng này. Việc này không bổ sung chi phí hoặc xác nhận quy tắc tỷ lệ lấp đầy cho production. Chi tiết tại `docs/DEVELOPMENT_PARKING_DATA.md` và `docs/PARKING_BOOKING_IMPORT_DESIGN.md`.
-
-## Bằng chứng kiểm thử
-
-- Chạy Postman Collection bằng Newman với database SQLite tạm sau khi đổi route: 11 request và 11 assertion thành công. Hai request body theo tài liệu được kỳ vọng bị từ chối vì API chưa hỗ trợ; kiểm thử route không chứng minh body/response đã khớp.
-- Kiểm tra body sửa theo tài liệu bị từ chối và không làm doanh thu/số lượt về 0. Trước khi sửa, cùng body đã bị chấp nhận và ghi cả hai giá trị thành 0.
-- Kiểm tra xóa mềm: bản ghi vẫn tồn tại trong SQLite với `daXoa = 1`, không hiện qua API, không sửa/xóa lại được; có thể tạo bản ghi mới cho cùng bãi và kỳ.
-- Kiểm tra migration trên database tạm: giữ dữ liệu cũ, sao lưu trước khi áp dụng và từ chối khi bảng khác có khóa ngoại trỏ tới bảng kết quả. Database cục bộ đã được sao lưu và áp dụng migration.
-
-Các bằng chứng trên chỉ áp dụng cho môi trường Development và các trường hợp đã chạy; chưa xác nhận tất cả trường hợp lỗi framework trả HTTP 200 hay toàn bộ yêu cầu ApiSpec/LLD.
-
-## Ma trận truy vết
+## Ma trận bằng chứng
 
 | Yêu cầu | Bằng chứng | Trạng thái |
-| --- | --- | --- |
-| Xóa mềm và ẩn bản ghi đã xóa | Kiểm tra repository và Newman trên SQLite tạm; đọc trực tiếp xác nhận bản ghi vẫn còn | `[Verified]` |
-| Bảo toàn dữ liệu khi cập nhật schema | `tests/test_soft_delete_migration.py`: dữ liệu cũ, sao lưu, chặn khóa ngoại tham chiếu và chạy lại | `[Verified]` |
-| Không ghi 0 khi body thiếu trường hoặc dùng body tài liệu chưa hỗ trợ | Newman gửi PUT theo ApiSpec và body thiếu trường; xác nhận code 7 và dữ liệu gốc không đổi | `[Verified]` |
-| Đúng route, body và response ApiSpec/LLD | Route đã theo mẫu; body và response còn khác, thiếu nguồn dữ liệu cho nhiều trường | `[Blocked / Not Verified]` toàn bộ hợp đồng |
-| Danh sách và tổng hợp báo cáo Development theo kỳ và bãi | `tests/seeded_parking_api_checks.ps1`: tổng, lọc, quyền bãi và xóa mềm trên SQLite tạm | `[Verified]` cho phạm vi thử nghiệm; chưa khớp đầy đủ UC 3.4 |
-| Tìm kiếm danh sách theo tên/địa chỉ bãi | `tests/seeded_parking_api_checks.ps1`: tên, địa chỉ, không khớp và giới hạn quyền bãi | `[Verified]` cho phạm vi Development |
-| Lọc địa bàn theo chuỗi địa chỉ | `tests/seeded_parking_api_checks.ps1`: danh sách, tổng hợp và Excel | `[Verified]` theo chuỗi địa chỉ; không xác minh mã địa bàn |
-| Top 5 bãi theo doanh thu | `tests/seeded_parking_api_checks.ps1`: thông tin bãi, doanh thu, tỷ trọng và phạm vi quyền | `[Verified]` trên dữ liệu mẫu; chưa có tăng trưởng hoặc cơ cấu quận |
-| Xuất Excel thử nghiệm theo kỳ và phạm vi bãi | `tests/seeded_parking_api_checks.ps1` kiểm tra file thực tế, quyền, số liệu và xóa mềm | `[Verified]` cho phạm vi Development; chưa khớp đầy đủ ApiSpec |
-| Xuất PDF thử nghiệm theo kỳ và phạm vi bãi | `tests/seeded_parking_api_checks.ps1`: đọc nội dung file, số liệu và quyền theo bãi | `[Verified]` nội dung trên Windows; chưa kiểm tra trực quan hoặc khớp đầy đủ ApiSpec |
-| Import lượt xe và thống kê trực tiếp Development | `tests/parking_booking_import_checks.ps1` và `tests/test_parking_visit_migration.py`: nhập, nhập lại, dữ liệu lỗi, quyền, thống kê và sao lưu | `[Verified]` theo file mẫu mới; chưa khớp import tổng hợp ApiSpec gốc |
+|---|---|---|
+| Quy tắc tính, CRUD, audit, xóa mềm | `tests/RevenueMetrics.Checks`, `tests/api_sqlite_checks.ps1` | Verified cục bộ |
+| Migration bảo toàn dữ liệu và sao lưu | `test_sqlite_migration.py`, `test_soft_delete_migration.py`, `test_parking_visit_migration.py`, `test_booking_migration.py` | Kiểm tra trên database tạm |
+| Danh sách, tổng hợp, Excel/PDF, chủ file và quyền bãi | `tests/seeded_parking_api_checks.ps1` | Verified cục bộ trên Windows |
+| Import, trùng, lọc kết hợp, thống kê, xuất booking | `tests/parking_booking_import_checks.ps1` | Verified cục bộ; XLS chỉ chạy khi có xlwt |
+| Giao dịch rollback và hủy import | `tests/Enterprise.Checks` | Verified cục bộ |
+| Giao diện/đăng nhập/API Production, lỗi framework và health | `tests/runtime_checks.ps1` | Verified cục bộ bằng database tạm |
+| Ranh giới Clean Architecture | `tests/test_architecture.py` | Verified cục bộ |
+| Toàn bộ hợp đồng gốc, quyền theo tổ chức, SSO và tải thực | Cần nguồn dữ liệu và môi trường tích hợp phù hợp | Chưa xác minh |

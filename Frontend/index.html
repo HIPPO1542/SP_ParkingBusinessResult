@@ -132,7 +132,7 @@
   $('loginForm').addEventListener('submit', async event => {
     event.preventDefault(); token = null; $('authStatus').textContent = 'Chưa đăng nhập'; $('authStatus').className = 'status';
     try {
-      const response = await fetch('/dev/auth/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('username').value,password:$('password').value})});
+      const response = await fetch('/auth/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('username').value,password:$('password').value})});
       if (!response.ok) throw new Error(`Không đăng nhập được (HTTP ${response.status}).`);
       const result = await response.json(); if (result.code !== 0 || !result.data?.accessToken) throw new Error(result.message || 'Đăng nhập không thành công.');
       token = result.data.accessToken; $('password').value = ''; $('authStatus').textContent = 'Đã đăng nhập'; $('authStatus').className = 'status connected'; notify('loginMessage', 'Đăng nhập thành công. Phiên có hiệu lực 30 phút.', 'success');

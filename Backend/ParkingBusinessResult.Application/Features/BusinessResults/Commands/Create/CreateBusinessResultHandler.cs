@@ -14,7 +14,7 @@ public sealed class CreateBusinessResultHandler(IBusinessResultRepository reposi
         {
             var result = new ParkingBusinessResultRecord(Guid.NewGuid(), command.ParkingLotId, command.ReportingPeriod,
                 command.Revenue, command.CompletedVehicleCount, command.Note);
-            return repository.TryAdd(result)
+            return repository.TryAdd(result, command.Actor)
                 ? BusinessResultOutcome<ParkingBusinessResultRecord>.Success(result)
                 : BusinessResultOutcome<ParkingBusinessResultRecord>.Failure("Bãi xe đã có dữ liệu cho kỳ báo cáo này.");
         }

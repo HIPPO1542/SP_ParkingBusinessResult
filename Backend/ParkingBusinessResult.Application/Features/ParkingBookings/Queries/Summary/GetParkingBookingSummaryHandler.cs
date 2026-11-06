@@ -14,15 +14,16 @@ public sealed class GetParkingBookingSummaryHandler(IParkingBookingSummaryReposi
 {
     public ParkingBookingSummary Handle(GetParkingBookingSummaryQuery query)
     {
-        IReadOnlyList<CompletedParkingBooking> bookings = repository.ListCompleted(query.FromInclusive, query.ToExclusive);
-        CompletedParkingBooking[] permitted = Filter(bookings, query);
+        CompletedParkingBooking[] permitted = repository.ListCompleted(new ParkingBookingSummaryFilter(
+            query.FromInclusive, query.ToExclusive, query.Access, query.ParkingLotId, query.ParkingLotIds, query.District)).ToArray();
         decimal collected = permitted.Where(booking => booking.CollectedAmount.HasValue).Sum(booking => booking.CollectedAmount!.Value);
         long missing = permitted.LongCount(booking => booking.CollectedAmount is null);
         decimal? previousRevenue = null;
         decimal? growth = null;
         if (query.IsMonthly && query.FromInclusive > DateTime.MinValue)
         {
-            CompletedParkingBooking[] previous = Filter(repository.ListCompleted(query.FromInclusive.AddMonths(-1), query.FromInclusive), query);
+            CompletedParkingBooking[] previous = repository.ListCompleted(new ParkingBookingSummaryFilter(
+                query.FromInclusive.AddMonths(-1), query.FromInclusive, query.Access, query.ParkingLotId, query.ParkingLotIds, query.District)).ToArray();
             if (previous.Length > 0 && previous.All(booking => booking.CollectedAmount.HasValue))
             {
                 previousRevenue = previous.Sum(booking => booking.CollectedAmount!.Value);
@@ -55,12 +56,6 @@ public sealed class GetParkingBookingSummaryHandler(IParkingBookingSummaryReposi
         return new(query.PeriodLabel,
             permitted.LongLength, collected, missing, previousRevenue, growth, averageDailyRevenue, topLots, districts);
     }
-
-    private static CompletedParkingBooking[] Filter(IEnumerable<CompletedParkingBooking> bookings, GetParkingBookingSummaryQuery query) =>
-        bookings.Where(booking => query.Access.CanAccess(booking.ParkingLotId))
-            .Where(booking => query.ParkingLotId is null || booking.ParkingLotId == query.ParkingLotId)
-            .Where(booking => query.ParkingLotIds is null || query.ParkingLotIds.Contains(booking.ParkingLotId))
-            .Where(booking => string.IsNullOrWhiteSpace(query.District) || (booking.ParkingLotAddress?.Contains(query.District.Trim(), StringComparison.OrdinalIgnoreCase) ?? false)).ToArray();
 
     private static string? FindDistrict(string? address)
     {

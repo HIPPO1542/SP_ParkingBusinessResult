@@ -4,7 +4,6 @@ using System.Text.Json.Serialization;
 using System.Xml;
 using ParkingBusinessResult.Api.Contracts;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.Export;
-using ParkingBusinessResult.Infrastructure.Reports;
 
 namespace ParkingBusinessResult.Api.Endpoint.ParkingBookings;
 
@@ -31,12 +30,10 @@ public static class ExportParkingBookingReportEndpoint
         try { XmlConvert.VerifyXmlChars(title); }
         catch (XmlException) { return Results.Ok(ApiResponse<object>.BusinessError("Tiêu đề chứa ký tự không hợp lệ.")); }
         IReadOnlySet<Guid>? parkingLotIds = request.ParkingLotIds is { Length: > 0 } ? request.ParkingLotIds.ToHashSet() : null;
-        ParkingBookingExportResult result = handler.Handle(new ExportParkingBookingReportQuery(period.From, period.ToExclusive, period.Label, request.ParkingLotId, EndpointSupport.GetAccess(user), request.District, parkingLotIds));
+        ParkingBookingExportResult result = handler.Handle(new ExportParkingBookingReportQuery(period.From, period.ToExclusive, period.Label, request.ParkingLotId, EndpointSupport.GetAccess(user), request.District, parkingLotIds, request.FileFormat, title));
         if (result.MissingAmountCount > 0)
             return Results.Ok(ApiResponse<object>.BusinessError($"Có {result.MissingAmountCount} lượt hoàn tất chưa có số tiền thực thu."));
-        if (request.FileFormat == "PDF")
-            return Results.File(BusinessReportPdfWriter.Write(title, period.Label, result.Rows), "application/pdf", "bao-cao-luot-xe.pdf");
-        return Results.File(BusinessReportExcelWriter.Write(title, period.Label, result.Rows),
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "bao-cao-luot-xe.xlsx");
+        var document = result.Document!;
+        return Results.File(document.Content, document.ContentType, $"bao-cao-luot-xe{document.Extension}");
     }
 }

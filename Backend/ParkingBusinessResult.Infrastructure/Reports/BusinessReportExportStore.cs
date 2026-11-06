@@ -1,37 +1,54 @@
-using Microsoft.Data.Sqlite;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using ParkingBusinessResult.Application.Features.BusinessReports.Common;
 
 namespace ParkingBusinessResult.Infrastructure.Reports;
 
-public sealed class BusinessReportExportStore(string databasePath, string exportDirectory)
+public sealed class BusinessReportExportStore(string exportDirectory, bool allowLegacyDownloads = false) : IBusinessReportExportStore
 {
-    public string? FindUsername(Guid userId)
+    public SavedBusinessReport Save(ReportActor actor, string format, ReportDocument document, int recordCount)
     {
-        using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
-        {
-            DataSource = databasePath,
-            Mode = SqliteOpenMode.ReadOnly
-        }.ToString());
-        connection.Open();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "SELECT username FROM dev_auth_users WHERE id = $id";
-        command.Parameters.AddWithValue("$id", userId.ToString());
-        return command.ExecuteScalar() as string;
-    }
-
-    public void Save(Guid userId, string fileName, byte[] content)
-    {
-        string directory = Path.Combine(exportDirectory, userId.ToString("N"));
+        Guid id = Guid.NewGuid();
+        DateTimeOffset now = DateTimeOffset.Now;
+        string fileName = $"BaoCao_KetQuaKinhDoanh_{now:yyyyMMdd_HHmmss}_{id:N}{document.Extension}";
+        string directory = OwnerDirectory(actor);
         Directory.CreateDirectory(directory);
-        using var file = new FileStream(Path.Combine(directory, fileName), FileMode.CreateNew, FileAccess.Write, FileShare.None);
-        file.Write(content);
+        string temporaryPath = Path.Combine(directory, fileName + ".tmp");
+        string finalPath = Path.Combine(directory, fileName);
+        try
+        {
+            using (var file = new FileStream(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                file.Write(document.Content);
+                file.Flush(flushToDisk: true);
+            }
+            File.Move(temporaryPath, finalPath);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+        }
+        string date = now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        return new(id, $"/static/exports/{fileName}", fileName, format, document.Content.LongLength, recordCount,
+            date, actor.Name, actor.Id, date, actor.Name, actor.Id);
     }
 
-    public string? FindFile(Guid userId, string fileName)
+    public ReportDownload? FindFile(ReportActor actor, string fileName)
     {
-        if (fileName != Path.GetFileName(fileName) || !fileName.StartsWith("BaoCao_KetQuaKinhDoanh_", StringComparison.Ordinal) ||
+        if (fileName.Length > 180 || fileName.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not ('_' or '.')) ||
+            fileName != Path.GetFileName(fileName) || !fileName.StartsWith("BaoCao_KetQuaKinhDoanh_", StringComparison.Ordinal) ||
             !(fileName.EndsWith(".xlsx", StringComparison.Ordinal) || fileName.EndsWith(".pdf", StringComparison.Ordinal)))
             return null;
-        string path = Path.Combine(exportDirectory, userId.ToString("N"), fileName);
-        return File.Exists(path) ? path : null;
+        string path = Path.Combine(OwnerDirectory(actor), fileName);
+        if (!File.Exists(path) && allowLegacyDownloads && Guid.TryParse(actor.Id, out Guid legacyUserId))
+            path = Path.Combine(exportDirectory, legacyUserId.ToString("N"), fileName);
+        if (!File.Exists(path)) return null;
+        string contentType = fileName.EndsWith(".pdf", StringComparison.Ordinal) ? "application/pdf"
+            : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        return new(path, contentType, fileName);
     }
+
+    private string OwnerDirectory(ReportActor actor) => Path.Combine(exportDirectory,
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{actor.Issuer}\0{actor.Id}"))));
 }

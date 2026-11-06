@@ -13,7 +13,7 @@ public static class BusinessReportPdfWriter
     public static byte[] Write(string title, string period, IReadOnlyList<BusinessReportRow> records)
     {
         if (!OperatingSystem.IsWindows())
-            throw new PlatformNotSupportedException("Xuất PDF thử nghiệm cần phông chữ Windows.");
+            throw new PlatformNotSupportedException("Xuất PDF cần phông chữ Windows.");
 
         GlobalFontSettings.UseWindowsFontsUnderWindows = true;
         using var document = new PdfDocument();

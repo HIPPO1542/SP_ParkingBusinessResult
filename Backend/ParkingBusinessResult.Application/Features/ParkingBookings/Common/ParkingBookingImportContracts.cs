@@ -20,6 +20,12 @@ public interface IParkingBookingSpreadsheetReader
 
 public interface IParkingBookingImportRepository
 {
+    IParkingBookingImportSession BeginImport();
+}
+
+public interface IParkingBookingImportSession : IDisposable
+{
     Guid? FindAccessibleParkingLot(string code, BusinessAccess access);
-    ParkingBookingSaved? TryInsert(ParkingBookingInput booking);
+    ParkingBookingSaved? TryInsert(ParkingBookingInput booking, string? userId, string? username);
+    void Commit();
 }

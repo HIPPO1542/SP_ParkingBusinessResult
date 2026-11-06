@@ -21,7 +21,7 @@ Các tên thường gặp:
 - **DTO/record:** kiểu dữ liệu mang thông tin giữa các phần hoặc trả về API.
 - **Migration:** script thay đổi cấu trúc database và có thể chuyển dữ liệu cũ.
 
-Project dùng Minimal API, CQRS và dependency injection. Các handler được gọi trực tiếp; dự án hiện **không dùng MediatR hoặc EF Core**. API và tài khoản hiện chỉ được đăng ký ở môi trường Development.
+Project dùng Minimal API, CQRS và dependency injection. Các handler được gọi trực tiếp; dự án **không dùng MediatR hoặc EF Core**. API, giao diện và tài khoản Local chạy được ở Production; Authority là chế độ xác thực tùy chọn khi tích hợp SSO.
 
 ## 2. File tại thư mục gốc
 
@@ -29,6 +29,9 @@ Project dùng Minimal API, CQRS và dependency injection. Các handler được 
 |---|---|
 | `.gitignore` | Cho Git bỏ qua file tạo tự động hoặc dữ liệu cục bộ, chẳng hạn `bin`, `obj`, database SQLite, file báo cáo và file tạm Excel. |
 | `SP_ParkingBusinessResult.sln` | Solution gom các project .NET để build và mở trong IDE. |
+| `start.ps1` | Chạy Release/Production, dùng database và User Secrets của bản cài hiện có; không reset dữ liệu. |
+| `Directory.Build.props` | Build xác định được kết quả, bật cảnh báo thành lỗi và cấu hình CI. |
+| `.github/workflows/ci.yml` | Chạy kiểm tra kiến trúc, dữ liệu và API tự động khi push hoặc mở PR. |
 | `README.md` | Giới thiệu dự án, database, cách cấu hình tài khoản và chạy backend. |
 | `TONG_QUAN_DU_AN.md` | Tổng quan kiến trúc, chức năng, database, cách chạy và những phần chưa hoàn chỉnh. |
 | `GIAI_THICH_TUNG_FILE.md` | Tài liệu đang đọc: giải thích chức năng các file. |
@@ -42,7 +45,7 @@ Thư mục `Frontend/`:
 | `index.html` | Chứa giao diện, CSS và JavaScript: đăng nhập, nhập file, xem thống kê theo ngày và bãi, lọc danh sách lượt xe và xuất báo cáo. JavaScript dùng `fetch` gọi API và hiển thị kết quả. |
 | `README.md` | Hướng dẫn mở và sử dụng giao diện. |
 
-Backend nhúng `index.html` vào project API và phục vụ tại đường dẫn `/` khi chạy Development; không cần chạy một server frontend riêng.
+Backend nhúng `index.html` vào project API và phục vụ tại `/` khi dùng xác thực Local, kể cả Production; không cần chạy server frontend riêng.
 
 ## 4. Backend — ParkingBusinessResult.Api
 
@@ -52,19 +55,19 @@ Backend nhúng `index.html` vào project API và phục vụ tại đường d�
 
 | File | Chức năng |
 |---|---|
-| `Program.cs` | Điểm bắt đầu backend; tạo ứng dụng, gọi cấu hình và đăng ký endpoint Development, sau đó chạy web server. |
+| `Program.cs` | Điểm bắt đầu backend; đọc cấu hình, tùy chọn User Secrets, đăng ký ứng dụng và chạy web server. |
 | `ParkingBusinessResult.Api.csproj` | Khai báo project API, tham chiếu Application và Infrastructure, package JWT và tài nguyên giao diện được nhúng. |
 | `appsettings.json` | Cấu hình chung hiện có, gồm logging và host. |
 | `appsettings.Development.json` | Cấu hình logging dành cho Development. |
-| `Properties/launchSettings.json` | Các profile chạy `http` và `https`, cổng và môi trường Development. |
+| `Properties/launchSettings.json` | Các profile `http`/`https` chạy Production, cổng và tùy chọn đọc User Secrets. |
 | `Contracts/ApiResponse.cs` | Định nghĩa phong bì JSON `code`, `message`, `data` cho response của API. |
 | `Endpoint/EndpointRegistration.cs` | Nhóm và đăng ký các route; phục vụ trang `/` và route tải file báo cáo đã lưu. |
 | `Endpoint/EndpointSupport.cs` | Lấy phạm vi quyền từ thông tin người dùng và chuyển một số kết quả nghiệp vụ thành response chung. |
 | `Extensions/BusinessResultRegistration.cs` | Đăng ký các handler để endpoint có thể nhận chúng qua dependency injection. |
-| `Extensions/DevelopmentSetup.cs` | Cấu hình handler, repository SQLite, bộ đọc file, tài khoản và đăng ký API trong Development. |
-| `Extensions/DevelopmentAuthentication.cs` | Cấu hình JWT, các chính sách quyền và giới hạn số lần đăng nhập trong Development. |
-| `Extensions/DevelopmentCredentials.cs` | Băm/kiểm tra mật khẩu và phát hành JWT cho tài khoản Development. |
-| `Middlewares/.gitkeep` | Giữ thư mục `Middlewares` rỗng trong Git; không có logic chạy. |
+| `Extensions/ApplicationSetup.cs` | Cấu hình repository đọc/ghi, reader/writer file, health, middleware và đăng ký API ở mọi môi trường. |
+| `Extensions/AuthenticationSetup.cs` | Cấu hình JWT Local hoặc Authority, chính sách quyền và giới hạn đăng nhập. |
+| `Extensions/LocalCredentials.cs` | Băm/kiểm tra mật khẩu và phát hành JWT cho tài khoản Local, dùng cả Production. |
+| `Middlewares/ApiExceptionMiddleware.cs` | Xử lý lỗi tập trung, không lộ chi tiết nội bộ; gắn request ID và ghi log thời gian. |
 
 ### 4.2. Endpoint kết quả kinh doanh
 
@@ -88,7 +91,8 @@ Thư mục `Endpoint/BusinessReports/`:
 |---|---|
 | `ListBusinessReportEndpoint.cs` | Nhận bộ lọc và phân trang, trả danh sách báo cáo với thông tin bãi, đơn vị quản lý và audit. |
 | `GetBusinessReportSummaryEndpoint.cs` | Nhận yêu cầu thống kê tổng hợp theo kỳ/bãi và gọi query handler. |
-| `ExportBusinessReportEndpoint.cs` | Kiểm tra quyền, lấy số liệu, tạo Excel/PDF, lưu file và trả JSON có thông tin file cùng URL tải. |
+| `ExportBusinessReportEndpoint.cs` | Kiểm tra request/quyền, gọi Command xuất báo cáo và trả metadata cùng URL tải. |
+| `DownloadBusinessReportEndpoint.cs` | Gọi Query tìm báo cáo thuộc tài khoản đăng nhập rồi trả file. |
 
 ### 4.4. Endpoint lượt xe
 
@@ -104,14 +108,14 @@ Thư mục `Endpoint/ParkingBookings/`:
 | `CompareParkingBookingTariffEndpoint.cs` | Nhận yêu cầu đối chiếu tiền một lượt xe với bảng giá theo loại ngày. |
 | `ParkingBookingPeriodParser.cs` | Chuyển tháng hoặc khoảng ngày từ request thành khoảng thời gian dùng cho thống kê/xuất. |
 
-### 4.5. Endpoint tài khoản Development
+### 4.5. Endpoint tài khoản Local
 
-Thư mục `Endpoint/DevelopmentAccounts/`:
+Thư mục `Endpoint/LocalAccounts/`:
 
 | File | Chức năng |
 |---|---|
 | `LoginEndpoint.cs` | Nhận tên đăng nhập/mật khẩu và trả token khi thông tin hợp lệ. |
-| `CreateAccountEndpoint.cs` | Nhận yêu cầu tạo tài khoản Development; có kiểm tra quyền. |
+| `CreateAccountEndpoint.cs` | Nhận yêu cầu tạo tài khoản Local; chỉ admin được thực hiện. |
 
 ## 5. Backend — ParkingBusinessResult.Application
 
@@ -124,7 +128,7 @@ Thư mục `Endpoint/DevelopmentAccounts/`:
 | `ParkingBusinessResult.Application.csproj` | Khai báo project Application và tham chiếu Domain. |
 | `Common/.gitkeep` | Giữ thư mục chung rỗng trong Git; không có logic chạy. |
 | `DTOs/BusinessResultRequests.cs` | Định nghĩa dữ liệu request để thêm/sửa kết quả kinh doanh. |
-| `DTOs/DevelopmentAccountRequests.cs` | Định nghĩa dữ liệu request liên quan đến đăng nhập và tạo tài khoản Development. |
+| `DTOs/LocalAccountRequests.cs` | Định nghĩa request đăng nhập và tạo tài khoản Local. |
 
 ### 5.2. Feature BusinessResults
 
@@ -164,8 +168,10 @@ Thư mục `Endpoint/DevelopmentAccounts/`:
 | `Queries/Summary/GetBusinessReportSummaryQuery.cs` | Mang điều kiện yêu cầu thống kê bản tổng hợp. |
 | `Queries/Summary/GetBusinessReportSummaryHandler.cs` | Tính tổng, bình quân, tăng trưởng khi đủ dữ liệu, top bãi và nhóm địa bàn từ bản tổng hợp. |
 | `Queries/Summary/BusinessReportSummary.cs` | Định nghĩa cấu trúc response tổng hợp, top bãi và doanh thu theo địa bàn. |
-| `Queries/Export/ExportBusinessReportQuery.cs` | Mang điều kiện lấy dữ liệu xuất báo cáo tổng hợp. |
-| `Queries/Export/ExportBusinessReportHandler.cs` | Lấy các bản tổng hợp phù hợp để endpoint chuyển thành file. |
+| `Commands/Export/ExportBusinessReportCommand.cs` | Mang điều kiện và người xuất báo cáo tổng hợp có lưu file. |
+| `Commands/Export/ExportBusinessReportHandler.cs` | Lấy số liệu, dùng interface tạo/lưu file và trả metadata; không phụ thuộc thư viện Excel/PDF. |
+| `Common/ReportDocuments.cs` | Kiểu nội dung/metadata file, người xuất và interface tạo/lưu/tải báo cáo. |
+| `Queries/Download/DownloadBusinessReportQuery.cs` | Query và handler tìm file báo cáo thuộc issuer/subject hiện tại. |
 
 ### 5.4. Feature ParkingBookings
 
@@ -189,21 +195,21 @@ Thư mục `Endpoint/DevelopmentAccounts/`:
 | `Queries/CompareTariff/CompareParkingBookingTariffQuery.cs` | Mang ID lượt xe, loại ngày và quyền cho yêu cầu đối chiếu. |
 | `Queries/CompareTariff/CompareParkingBookingTariffHandler.cs` | Áp dụng các điều kiện hỗ trợ, tính giá dự kiến và so với tiền thực thu nếu đủ dữ liệu. |
 
-### 5.5. Feature DevelopmentAccounts
+### 5.5. Feature LocalAccounts
 
-Đường dẫn gốc: `Features/DevelopmentAccounts/`:
+Đường dẫn gốc: `Features/LocalAccounts/`:
 
 | File | Chức năng |
 |---|---|
 | `Commands/Bootstrap/BootstrapAdministratorCommand.cs` | Mang thông tin cấu hình để khởi tạo tài khoản quản trị đầu tiên. |
 | `Commands/Bootstrap/BootstrapAdministratorHandler.cs` | Chuẩn bị kho tài khoản và tạo admin đầu tiên nếu phù hợp. |
 | `Commands/Create/CreateAccountCommand.cs` | Mang dữ liệu cho yêu cầu tạo tài khoản. |
-| `Commands/Create/CreateAccountHandler.cs` | Kiểm tra dữ liệu, băm mật khẩu và yêu cầu lưu tài khoản Development. |
+| `Commands/Create/CreateAccountHandler.cs` | Kiểm tra dữ liệu, băm mật khẩu và yêu cầu lưu tài khoản Local. |
 | `Commands/SignIn/SignInCommand.cs` | Mang tên đăng nhập và mật khẩu cho yêu cầu đăng nhập. |
 | `Commands/SignIn/SignInHandler.cs` | Tìm tài khoản, kiểm tra mật khẩu và yêu cầu phát hành token. |
-| `Common/DevelopmentAccount.cs` | Kiểu dữ liệu tài khoản Development, bao gồm vai trò và bãi được gán. |
-| `Common/IDevelopmentAccountRepository.cs` | Hợp đồng lưu và tìm tài khoản Development. |
-| `Common/IDevelopmentCredentials.cs` | Hợp đồng băm/kiểm tra mật khẩu và phát hành token. |
+| `Common/LocalAccount.cs` | Kiểu dữ liệu tài khoản Local, bao gồm vai trò và bãi được gán. |
+| `Common/ILocalAccountRepository.cs` | Hợp đồng lưu và tìm tài khoản Local. |
+| `Common/ILocalCredentials.cs` | Hợp đồng băm/kiểm tra mật khẩu và phát hành token. |
 
 ## 6. Backend — ParkingBusinessResult.Domain
 
@@ -229,15 +235,17 @@ Thư mục `Endpoint/DevelopmentAccounts/`:
 | `Repositories/SqliteBusinessResultRepository.cs` | Đọc/ghi kết quả kinh doanh tổng hợp trong SQLite, gồm xóa mềm và kiểm tra dữ liệu liên quan. |
 | `Repositories/SqliteBusinessReportParkingLotSearch.cs` | Tìm bãi hoặc lấy thông tin bãi phục vụ danh sách và báo cáo. |
 | `Repositories/SqliteBusinessReportMetadataReader.cs` | Ghép dữ liệu kết quả kinh doanh với bãi, đơn vị quản lý và thông tin audit để trả danh sách báo cáo. |
-| `Repositories/SqliteParkingBookingImportRepository.cs` | Đọc/ghi lượt xe trong bảng booking; cung cấp dữ liệu cho import, danh sách và thống kê. |
+| `Repositories/SqliteParkingBookingImportRepository.cs` | Mở session import, kiểm tra bãi và ghi các dòng hợp lệ trong một giao dịch; rollback nếu lỗi hoặc hủy. |
+| `Repositories/SqliteParkingBookingQueryRepository.cs` | Chỉ đọc booking: lọc quyền, lọc nhiều tiêu chí, đếm/phân trang bằng SQL và lấy dữ liệu thống kê đúng phạm vi. |
 | `Repositories/SqliteParkingBookingTariffRepository.cs` | Lấy thông tin lượt xe và các quy tắc giá liên quan để đối chiếu. |
 | `Repositories/ExcelParkingBookingSpreadsheetReader.cs` | Đọc file `.xlsx`, `.xls`, `.csv`, kiểm tra tiêu đề và chuyển dữ liệu thành các dòng import. |
-| `Repositories/SqliteDevelopmentAccountRepository.cs` | Tạo kho tài khoản Development và thực hiện lưu/tìm tài khoản trong SQLite. |
+| `Repositories/SqliteLocalAccountRepository.cs` | Lưu/tìm tài khoản Local trong bảng `dev_auth_users` cũ để giữ tài khoản hiện có; hoạt động cả Production. |
 | `Repositories/InMemoryBusinessResultRepository.cs` | Cài đặt repository lưu tạm trong bộ nhớ; được dùng trong kiểm tra, không phải kho SQLite đang cấu hình cho API. |
 | `Reports/BusinessReportExcelWriter.cs` | Tạo nội dung file báo cáo Excel từ các dòng kết quả. |
 | `Reports/BusinessReportPdfWriter.cs` | Tạo nội dung file báo cáo PDF từ các dòng kết quả; bản hiện tại cần Windows. |
-| `Reports/BusinessReportExportStore.cs` | Lưu file báo cáo tổng hợp và tìm file thuộc người đã xuất; lấy tên tài khoản Development để trả metadata. |
-| `Data/.gitkeep` | Giữ thư mục dự phòng `Data`; không có logic chạy. |
+| `Reports/BusinessReportExportStore.cs` | Ghi file tạm rồi đổi tên, tạo metadata; chỉ cho chủ sở hữu issuer/subject tải lại. |
+| `Reports/BusinessReportDocumentWriter.cs` | Chọn bộ tạo Excel/PDF và trả nội dung qua hợp đồng Application. |
+| `Data/SqliteStorageProbe.cs` | Kiểm tra database đọc được và có ba bảng lõi cho readiness. |
 | `EntityConfigs/.gitkeep` | Giữ thư mục dự phòng `EntityConfigs`; hiện chưa dùng EF Core configuration. |
 
 ## 8. Database và dữ liệu mẫu
@@ -275,6 +283,7 @@ Thư mục `docs/`:
 | File | Chức năng |
 |---|---|
 | `API_CONTRACT_REVIEW.md` | Đối chiếu các API hiện tại với đặc tả và ghi lại các chỗ chưa khớp. |
+| `ENTERPRISE_DEPLOYMENT.md` | Giải thích luồng kiến trúc, giao dịch import, chế độ Local/Authority, cách triển khai Production và các giới hạn đã biết. |
 | `DEVELOPMENT_BUSINESS_REPORTS.md` | Hướng dẫn gọi API danh sách, tổng hợp và xuất bản báo cáo kinh doanh. |
 | `DEVELOPMENT_PARKING_DATA.md` | Giải thích dữ liệu bãi, bảng giá và lượt giả lập dùng trong Development. |
 | `PARKING_BOOKING_IMPORT_DESIGN.md` | Hướng dẫn cấu trúc file nhập, bảng booking, thống kê và các giới hạn hiện tại. |
@@ -283,7 +292,7 @@ Thư mục `postman/`:
 
 | File | Chức năng |
 |---|---|
-| `ParkingBusinessResult.postman_collection.json` | Collection gọi các API kết quả kinh doanh và tài khoản Development. |
+| `ParkingBusinessResult.postman_collection.json` | Collection gọi API kết quả kinh doanh và đăng nhập Local qua `/auth/login`. |
 | `ParkingBookings.postman_collection.json` | Collection gọi API import, danh sách, thống kê và đối chiếu lượt xe. |
 | `README.md` | Hướng dẫn cấu hình và sử dụng các collection. |
 | `seed-demo-parking-lot.sql` | SQL tạo dữ liệu bãi mẫu phục vụ Postman. |
@@ -297,6 +306,11 @@ Thư mục `tests/` không phải giao diện hay chức năng nghiệp vụ ch�
 |---|---|
 | `RevenueMetrics.Checks/RevenueMetrics.Checks.csproj` | Khai báo project kiểm tra quy tắc tính và repository. |
 | `RevenueMetrics.Checks/Program.cs` | Chạy các kiểm tra quy tắc doanh thu, dữ liệu và repository liên quan. |
+| `Enterprise.Checks/Enterprise.Checks.csproj` và `Program.cs` | Kiểm tra rollback/hủy import, audit, phân trang, phạm vi bãi và quyền sở hữu file trên dữ liệu tạm. |
+| `runtime_checks.ps1` | Chạy host thật trên database tạm: lỗi JSON, lỗi storage, request ID, readiness, UI/đăng nhập/API Production và chế độ Authority. |
+| `test_architecture.py` | Chặn tham chiếu sai chiều, Endpoint gọi Infrastructure và thư viện công nghệ trong Domain/Application. |
+| `TestRuntime.ps1` | Chọn Python theo cấu hình hoặc PATH để bài kiểm tra không phụ thuộc riêng máy hiện tại. |
+| `requirements.txt` | Khóa phiên bản thư viện Python dùng tạo/đọc file khi kiểm tra. |
 | `prepare_sqlite_fixture.py` | Tạo database SQLite nền cho các bài kiểm tra. |
 | `sqlite_schema_checks.py` | Kiểm tra cấu trúc SQLite và các ràng buộc liên quan. |
 | `test_sqlite_migration.py` | Kiểm tra migration bổ sung các bảng tham chiếu. |
@@ -335,5 +349,5 @@ Phần thống kê đi tương tự nhưng dùng **Query**: `GetParkingBookingSu
 - Database cục bộ đã chuyển lượt xe sang `SP_datTruocChoDoXe`; API ở dự án khác chỉ thấy dữ liệu khi cùng dùng database tương ứng.
 - Thời gian kết thúc trong bảng booking được phép trống cho xe chưa ra, dù sheet Excel đánh dấu trường này bắt buộc.
 - Lượt xe trong bảng booking và kết quả đã tổng hợp trong `SP_ketQuaKinhDoanhBaiDoXe` chưa tự đồng bộ với nhau.
-- API, tài khoản và phân quyền hiện dùng cấu hình Development; một số body/response/quyền còn cần đối chiếu ApiSpec/LLD.
+- API và đăng nhập Local chạy Production; SSO và chính sách quyền hệ thống chung chưa xác minh. Một số body/response còn khác tài liệu gốc theo bảng đối chiếu hợp đồng.
 - Tăng trưởng, doanh thu và đối chiếu giá chỉ có ý nghĩa khi dữ liệu đầu vào và quy tắc cần thiết đã đầy đủ; số liệu giả lập không phải dữ liệu vận hành thực tế.

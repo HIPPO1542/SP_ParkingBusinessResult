@@ -7,9 +7,13 @@ public sealed class ImportParkingBookingsHandler(IParkingBookingSpreadsheetReade
 {
     private static readonly string[] DateFormats = ["yyyy-MM-dd HH:mm", "yyyy-MM-dd HH:mm:ss", "dd/MM/yyyy HH:mm", "dd/MM/yyyy HH:mm:ss"];
 
-    public ParkingBookingImportResult Handle(ImportParkingBookingsCommand command)
+    public ParkingBookingImportResult Handle(ImportParkingBookingsCommand command, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<ParkingBookingRow> rows = reader.Read(command.Content, command.Extension);
+        // A file is one import batch: row validation errors are reported, but a storage failure rolls back all valid rows.
+        using IParkingBookingImportSession session = repository.BeginImport();
+        var parkingLots = new Dictionary<string, Guid?>(StringComparer.OrdinalIgnoreCase);
         var errors = new List<ParkingBookingImportError>();
         var importedIds = new List<Guid>();
         var importedRows = new List<ParkingBookingImportedRow>();
@@ -17,9 +21,15 @@ public sealed class ImportParkingBookingsHandler(IParkingBookingSpreadsheetReade
         int duplicates = 0;
         foreach (ParkingBookingRow row in rows)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string?[] fields = row.Cells;
             string? parkingLotCode = string.IsNullOrWhiteSpace(fields[0]) ? null : fields[0]!.Trim();
-            Guid? lotId = parkingLotCode is null ? null : repository.FindAccessibleParkingLot(parkingLotCode, command.Access);
+            Guid? lotId = null;
+            if (parkingLotCode is not null && !parkingLots.TryGetValue(parkingLotCode, out lotId))
+            {
+                lotId = session.FindAccessibleParkingLot(parkingLotCode, command.Access);
+                parkingLots.Add(parkingLotCode, lotId);
+            }
             string plate = fields[1]?.Trim().ToUpperInvariant() ?? "";
             string type = fields[2]?.Trim() ?? "";
             if (lotId is null || plate.Length is 0 or > 30 || type.Length is 0 or > 100 ||
@@ -48,7 +58,7 @@ public sealed class ImportParkingBookingsHandler(IParkingBookingSpreadsheetReade
                 }
                 amount = parsedAmount;
             }
-            ParkingBookingSaved? saved = repository.TryInsert(new ParkingBookingInput(lotId.Value, plate, type, entered, exited, amount));
+            ParkingBookingSaved? saved = session.TryInsert(new ParkingBookingInput(lotId.Value, plate, type, entered, exited, amount), command.UserId, command.Username);
             if (saved is null)
             {
                 duplicates++;
@@ -59,6 +69,8 @@ public sealed class ImportParkingBookingsHandler(IParkingBookingSpreadsheetReade
             importedRows.Add(new(row.RowNumber, parkingLotCode!, saved));
             success++;
         }
+        cancellationToken.ThrowIfCancellationRequested();
+        session.Commit();
         return new(rows.Count, success, errors.Count, importedIds, errors, duplicates, importedRows);
     }
 

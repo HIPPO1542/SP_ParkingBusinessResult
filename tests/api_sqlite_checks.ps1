@@ -2,8 +2,9 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $databasePath = Join-Path ([System.IO.Path]::GetTempPath()) ("parking-api-" + [guid]::NewGuid().ToString('N') + '.db')
 $fixturePath = Join-Path $repositoryRoot 'tests/prepare_sqlite_fixture.py'
-$apiPath = Join-Path $repositoryRoot 'Backend/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll'
-$pythonPath = Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'
+$apiPath = if ($env:PARKING_API_DLL) { $env:PARKING_API_DLL } else { Join-Path $repositoryRoot 'Backend/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll' }
+. (Join-Path $PSScriptRoot 'TestRuntime.ps1')
+$pythonPath = Resolve-ParkingPython
 $previousEnvironment = $env:ASPNETCORE_ENVIRONMENT
 $previousDatabasePath = $env:ParkingBusinessResult__DatabasePath
 $previousIssuer = $env:Authentication__Issuer
@@ -53,7 +54,7 @@ try {
     if (-not $ready) { throw 'API did not start.' }
 
     if ($unauthenticated.code -ne 7) { throw 'An unauthenticated request was accepted.' }
-    $authBaseUrl = "http://127.0.0.1:$port/dev/auth"
+    $authBaseUrl = "http://127.0.0.1:$port/auth"
     $incorrectLogin = @{ username = 'test-admin'; password = 'incorrect-password' } | ConvertTo-Json
     if ((Invoke-RestMethod -Method Post -Uri "$authBaseUrl/login" -ContentType 'application/json' -Body $incorrectLogin).code -ne 7) { throw 'Incorrect credentials were accepted.' }
     $adminLogin = @{ username = 'test-admin'; password = 'test-admin-password-only' } | ConvertTo-Json
@@ -99,6 +100,8 @@ try {
     if ($loaded.code -ne 0 -or $loaded.data.completedVehicleCount -ne 3) { throw 'Read failed.' }
     $deleted = Invoke-RestMethod -Method Delete -Uri "$baseUrl/$id" -Headers $headers
     if ($deleted.code -ne 0) { throw 'Delete failed.' }
+    & $pythonPath -c "import sqlite3,sys; row=sqlite3.connect(sys.argv[1]).execute('SELECT idNguoiTao,idNguoiCapNhat,nguoiTao,nguoiCapNhat,ngayTao,ngayCapNhat FROM SP_ketQuaKinhDoanhBaiDoXe WHERE id=?',(sys.argv[2],)).fetchone(); assert row and row[0] and row[0]==row[1] and row[2:4]==('test-admin','test-admin') and row[4] and row[5], 'Authenticated actor audit was not persisted'" $databasePath $id
+    if ($LASTEXITCODE -ne 0) { throw 'CRUD audit check failed.' }
     $missing = Invoke-RestMethod -Uri "$baseUrl/$id" -Headers $headers
     if ($missing.code -ne 7) { throw 'Deleted record still exists.' }
     $null = Invoke-RestMethod -Method Post -Uri "$authBaseUrl/login" -ContentType 'application/json' -Body $incorrectLogin

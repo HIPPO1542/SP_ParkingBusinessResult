@@ -8,7 +8,7 @@ public sealed class DeleteBusinessResultHandler(IBusinessResultRepository reposi
     public BusinessResultOutcome<ParkingBusinessResultRecord> Handle(DeleteBusinessResultCommand command)
     {
         ParkingBusinessResultRecord? result = repository.FindById(command.Id);
-        if (result is null || !command.Access.CanAccess(result.ParkingLotId) || !repository.TrySoftDelete(command.Id))
+        if (result is null || !command.Access.CanAccess(result.ParkingLotId) || !repository.TrySoftDelete(command.Id, command.Actor))
             return BusinessResultOutcome<ParkingBusinessResultRecord>.Failure("Không tìm thấy kết quả kinh doanh.");
 
         return BusinessResultOutcome<ParkingBusinessResultRecord>.Success(result);

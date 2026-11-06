@@ -6,7 +6,7 @@
 
 **Quy tắc đã thống nhất:** một lượt hoàn tất là một xe đã vào rồi ra. Xe chưa có giờ ra vẫn đang trong bãi và chưa được tính là lượt hoàn tất. Doanh thu từ lượt xe dùng **số tiền thực thu trong file**; bảng giá dùng để đối chiếu.
 
-> Trạng thái hiện tại: các API và tài khoản mới dành cho **Development**. Route nghiệp vụ chính đã theo ví dụ trong tài liệu, nhưng body, response, phân quyền và một số chức năng chưa khớp đầy đủ ApiSpec/LLD. Xem [bảng đối chiếu](docs/API_CONTRACT_REVIEW.md).
+> API, giao diện và đăng nhập Local chạy được ở **Production** bằng `.\start.ps1`; dùng lại database và tài khoản đã có. Cấu hình F5 cũng chạy Production. Xem [kiến trúc và triển khai](docs/ENTERPRISE_DEPLOYMENT.md), cùng [các khác biệt hợp đồng còn lại](docs/API_CONTRACT_REVIEW.md).
 
 ## 2. Công nghệ và cấu trúc
 
@@ -30,9 +30,9 @@ SP_ParkingBusinessResult/
 │   │   │   ├── BusinessResults/      # Thêm, sửa, xóa, xem kết quả
 │   │   │   ├── BusinessReports/      # Danh sách, tổng hợp, xuất báo cáo tổng hợp
 │   │   │   ├── ParkingBookings/        # Import, xem, thống kê, xuất, đối chiếu lượt xe
-│   │   │   └── DevelopmentAccounts/  # Đăng nhập, tạo tài khoản thử nghiệm
+│   │   │   └── LocalAccounts/         # Đăng nhập, tạo tài khoản Local
 │   │   ├── Extensions/               # Đăng ký handler, repository và xác thực
-│   │   ├── Middlewares/              # Thư mục dự phòng, hiện chưa có middleware riêng
+│   │   ├── Middlewares/              # Xử lý lỗi, request ID và log
 │   │   └── Program.cs               # Khởi tạo ứng dụng
 │   │
 │   ├── ParkingBusinessResult.Application/
@@ -40,9 +40,9 @@ SP_ParkingBusinessResult/
 │   │   ├── DTOs/                     # Các request hiện có
 │   │   └── Features/
 │   │       ├── BusinessResults/      # Commands, Queries, Common của kết quả kinh doanh
-│   │       ├── BusinessReports/      # Queries và Common của báo cáo tổng hợp
+│   │       ├── BusinessReports/      # Commands, Queries và Common của báo cáo tổng hợp
 │   │       ├── ParkingBookings/        # Import và các query theo từng lượt xe
-│   │       └── DevelopmentAccounts/  # Commands và Common của tài khoản thử nghiệm
+│   │       └── LocalAccounts/         # Commands và Common của tài khoản Local
 │   │
 │   ├── ParkingBusinessResult.Domain/
 │   │   ├── Common/                   # Quy tắc tính dùng trong miền
@@ -55,7 +55,7 @@ SP_ParkingBusinessResult/
 │   └── ParkingBusinessResult.Infrastructure/
 │       ├── Repositories/             # Đọc/ghi SQLite, đọc file Excel/CSV
 │       ├── Reports/                  # Tạo file Excel và PDF
-│       ├── Data/                     # Hiện là thư mục dự phòng
+│       ├── Data/                     # Probe kiểm tra storage cho readiness
 │       └── EntityConfigs/            # Hiện là thư mục dự phòng
 │
 ├── database/sqlite/                  # SQL, migration và script tạo dữ liệu mẫu
@@ -92,14 +92,14 @@ Import thêm xe vào `SP_datTruocChoDoXe` sẽ thay đổi thống kê của `pa
 
 ## 4. Các chức năng đã làm
 
-### 4.1. Đăng nhập và phân quyền thử nghiệm
+### 4.1. Đăng nhập và phân quyền
 
-- Đăng nhập bằng tài khoản cục bộ qua `POST /dev/auth/login`; thành công trả JWT có hiệu lực 30 phút.
-- Quản trị viên có thể tạo tài khoản thử nghiệm qua `POST /dev/auth/users`.
-- `ROLE_ADMIN` có thể truy cập tất cả bãi trong môi trường thử nghiệm. `ROLE_DISTRICT_ADMIN` và `ROLE_PARKING_OPERATOR` chỉ truy cập bãi được gán cho tài khoản; mỗi tài khoản cục bộ hiện gán tối đa một bãi.
+- Đăng nhập bằng tài khoản cục bộ qua `POST /auth/login`; thành công trả JWT có hiệu lực 30 phút.
+- Quản trị viên có thể tạo tài khoản Local qua `POST /auth/users`.
+- `ROLE_ADMIN` truy cập tất cả bãi. `ROLE_DISTRICT_ADMIN` và `ROLE_PARKING_OPERATOR` chỉ truy cập bãi được gán; mỗi tài khoản Local hiện gán tối đa một bãi.
 - Xuất báo cáo chỉ cho `ROLE_ADMIN` hoặc `ROLE_DISTRICT_ADMIN`, trong phạm vi bãi được phép.
 
-Đây là cơ chế Development, chưa phải hệ thống xác thực và phân quyền chính thức của nhóm.
+Local JWT chạy Production cho ứng dụng độc lập. Khi nhóm tích hợp hệ thống chung có thể chọn Authority; SSO và ánh xạ vai trò cần kiểm tra với môi trường thực của nhóm.
 
 ### 4.2. Quản lý kết quả kinh doanh đã tổng hợp — UC 1.5
 
@@ -204,7 +204,7 @@ Database phát triển nằm ở `database/sqlite/parking_business_result.db`; f
 | `SP_apDungKhungGia` | Thông tin áp dụng khung giá cho bãi. |
 | `SP_datTruocChoDoXe` | Bảng booking theo Excel, dùng lưu các lượt xe vào/ra và số tiền đã thu. |
 | `dev_parking_sessions` | Lượt xe **giả lập** chỉ dùng phát triển, không phải dữ liệu vận hành. |
-| `dev_auth_users` | Tài khoản và mật khẩu băm phục vụ Development. |
+| `dev_auth_users` | Tài khoản Local và mật khẩu băm; giữ tên bảng cũ để bảo toàn tài khoản, dùng cả Production. |
 
 Script dữ liệu mẫu tạo 5 bãi, mỗi bãi có 50 lượt giả lập: 30 lượt hoàn tất và 20 lượt đang trong bãi tại thời điểm tạo. Đây là **dữ liệu minh họa**, không phải biển số, giá hoặc số liệu thực tế. Chi tiết ở [DEVELOPMENT_PARKING_DATA.md](docs/DEVELOPMENT_PARKING_DATA.md); phần mô tả chức năng tại cuối file đó có thể cũ, hãy dùng tài liệu này và mã hiện tại để xem trạng thái API.
 
@@ -213,12 +213,11 @@ Các script migration nằm trong `database/sqlite/`. `migrate_visits_to_booking
 ## 6. Chạy và kiểm thử
 
 1. Cài .NET 10 SDK và chuẩn bị SQLite theo hướng dẫn trong [README.md](README.md).
-2. Cấu hình issuer, audience, khóa ký JWT và tài khoản quản trị Development bằng biến môi trường như phần **Tài khoản cục bộ cho Development** trong README. Không đưa mật khẩu hoặc khóa thật vào Git.
+2. Máy đã cấu hình dùng lại User Secrets, database và tài khoản đã có. Máy mới cấu hình issuer, audience, khóa ký và bootstrap theo README; không đưa bí mật vào Git.
 3. Chạy:
 
    ```powershell
-   dotnet build SP_ParkingBusinessResult.sln
-   dotnet run --project Backend/ParkingBusinessResult.Api
+   .\start.ps1
    ```
 
 4. Import [collection kết quả kinh doanh](postman/ParkingBusinessResult.postman_collection.json) hoặc [collection lượt xe](postman/ParkingBookings.postman_collection.json) vào Postman. Cách cấu hình biến, đăng nhập và chọn file nằm ở [postman/README.md](postman/README.md).
@@ -235,7 +234,7 @@ Các bài kiểm tra HTTP này dùng database tạm. Kiểm thử XLS cần côn
 
 ## 7. Những phần chưa hoàn chỉnh
 
-- API chỉ được đăng ký ở Development; cơ chế định danh, phân quyền và cấu hình production chưa tích hợp.
+- Local JWT chạy được ở Production; SSO là tùy chọn, chưa kiểm tra với IdP thực của nhóm. Chính sách vai trò cần được đồng bộ khi tích hợp hệ thống chung.
 - Body/response của một số API chưa khớp ApiSpec. Import từng lượt xe là yêu cầu mới, trong khi tài liệu gốc mô tả file số liệu tổng hợp.
 - Hai nguồn báo cáo chưa được tự đồng bộ; không nên cộng chúng với nhau. Một số bộ lọc và chỉ số của API tổng hợp cũ còn thiếu.
 - Chưa có nguồn dữ liệu chính thức đầy đủ cho chi phí vận hành và tỷ lệ lấp đầy; chưa thể coi các chỉ số đó là đã làm.

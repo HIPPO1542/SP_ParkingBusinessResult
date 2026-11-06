@@ -1,6 +1,6 @@
 # Phương án nhập từng lượt xe từ Excel
 
-Trạng thái: có API import và thống kê lượt xe **Development**. File gồm mã bãi, biển số, loại xe, giờ vào, giờ ra và số tiền đã thu. File [mẫu cũ](../outputs/parking-import/mau-luot-xe.xlsx) có thêm cột phương thức thanh toán vẫn được đọc, nhưng cột này không được lưu. Giờ vào/ra gồm cả ngày, tháng, năm, giờ và phút; giờ ra để trống khi xe còn trong bãi.
+API import và thống kê lượt xe được đăng ký ở mọi môi trường; xác thực ngoài Development dùng hệ thống định danh của nhóm. Xem [cấu hình triển khai](ENTERPRISE_DEPLOYMENT.md). File gồm mã bãi, biển số, loại xe, giờ vào, giờ ra và số tiền đã thu. File [mẫu cũ](../outputs/parking-import/mau-luot-xe.xlsx) có thêm cột phương thức thanh toán vẫn được đọc, nhưng cột này không được lưu. Giờ vào/ra gồm cả ngày, tháng, năm, giờ và phút; giờ ra để trống khi xe còn trong bãi.
 
 Đã xác nhận với người dùng:
 
@@ -10,7 +10,7 @@ Trạng thái: có API import và thống kê lượt xe **Development**. File g
 
 Lưu vào bảng SQLite `SP_datTruocChoDoXe` theo 16 cột của sheet `SP_ParkingBooking`: `thoiGianBatDau` là giờ vào, `thoiGianKetThuc` là giờ ra và `tongTien` là số tiền đã thu theo xác nhận của người dùng. Mỗi dòng import là một lượt xe và ghi `soLuongChoDat = 1`; trạng thái dùng mặc định `CONFIRMED` theo Excel. Giờ ra cho phép để trống để lưu xe chưa rời bãi, dù Excel đánh dấu trường này bắt buộc. Phương thức thanh toán không được quản lý. Bảng `dev_parking_sessions` chỉ chứa dữ liệu giả lập.
 
-Migration `database/sqlite/migrate_visits_to_booking.py` tạo bản sao lưu, chuyển các lượt từ `parking_visit` và kiểm tra dữ liệu trước khi xóa bảng cũ; thông tin phương thức thanh toán cũ chỉ còn trong bản sao lưu. API kiểm tra từng dòng, quyền đối với bãi, thời điểm ra sau thời điểm vào và báo rõ các dòng lỗi. Khi nhập trùng, dữ liệu lượt đã lưu không thay đổi. Các dòng hợp lệ được lưu, dòng lỗi được trả về riêng; lỗi hệ thống trong lúc ghi có thể dừng yêu cầu sau khi một số dòng đã được lưu.
+Migration `database/sqlite/migrate_visits_to_booking.py` tạo bản sao lưu, chuyển các lượt từ `parking_visit` và kiểm tra dữ liệu trước khi xóa bảng cũ; thông tin phương thức thanh toán cũ chỉ còn trong bản sao lưu. API kiểm tra từng dòng, quyền đối với bãi, thời điểm ra sau thời điểm vào và báo rõ các dòng lỗi. Khi nhập trùng, dữ liệu lượt đã lưu không thay đổi. Các dòng hợp lệ trong một file được ghi chung một giao dịch, dòng sai nghiệp vụ trả về riêng. Lỗi lưu trữ hoặc hủy yêu cầu trước commit làm rollback toàn bộ phần đang ghi. Đây là giao dịch batch import có chủ đích; đọc file hoàn tất trước khi mở giao dịch. Thông tin audit lấy từ người đăng nhập và lưu vào các cột sẵn có.
 
 Gửi multipart `POST /gdci/parking/parkingLot/businessOperation/import`, trường file tên `file`, với Bearer token. Hỗ trợ `.xlsx`, `.xls`, `.csv` tối đa 10 MB và tối đa 50.000 dòng dữ liệu; cột phải đúng file mẫu. Giờ nhập dạng `yyyy-MM-dd HH:mm` hoặc `dd/MM/yyyy HH:mm`, hoặc ô ngày giờ thực của Excel. Không nhập dấu phân cách hàng nghìn trong ô văn bản tiền. Kết quả trả số dòng thành công, ID và dữ liệu các lượt đã lưu, số dòng trùng và danh sách dòng lỗi. Dòng trùng bao gồm lượt đã có trong database hoặc lặp lại trong cùng file; dòng trùng được tính vào số lỗi, không tính vào số thành công.
 

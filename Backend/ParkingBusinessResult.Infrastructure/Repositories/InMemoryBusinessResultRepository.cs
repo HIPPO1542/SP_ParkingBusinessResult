@@ -9,7 +9,7 @@ public sealed class InMemoryBusinessResultRepository : IBusinessResultRepository
     private readonly Dictionary<Guid, ParkingBusinessResultRecord> records = new();
     private readonly HashSet<Guid> deletedIds = new();
 
-    public bool TryAdd(ParkingBusinessResultRecord businessResult)
+    public bool TryAdd(ParkingBusinessResultRecord businessResult, AuditActor? actor = null)
     {
         ArgumentNullException.ThrowIfNull(businessResult);
         lock (sync)
@@ -44,7 +44,7 @@ public sealed class InMemoryBusinessResultRepository : IBusinessResultRepository
         }
     }
 
-    public bool TryUpdate(Guid id, decimal revenue, int completedVehicleCount, string? note)
+    public bool TryUpdate(Guid id, decimal revenue, int completedVehicleCount, string? note, AuditActor? actor = null)
     {
         lock (sync)
         {
@@ -58,7 +58,7 @@ public sealed class InMemoryBusinessResultRepository : IBusinessResultRepository
         }
     }
 
-    public bool TrySoftDelete(Guid id)
+    public bool TrySoftDelete(Guid id, AuditActor? actor = null)
     {
         lock (sync)
         {

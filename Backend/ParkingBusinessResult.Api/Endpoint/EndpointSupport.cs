@@ -2,11 +2,22 @@ using System.Security.Claims;
 using ParkingBusinessResult.Api.Contracts;
 using ParkingBusinessResult.Application.Features.BusinessResults.Common;
 using ParkingBusinessResult.Domain;
+using ParkingBusinessResult.Application.Features.BusinessReports.Common;
 
 namespace ParkingBusinessResult.Api.Endpoint;
 
 internal static class EndpointSupport
 {
+    public static AuditActor GetAuditActor(ClaimsPrincipal user)
+    {
+        ReportActor actor = GetReportActor(user);
+        return new(actor.Id, actor.Name);
+    }
+
+    public static ReportActor GetReportActor(ClaimsPrincipal user) => new(
+        user.FindFirst("sub")?.Value ?? throw new InvalidOperationException("Missing authenticated subject."),
+        user.FindFirst("preferred_username")?.Value ?? user.FindFirst("unique_name")?.Value ?? user.FindFirst("name")?.Value,
+        user.FindFirst("iss")?.Value);
     public static BusinessAccess GetAccess(ClaimsPrincipal user)
     {
         var parkingLotIds = new HashSet<Guid>();

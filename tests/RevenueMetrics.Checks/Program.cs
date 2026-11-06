@@ -116,7 +116,7 @@ try
 
     var sqliteRepository = new SqliteBusinessResultRepository(databasePath);
     var persistentResult = new ParkingBusinessResultRecord(Guid.NewGuid(), testLotId, "2026-10", 123.45m, 4, "Test");
-    if (!sqliteRepository.TryAdd(persistentResult) || sqliteRepository.TryAdd(persistentResult))
+    if (!sqliteRepository.TryAdd(persistentResult, new("creator", "Creator")) || sqliteRepository.TryAdd(persistentResult))
     {
         throw new InvalidOperationException("SQLite insert or duplicate detection failed.");
     }
@@ -124,9 +124,9 @@ try
     var reopenedRepository = new SqliteBusinessResultRepository(databasePath);
     if (reopenedRepository.FindById(persistentResult.Id)?.Revenue != 123.45m ||
         reopenedRepository.List().Count != 1 ||
-        !reopenedRepository.TryUpdate(persistentResult.Id, 500m, 5, null) ||
+        !reopenedRepository.TryUpdate(persistentResult.Id, 500m, 5, null, new("editor", "Editor")) ||
         reopenedRepository.FindById(persistentResult.Id)?.CompletedVehicleCount != 5 ||
-        !reopenedRepository.TrySoftDelete(persistentResult.Id) ||
+        !reopenedRepository.TrySoftDelete(persistentResult.Id, new("deleter", "Deleter")) ||
         reopenedRepository.FindById(persistentResult.Id) is not null)
     {
         throw new InvalidOperationException("SQLite persistence or CRUD operations failed.");
@@ -142,11 +142,14 @@ try
     {
         connection.Open();
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "SELECT daXoa, doanhThu, soLuotXe FROM SP_ketQuaKinhDoanhBaiDoXe WHERE id = $id";
+        command.CommandText = "SELECT daXoa, doanhThu, soLuotXe, idNguoiTao, nguoiTao, idNguoiCapNhat, nguoiCapNhat, ngayTao, ngayCapNhat FROM SP_ketQuaKinhDoanhBaiDoXe WHERE id = $id";
         command.Parameters.AddWithValue("$id", persistentResult.Id.ToString());
         using SqliteDataReader reader = command.ExecuteReader();
         if (!reader.Read() || reader.GetInt32(0) != 1 || reader.GetDouble(1) != 500 || reader.GetInt32(2) != 5)
             throw new InvalidOperationException("Soft delete did not preserve the original SQLite record.");
+        if (reader.GetString(3) != "creator" || reader.GetString(4) != "Creator" || reader.GetString(5) != "deleter" ||
+            reader.GetString(6) != "Deleter" || reader.IsDBNull(7) || reader.IsDBNull(8))
+            throw new InvalidOperationException("Mutation audit did not preserve the creator and record the latest actor.");
     }
 
     if (!reopenedRepository.TryAdd(new ParkingBusinessResultRecord(Guid.NewGuid(), testLotId, "2026-10", 200m, 2, null)))

@@ -3,8 +3,9 @@ $root = Split-Path -Parent $PSScriptRoot
 $databasePath = Join-Path ([IO.Path]::GetTempPath()) ("parking-newman-" + [guid]::NewGuid().ToString('N') + '.db')
 $fixturePath = Join-Path $root 'tests/prepare_sqlite_fixture.py'
 $collectionPath = Join-Path $root 'postman/ParkingBusinessResult.postman_collection.json'
-$apiPath = Join-Path $root 'Backend/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll'
-$pythonPath = Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'
+$apiPath = if ($env:PARKING_API_DLL) { $env:PARKING_API_DLL } else { Join-Path $root 'Backend/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll' }
+. (Join-Path $PSScriptRoot 'TestRuntime.ps1')
+$pythonPath = Resolve-ParkingPython
 $lotId = '00000000-0000-4000-8000-000000000002'
 $server = $null
 
@@ -36,7 +37,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Postman collection failed.' }
 
     $loginBody = @{ username = 'postman-test-admin'; password = 'postman-test-password-only' } | ConvertTo-Json
-    $token = (Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $loginBody).data.accessToken
+    $token = (Invoke-RestMethod -Method Post -Uri "$baseUrl/auth/login" -ContentType 'application/json' -Body $loginBody).data.accessToken
     $headers = @{ Authorization = "Bearer $token" }
     $deletedId = & $pythonPath (Join-Path $root 'tests/read_postman_deleted_record.py') $databasePath
     if ($LASTEXITCODE -ne 0) { throw 'The deleted record was not retained in SQLite.' }

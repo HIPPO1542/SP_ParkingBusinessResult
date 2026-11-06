@@ -15,6 +15,6 @@ public static class CreateBusinessResultEndpoint
             return EndpointSupport.InvalidBody();
 
         return EndpointSupport.Respond(handler.Handle(new CreateBusinessResultCommand(request.ParkingLotId.Value, request.ReportingPeriod,
-            request.Revenue.Value, request.CompletedVehicleCount.Value, request.Note, EndpointSupport.GetAccess(user))));
+            request.Revenue.Value, request.CompletedVehicleCount.Value, request.Note, EndpointSupport.GetAccess(user), EndpointSupport.GetAuditActor(user))));
     }
 }

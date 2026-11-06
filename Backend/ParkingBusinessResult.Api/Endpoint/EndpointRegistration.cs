@@ -1,22 +1,23 @@
 using ParkingBusinessResult.Api.Endpoint.BusinessResults;
 using ParkingBusinessResult.Api.Endpoint.BusinessReports;
-using ParkingBusinessResult.Api.Endpoint.DevelopmentAccounts;
+using ParkingBusinessResult.Api.Endpoint.LocalAccounts;
 using ParkingBusinessResult.Api.Endpoint.ParkingBookings;
-using ParkingBusinessResult.Infrastructure.Reports;
-using System.Security.Claims;
 
 namespace ParkingBusinessResult.Api.Endpoint;
 
 public static class EndpointRegistration
 {
-    public static void MapDevelopmentEndpoints(this WebApplication app)
+    public static void MapApplicationEndpoints(this WebApplication app)
     {
-        app.MapGet("/", () =>
+        if ((app.Configuration["Authentication:Mode"] ?? "Local") == "Local")
         {
-            using Stream stream = typeof(EndpointRegistration).Assembly.GetManifestResourceStream("ParkingBusinessResult.Api.Frontend.index.html")!;
-            using var reader = new StreamReader(stream);
-            return Results.Content(reader.ReadToEnd(), "text/html; charset=utf-8");
-        }).AllowAnonymous();
+            app.MapGet("/", () =>
+            {
+                using Stream stream = typeof(EndpointRegistration).Assembly.GetManifestResourceStream("ParkingBusinessResult.Api.Frontend.index.html")!;
+                using var reader = new StreamReader(stream);
+                return Results.Content(reader.ReadToEnd(), "text/html; charset=utf-8");
+            }).AllowAnonymous();
+        }
         RouteGroupBuilder businessResults = app.MapGroup("/gdci/parking/parkingLot/businessOperation").RequireAuthorization("BusinessResultAccess");
         ListBusinessResultsEndpoint.Map(businessResults);
         GetBusinessResultEndpoint.Map(businessResults);
@@ -30,15 +31,7 @@ public static class EndpointRegistration
         GetBusinessReportSummaryEndpoint.Map(businessReports);
         ExportBusinessReportEndpoint.Map(businessReports);
 
-        app.MapGet("/static/exports/{fileName}", (string fileName, ClaimsPrincipal user, BusinessReportExportStore store) =>
-        {
-            if (!Guid.TryParse(user.FindFirst("sub")?.Value, out Guid userId)) return Results.NotFound();
-            string? path = store.FindFile(userId, fileName);
-            if (path is null) return Results.NotFound();
-            string contentType = fileName.EndsWith(".pdf", StringComparison.Ordinal)
-                ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            return Results.File(path, contentType, fileName);
-        }).RequireAuthorization("BusinessResultAccess");
+        DownloadBusinessReportEndpoint.Map(app);
 
         RouteGroupBuilder parkingBookings = app.MapGroup("/gdci/parking/parkingLot/parkingBooking").RequireAuthorization("BusinessResultAccess");
         ListParkingBookingsEndpoint.Map(parkingBookings);
@@ -47,8 +40,11 @@ public static class EndpointRegistration
         ExportParkingBookingReportEndpoint.Map(parkingBookings);
         CompareParkingBookingTariffEndpoint.Map(parkingBookings);
 
-        RouteGroupBuilder accounts = app.MapGroup("/dev/auth");
-        LoginEndpoint.Map(accounts);
-        CreateAccountEndpoint.Map(accounts);
+        if ((app.Configuration["Authentication:Mode"] ?? "Local") == "Local")
+        {
+            RouteGroupBuilder accounts = app.MapGroup("/auth");
+            LoginEndpoint.Map(accounts);
+            CreateAccountEndpoint.Map(accounts);
+        }
     }
 }

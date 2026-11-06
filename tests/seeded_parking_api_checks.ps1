@@ -1,8 +1,9 @@
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $databasePath = Join-Path ([IO.Path]::GetTempPath()) ("parking-seeded-api-" + [guid]::NewGuid().ToString('N') + '.db')
-$pythonPath = Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'
-$apiPath = Join-Path $root 'Backend/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll'
+. (Join-Path $PSScriptRoot 'TestRuntime.ps1')
+$pythonPath = Resolve-ParkingPython
+$apiPath = if ($env:PARKING_API_DLL) { $env:PARKING_API_DLL } else { Join-Path $root 'Backend/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll' }
 $server = $null
 $exportPath = Join-Path ([IO.Path]::GetTempPath()) ("parking-report-" + [guid]::NewGuid().ToString('N') + '.xlsx')
 $pdfPath = Join-Path ([IO.Path]::GetTempPath()) ("parking-report-" + [guid]::NewGuid().ToString('N') + '.pdf')
@@ -38,7 +39,7 @@ try {
     $homepage = Invoke-WebRequest -Uri "$baseUrl/" -UseBasicParsing
     if ($homepage.StatusCode -ne 200 -or $homepage.Content -notmatch 'id="loginForm"') { throw 'The frontend home page was not served.' }
     $body = @{ username = 'seed-test-admin'; password = 'seed-test-password-only' } | ConvertTo-Json
-    $login = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $body
+    $login = Invoke-RestMethod -Method Post -Uri "$baseUrl/auth/login" -ContentType 'application/json' -Body $body
     if ($login.code -ne 0 -or -not $login.data.accessToken) { throw 'Login failed.' }
     $headers = @{ Authorization = "Bearer $($login.data.accessToken)" }
     function Save-BusinessExport($requestBody, $requestHeaders, $destination, $expectedCount) {
@@ -130,17 +131,13 @@ try {
     if ($scoped.data.totalRevenue -ne 555000 -or $scoped.data.totalVehicleCount -ne 30) { throw 'Parking lot filter failed.' }
     if (@($scoped.data.topRevenueParkingLots).Count -ne 1 -or $scoped.data.topRevenueParkingLots[0].percentage -ne 100) { throw 'Scoped ranking failed.' }
     $account = @{ username = 'report-operator'; password = 'report-password-only'; role = 'ROLE_PARKING_OPERATOR'; parkingLotId = $first.parkingLot.id } | ConvertTo-Json
-    $created = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/users" -Headers $headers -ContentType 'application/json' -Body $account
+    $created = Invoke-RestMethod -Method Post -Uri "$baseUrl/auth/users" -Headers $headers -ContentType 'application/json' -Body $account
     if ($created.code -ne 0) { throw 'Could not create scoped account.' }
     $operatorBody = @{ username = 'report-operator'; password = 'report-password-only' } | ConvertTo-Json
-    $operator = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $operatorBody
+    $operator = Invoke-RestMethod -Method Post -Uri "$baseUrl/auth/login" -ContentType 'application/json' -Body $operatorBody
     $operatorHeaders = @{ Authorization = "Bearer $($operator.data.accessToken)" }
-    try {
-        $null = Invoke-WebRequest -Uri "$baseUrl$script:lastExportUrl" -Headers $operatorHeaders -UseBasicParsing
-        throw 'Another user could download this report.'
-    } catch [System.Net.WebException] {
-        if ([int]$_.Exception.Response.StatusCode -ne 404) { throw }
-    }
+    $deniedDownload = Invoke-RestMethod -Uri "$baseUrl$script:lastExportUrl" -Headers $operatorHeaders
+    if ($deniedDownload.code -ne 7 -or $null -ne $deniedDownload.data) { throw 'Another user could download this report.' }
     $operatorExport = Invoke-RestMethod -Method Post -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport/export" -Headers $operatorHeaders -ContentType 'application/json' -Body $exportBody
     if ($operatorExport.code -ne 7) { throw 'Operator must not export reports.' }
     $operatorReport = Invoke-RestMethod -Uri "$baseUrl/gdci/parking/parkingLot/parkingBusinessReport?reportingPeriod=2026-11" -Headers $operatorHeaders
@@ -151,10 +148,10 @@ try {
     if ($forbiddenLot.data.totalRevenue -ne 0) { throw 'Operator accessed another parking lot.' }
     if (@($forbiddenLot.data.topRevenueParkingLots).Count -ne 0) { throw 'Operator accessed another parking lot ranking.' }
     $districtBody = @{ username = 'report-district'; password = 'report-password-only'; role = 'ROLE_DISTRICT_ADMIN'; parkingLotId = $first.parkingLot.id } | ConvertTo-Json
-    $districtCreated = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/users" -Headers $headers -ContentType 'application/json' -Body $districtBody
+    $districtCreated = Invoke-RestMethod -Method Post -Uri "$baseUrl/auth/users" -Headers $headers -ContentType 'application/json' -Body $districtBody
     if ($districtCreated.code -ne 0) { throw 'Could not create district account.' }
     $districtLoginBody = @{ username = 'report-district'; password = 'report-password-only' } | ConvertTo-Json
-    $district = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $districtLoginBody
+    $district = Invoke-RestMethod -Method Post -Uri "$baseUrl/auth/login" -ContentType 'application/json' -Body $districtLoginBody
     $districtHeaders = @{ Authorization = "Bearer $($district.data.accessToken)" }
     Save-BusinessExport $exportBody $districtHeaders $exportPath 1
     & $pythonPath (Join-Path $root 'tests/check_business_report_xlsx.py') $exportPath 1 555000

@@ -20,7 +20,7 @@ class PostmanCollectionTests(unittest.TestCase):
         requests = collection['item']
         routes = {(item['request']['method'], item['request']['url'].split('?')[0]) for item in requests}
         self.assertEqual(routes, {
-            ('POST', '{{baseUrl}}/dev/auth/login'),
+            ('POST', '{{baseUrl}}/auth/login'),
             ('POST', '{{baseUrl}}/gdci/parking/parkingLot/businessOperation/import'),
             ('GET', '{{baseUrl}}/gdci/parking/parkingLot/parkingBooking'),
             ('GET', '{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/summary'),
@@ -39,8 +39,8 @@ class PostmanCollectionTests(unittest.TestCase):
         requests = [item for folder in collection["item"] for item in folder["item"]]
         routes = {(item["request"]["method"], item["request"]["url"]) for item in requests}
         self.assertEqual(routes, {
-            ("POST", "{{baseUrl}}/dev/auth/login"),
-            ("POST", "{{baseUrl}}/dev/auth/users"),
+            ("POST", "{{baseUrl}}/auth/login"),
+            ("POST", "{{baseUrl}}/auth/users"),
             ("GET", "{{baseUrl}}/gdci/parking/parkingLot/businessOperation"),
             ("POST", "{{baseUrl}}/gdci/parking/parkingLot/businessOperation"),
             ("GET", "{{baseUrl}}/gdci/parking/parkingLot/businessOperation/{{resultId}}"),

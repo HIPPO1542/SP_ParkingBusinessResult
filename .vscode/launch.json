@@ -11,7 +11,8 @@
       "console": "integratedTerminal",
       "stopAtEntry": false,
       "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_ENVIRONMENT": "Production",
+        "Authentication__UseUserSecrets": "true",
         "ASPNETCORE_URLS": "http://localhost:5069",
         "ParkingBusinessResult__DatabasePath": "${workspaceFolder}/database/sqlite/parking_business_result.db"
       }

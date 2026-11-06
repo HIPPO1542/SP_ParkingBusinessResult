@@ -14,6 +14,6 @@ public static class UpdateBusinessResultEndpoint
             return EndpointSupport.InvalidBody();
 
         return EndpointSupport.Respond(handler.Handle(new UpdateBusinessResultCommand(id, request.Revenue.Value,
-            request.CompletedVehicleCount.Value, request.Note, EndpointSupport.GetAccess(user))));
+            request.CompletedVehicleCount.Value, request.Note, EndpointSupport.GetAccess(user), EndpointSupport.GetAuditActor(user))));
     }
 }

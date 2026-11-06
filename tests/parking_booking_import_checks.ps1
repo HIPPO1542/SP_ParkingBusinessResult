@@ -1,7 +1,8 @@
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $testDir = Join-Path ([IO.Path]::GetTempPath()) ('parking-import-test-' + [guid]::NewGuid().ToString('N'))
-$pythonPath = Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'
+. (Join-Path $PSScriptRoot 'TestRuntime.ps1')
+$pythonPath = Resolve-ParkingPython
 $apiPath = if ($env:PARKING_API_DLL) { $env:PARKING_API_DLL } else { Join-Path $root 'Backend/ParkingBusinessResult.Api/bin/Debug/net10.0/ParkingBusinessResult.Api.dll' }
 $server = $null
 New-Item -ItemType Directory -Path $testDir | Out-Null
@@ -39,7 +40,7 @@ try {
     }
     if (-not $ready) { throw 'API did not start.' }
     $loginBody = @{ username = 'visit-test-admin'; password = 'visit-test-password-only' } | ConvertTo-Json
-    $login = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $loginBody
+    $login = Invoke-RestMethod -Method Post -Uri "$baseUrl/auth/login" -ContentType 'application/json' -Body $loginBody
     $token = $login.data.accessToken
     function Import-File($name, $bearer) {
         $filePath = Join-Path $testDir $name
@@ -139,10 +140,10 @@ try {
     & $pythonPath (Join-Path $root 'tests/check_visit_district_export.py') $xlsxPath
     if ($LASTEXITCODE -ne 0) { throw 'Selected-lot export incorrect.' }
     $account = @{ username = 'visit-operator'; password = 'visit-password-only'; role = 'ROLE_PARKING_OPERATOR'; parkingLotId = $lotId } | ConvertTo-Json
-    $created = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/users" -Headers $headers -ContentType 'application/json' -Body $account
+    $created = Invoke-RestMethod -Method Post -Uri "$baseUrl/auth/users" -Headers $headers -ContentType 'application/json' -Body $account
     if ($created.code -ne 0) { throw 'Could not create operator.' }
     $operatorBody = @{ username = 'visit-operator'; password = 'visit-password-only' } | ConvertTo-Json
-    $operator = Invoke-RestMethod -Method Post -Uri "$baseUrl/dev/auth/login" -ContentType 'application/json' -Body $operatorBody
+    $operator = Invoke-RestMethod -Method Post -Uri "$baseUrl/auth/login" -ContentType 'application/json' -Body $operatorBody
     $scoped = Import-File 'scoped.xlsx' $operator.data.accessToken
     if ($scoped.code -ne 0 -or $scoped.data.successRows -ne 2 -or $scoped.data.errorRows -ne 1) { throw 'Import scope failed.' }
     $operatorHeaders = @{ Authorization = "Bearer $($operator.data.accessToken)" }

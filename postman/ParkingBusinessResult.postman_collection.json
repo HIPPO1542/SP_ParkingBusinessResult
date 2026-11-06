@@ -39,7 +39,7 @@
             "auth": { "type": "noauth" },
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}" },
-            "url": "{{baseUrl}}/dev/auth/login",
+            "url": "{{baseUrl}}/auth/login",
             "description": "Nhập tài khoản quản trị đã khởi tạo vào biến adminUsername và adminPassword. Token hết hạn sau 30 phút."
           }
         },
@@ -55,7 +55,7 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{operatorUsername}}\",\n  \"password\": \"{{operatorPassword}}\",\n  \"role\": \"ROLE_PARKING_OPERATOR\",\n  \"parkingLotId\": \"{{parkingLotId}}\"\n}" },
-            "url": "{{baseUrl}}/dev/auth/users",
+            "url": "{{baseUrl}}/auth/users",
             "description": "Cần token quản trị. Đặt operatorUsername và operatorPassword, mật khẩu từ 12 đến 256 ký tự; mỗi tên chỉ tạo một lần."
           }
         }

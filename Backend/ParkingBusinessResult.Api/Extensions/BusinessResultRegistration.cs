@@ -1,6 +1,7 @@
 using ParkingBusinessResult.Application.Features.BusinessResults.Commands.Create;
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.List;
-using ParkingBusinessResult.Application.Features.BusinessReports.Queries.Export;
+using ParkingBusinessResult.Application.Features.BusinessReports.Commands.Export;
+using ParkingBusinessResult.Application.Features.BusinessReports.Queries.Download;
 using ParkingBusinessResult.Application.Features.BusinessReports.Queries.Summary;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Commands.Import;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.Summary;
@@ -12,9 +13,9 @@ using ParkingBusinessResult.Application.Features.BusinessResults.Commands.Delete
 using ParkingBusinessResult.Application.Features.BusinessResults.Commands.Update;
 using ParkingBusinessResult.Application.Features.BusinessResults.Queries.GetById;
 using ParkingBusinessResult.Application.Features.BusinessResults.Queries.List;
-using ParkingBusinessResult.Application.Features.DevelopmentAccounts.Commands.Bootstrap;
-using ParkingBusinessResult.Application.Features.DevelopmentAccounts.Commands.Create;
-using ParkingBusinessResult.Application.Features.DevelopmentAccounts.Commands.SignIn;
+using ParkingBusinessResult.Application.Features.LocalAccounts.Commands.Bootstrap;
+using ParkingBusinessResult.Application.Features.LocalAccounts.Commands.Create;
+using ParkingBusinessResult.Application.Features.LocalAccounts.Commands.SignIn;
 
 namespace ParkingBusinessResult.Api.Extensions;
 
@@ -31,6 +32,7 @@ public static class BusinessResultRegistration
         services.AddScoped<BusinessReportListMapper>();
         services.AddScoped<GetBusinessReportSummaryHandler>();
         services.AddScoped<ExportBusinessReportHandler>();
+        services.AddScoped<DownloadBusinessReportHandler>();
         services.AddScoped<ImportParkingBookingsHandler>();
         services.AddScoped<GetParkingBookingSummaryHandler>();
         services.AddScoped<ExportParkingBookingReportHandler>();

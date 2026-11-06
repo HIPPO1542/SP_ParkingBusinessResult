@@ -8,5 +8,5 @@ public static class DeleteBusinessResultEndpoint
     public static void Map(RouteGroupBuilder routes) => routes.MapDelete("/{id:guid}", Handle);
 
     private static IResult Handle(Guid id, ClaimsPrincipal user, DeleteBusinessResultHandler handler) =>
-        EndpointSupport.Respond(handler.Handle(new DeleteBusinessResultCommand(id, EndpointSupport.GetAccess(user))));
+        EndpointSupport.Respond(handler.Handle(new DeleteBusinessResultCommand(id, EndpointSupport.GetAccess(user), EndpointSupport.GetAuditActor(user))));
 }

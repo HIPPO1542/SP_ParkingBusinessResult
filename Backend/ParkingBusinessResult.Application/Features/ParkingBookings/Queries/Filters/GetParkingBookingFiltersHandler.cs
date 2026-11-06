@@ -14,9 +14,7 @@ public sealed class GetParkingBookingFiltersHandler(IParkingBookingListRepositor
         HashSet<Guid> permittedIds = parkingLots.FindMatchingLots(null, null).Where(query.Access.CanAccess).ToHashSet();
         ReportParkingLot[] lots = parkingLots.GetParkingLots(permittedIds).Values
             .OrderBy(lot => lot.Code, StringComparer.OrdinalIgnoreCase).ThenBy(lot => lot.Name, StringComparer.OrdinalIgnoreCase).ToArray();
-        string[] vehicleTypes = bookings.List().Where(booking => query.Access.CanAccess(booking.ParkingLotId))
-            .Select(booking => booking.VehicleType).Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(type => type, StringComparer.OrdinalIgnoreCase).ToArray();
+        IReadOnlyList<string> vehicleTypes = bookings.GetVehicleTypes(query.Access);
         return new(lots, vehicleTypes);
     }
 }

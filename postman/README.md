@@ -1,7 +1,7 @@
 # Kiểm thử API bằng Postman
 
 1. Import `ParkingBusinessResult.postman_collection.json` vào Postman.
-2. Khởi động API theo phần **Tài khoản cục bộ cho Development** trong [README dự án](../README.md). Dùng `http://localhost:5069` với profile `http`; nếu chạy ở địa chỉ khác, sửa biến collection `baseUrl`.
+2. Chạy `.\start.ps1` theo [README dự án](../README.md). Dùng `http://localhost:5069`; nếu chạy ở địa chỉ khác, sửa biến collection `baseUrl`.
 3. Trong tab **Variables** của collection, nhập `adminUsername` và `adminPassword` là tài khoản quản trị đã khởi tạo. Các giá trị này không được cung cấp sẵn trong collection. Chạy **Đăng nhập quản trị viên**; script tự lưu `accessToken` khi thành công. Nếu đăng nhập thất bại, token cũ được xóa.
 4. Đặt `parkingLotId` là ID bãi xe đã có trong database. Nếu đã tạo 5 bãi `DEMO-01` đến `DEMO-05`, lấy ID bằng câu truy vấn trong [hướng dẫn dữ liệu giả lập](../docs/DEVELOPMENT_PARKING_DATA.md) và không cần chạy script bên dưới. Database mới có thể chưa có bãi xe; để thêm một bãi xe thử khác vào **database phát triển cục bộ**, có thể chạy một lần:
 
@@ -23,7 +23,7 @@ Nếu dùng **Collection Runner**, bỏ chọn request tạo tài khoản tùy c
 
 Request **Kiểm tra route theo tài liệu** xác nhận route có thể gọi; các request đối chiếu body xác nhận API từ chối body chưa hỗ trợ thay vì âm thầm ghi sai dữ liệu. Các kiểm tra đó **không có nghĩa API đã khớp hoàn toàn ApiSpec**. Chi tiết khác biệt được ghi trong `docs/API_CONTRACT_REVIEW.md`.
 
-API và tài khoản trong collection hiện chỉ dành cho môi trường Development. Các lỗi nghiệp vụ vẫn trả HTTP 200; kiểm tra trường `code` (`0`: thành công, `7`: lỗi). Token hết hạn sau 30 phút; đăng nhập lại khi cần.
+Collection dùng route `/auth/login` của chế độ Local, chạy được ở Production. Các lỗi nghiệp vụ trả HTTP 200; kiểm tra `code` (`0`: thành công, `7`: lỗi). Token hết hạn sau 30 phút; đăng nhập lại khi cần.
 
 ## Import và báo cáo theo từng lượt xe
 

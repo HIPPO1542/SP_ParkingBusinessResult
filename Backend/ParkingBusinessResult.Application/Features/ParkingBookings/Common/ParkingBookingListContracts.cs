@@ -1,3 +1,6 @@
+using ParkingBusinessResult.Application.Features.BusinessResults.Common;
+using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.List;
+
 namespace ParkingBusinessResult.Application.Features.ParkingBookings.Common;
 
 public sealed record ParkingBookingItem(Guid Id, Guid ParkingLotId, string LicensePlate, string VehicleType,
@@ -6,5 +9,6 @@ public sealed record ParkingBookingItem(Guid Id, Guid ParkingLotId, string Licen
 
 public interface IParkingBookingListRepository
 {
-    IReadOnlyList<ParkingBookingItem> List();
+    ParkingBookingPage GetPage(ListParkingBookingsQuery query);
+    IReadOnlyList<string> GetVehicleTypes(BusinessAccess access);
 }

@@ -12,7 +12,8 @@ public sealed class UpdateBusinessResultHandler(IBusinessResultRepository reposi
 
         try
         {
-            if (!repository.TryUpdate(command.Id, command.Revenue, command.CompletedVehicleCount, command.Note)) return NotFound();
+            existing.Update(command.Revenue, command.CompletedVehicleCount, command.Note);
+            if (!repository.TryUpdate(command.Id, existing.Revenue, existing.CompletedVehicleCount, existing.Note, command.Actor)) return NotFound();
             ParkingBusinessResultRecord? updated = repository.FindById(command.Id);
             return updated is null ? NotFound() : BusinessResultOutcome<ParkingBusinessResultRecord>.Success(updated);
         }

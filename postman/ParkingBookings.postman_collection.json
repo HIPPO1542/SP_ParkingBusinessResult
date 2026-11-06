@@ -23,7 +23,7 @@
         "if (response.code === 0 && response.data && response.data.accessToken) pm.collectionVariables.set('accessToken', response.data.accessToken);",
         "pm.test('Đăng nhập thành công', () => pm.expect(response.code).to.eql(0));"
       ] } }],
-      "request": { "method": "POST", "auth": { "type": "noauth" }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}" }, "url": "{{baseUrl}}/dev/auth/login" }
+      "request": { "method": "POST", "auth": { "type": "noauth" }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}" }, "url": "{{baseUrl}}/auth/login" }
     },
     {
       "name": "Import file lượt xe",
