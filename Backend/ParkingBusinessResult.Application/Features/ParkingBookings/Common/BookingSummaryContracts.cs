@@ -8,6 +8,7 @@ public sealed record UnfinishedBookingCount(Guid ParkingLotId, string VehicleTyp
     string? ParkingLotCode, string? ParkingLotName);
 
 public sealed record BookingExportData(IReadOnlyList<CompletedBooking> Completed, IReadOnlyList<UnfinishedBookingCount> Unfinished);
+public sealed record BookingOpenCounts(long ParkedVehicleCount, long ReservedBookingCount);
 
 public sealed record BookingSummaryFilter(DateTime FromInclusive, DateTime ToExclusive, BusinessAccess Access,
     Guid? ParkingLotId = null, IReadOnlySet<Guid>? ParkingLotIds = null, string? District = null, string? VehicleType = null);
@@ -16,4 +17,5 @@ public interface IBookingSummaryRepository
 {
     IReadOnlyList<CompletedBooking> ListCompleted(BookingSummaryFilter filter);
     BookingExportData ReadForExport(BookingSummaryFilter filter);
+    BookingOpenCounts GetOpenCounts(BookingSummaryFilter filter);
 }

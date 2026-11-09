@@ -13,7 +13,7 @@
     #importedRowsWrap :is(th,td):nth-child(7),
     #listWrap :is(th,td):nth-child(6),#listWrap :is(th,td):nth-child(7),
     #customerBookings :is(th,td):nth-child(n+8){text-align:center;vertical-align:middle}
-    .overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}.overview-chart{min-width:0}.overview-chart h3{margin:0 0 8px}.pie-chart{width:min(100%,240px);aspect-ratio:1;border-radius:50%;background:#e8eef5;margin:20px auto;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:#556b81}.chart-legend{list-style:none;padding:0;margin:0;display:grid;gap:10px}.chart-legend li{display:flex;gap:9px;align-items:baseline;line-height:1.5;overflow-wrap:anywhere}.legend-color{width:13px;height:13px;flex:0 0 13px;border-radius:2px;align-self:flex-start;margin-top:5px}.chart-total{font-weight:600;color:#194d79;margin:0}.overview-note{margin-top:18px}@media(max-width:1000px){.overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:800px){.overview-grid{grid-template-columns:minmax(0,1fr)}}
+    #stats{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:800px){#stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
   </style>
 </head>
 <body>
@@ -48,22 +48,9 @@
     <div id="importPaging" class="inline hidden" style="margin-top:12px"><button type="button" class="secondary" id="importPrev">Trang trước</button><span id="importPage" role="status"></span><button type="button" class="secondary" id="importNext">Trang sau</button></div>
   </section>
   <section class="card hidden" data-staff>
-    <h2>Tổng quan các bãi xe</h2>
-    <p class="muted">Bộ lọc dưới đây áp dụng chung cho cả 3 biểu đồ, theo các bãi tài khoản được phép xem.</p>
-    <form id="overviewForm" class="row"><div class="field"><label for="overviewDay">Ngày</label><select id="overviewDay"><option value="">Tất cả ngày</option></select></div><div class="field"><label for="overviewMonth">Tháng</label><select id="overviewMonth"><option value="">Tất cả tháng</option></select></div><div class="field"><label for="overviewYear">Năm</label><input id="overviewYear" type="number" min="1" max="9999" step="1" placeholder="Tất cả năm"></div><button type="submit" id="refreshOverview">Lọc / Làm mới biểu đồ</button></form>
-    <p id="overviewPeriod" class="file-info" role="status">Chưa có dữ liệu.</p>
-    <p id="overviewMessage" class="notice hidden" role="status"></p>
-    <div class="overview-grid">
-      <div class="overview-chart"><h3>Số lượt theo loại xe</h3><p id="vehicleChartTotal" class="chart-total">Chưa có dữ liệu.</p><div id="vehiclePie" class="pie-chart" role="img" aria-label="Chưa có dữ liệu số lượt xe">Chưa có dữ liệu</div><ul id="vehicleLegend" class="chart-legend" aria-label="Chú thích số lượt theo loại xe"></ul></div>
-      <div class="overview-chart"><h3>Doanh thu theo bãi xe</h3><p id="revenueChartTotal" class="chart-total">Chưa có dữ liệu.</p><div id="revenuePie" class="pie-chart" role="img" aria-label="Chưa có dữ liệu doanh thu">Chưa có dữ liệu</div><ul id="revenueLegend" class="chart-legend" aria-label="Chú thích doanh thu theo bãi xe"></ul></div>
-      <div class="overview-chart"><h3>Trạng thái booking</h3><p id="statusChartTotal" class="chart-total">Chưa có dữ liệu.</p><div id="statusPie" class="pie-chart" role="img" aria-label="Chưa có dữ liệu trạng thái booking">Chưa có dữ liệu</div><ul id="statusLegend" class="chart-legend" aria-label="Chú thích trạng thái booking"></ul></div>
-    </div>
-    <p class="file-info overview-note">Số lượt theo loại gồm xe đã trả và xe đang gửi, không tính booking chưa check-in. Doanh thu chỉ tính tiền thực thu của lượt đã hoàn tất. Lọc thời gian: hoàn tất theo giờ ra thực tế; đang gửi theo giờ vào; chưa check-in theo giờ đến dự kiến.</p>
-  </section>
-  <section class="card hidden" data-staff>
-    <h2>3. Xem thống kê</h2><p class="muted">Thống kê theo ngày xe ra và số tiền đã thu trong dữ liệu bãi xe.</p>
+    <h2>3. Xem thống kê</h2><p class="muted">Doanh thu và lượt hoàn tất theo giờ ra; xe đang gửi theo giờ vào; booking chưa check-in theo giờ đến dự kiến.</p>
     <div class="row"><div class="field"><label for="statsDay">Ngày</label><select id="statsDay"><option value="">Tất cả ngày</option></select></div><div class="field"><label for="statsMonth">Tháng</label><select id="statsMonth"><option value="">Tất cả tháng</option></select></div><div class="field"><label for="statsYear">Năm</label><input id="statsYear" type="number" min="1" max="9999" step="1" placeholder="Chọn năm" required></div><div class="field"><label id="statsLotsLabel">Bãi xe</label><div class="lot-picker" id="statsLotsPicker"><button type="button" class="lot-toggle" id="statsLotsToggle" aria-expanded="false" aria-controls="statsLotsMenu" aria-labelledby="statsLotsLabel statsLotsToggle">Tất cả bãi ▾</button><div id="statsLotsMenu" class="lot-menu hidden"><label class="lot-option lot-all"><input type="checkbox" id="statsAllLots" checked>Tất cả bãi</label><div id="statsLots"></div></div></div></div><div class="field"><label for="statsVehicleType">Loại xe</label><select id="statsVehicleType"><option value="">Tất cả loại xe</option></select></div><button type="button" id="view">Xem thống kê</button></div>
-    <div id="stats" class="metrics hidden"><div class="metric"><span>Doanh thu</span><strong id="revenue">—</strong></div><div class="metric"><span>Lượt xe đã ra</span><strong id="vehicles">—</strong></div></div>
+    <div id="stats" class="metrics hidden"><div class="metric"><span>Doanh thu</span><strong id="revenue">—</strong></div><div class="metric"><span>Đã hoàn tất</span><strong id="vehicles">—</strong></div><div class="metric"><span>Đang trong bãi</span><strong id="parkedVehicles">—</strong></div><div class="metric"><span>Chưa check-in</span><strong id="reservedBookings">—</strong></div></div>
     <p id="statsMessage" class="notice hidden" role="status"></p>
     <div id="vehicleStatsWrap" class="table-wrap hidden"><h3>Thống kê theo loại xe</h3><table><thead><tr><th>Loại xe</th><th>Doanh thu</th><th>Lượt xe</th><th>Tỷ trọng doanh thu mọi loại xe</th></tr></thead><tbody id="vehicleStats"></tbody></table></div>
     <div id="lotsWrap" class="table-wrap hidden"><h3>Thống kê theo bãi xe</h3><table><thead><tr><th>Bãi xe</th><th>Địa chỉ</th><th>Doanh thu</th><th>Lượt xe</th><th>Lượt xe theo loại</th><th>Tỷ lệ loại xe / bãi</th><th>Tỷ lệ</th></tr></thead><tbody id="lots"></tbody></table><p class="file-info">Số lượt theo loại là các lượt đã ra trong thời gian và bộ lọc đang chọn. Tỷ lệ loại xe = doanh thu loại xe / tổng doanh thu mọi loại xe của cùng bãi, cùng kỳ. Cột Tỷ lệ cuối là doanh thu bãi / tổng doanh thu đang xem.</p></div>
@@ -103,18 +90,15 @@
   let importedRows = [];
   let importPage = 1;
   const importPageSize = 10;
-  let overviewParameters = '';
   const today = new Date();
   $('statsYear').value = String(today.getFullYear());
   for (let day = 1; day <= 31; day++) {
     $('listDay').add(new Option(String(day), String(day)));
     $('statsDay').add(new Option(String(day), String(day)));
-    $('overviewDay').add(new Option(String(day), String(day)));
   }
   for (let month = 1; month <= 12; month++) {
     $('listMonth').add(new Option(String(month), String(month)));
     $('statsMonth').add(new Option(String(month), String(month)));
-    $('overviewMonth').add(new Option(String(month), String(month)));
   }
 
   function selectedStatsLots() { return [...$('statsLots').querySelectorAll('input:checked')].map(input => input.value); }
@@ -178,67 +162,9 @@
     options.forEach(({value, label}) => select.add(new Option(label, value)));
     if ([...select.options].some(option => option.value === previous)) select.value = previous;
   }
-  function renderPieChart(chartId, legendId, items, formatValue, unavailableMessage = null) {
-    const chart = $(chartId); const legend = $(legendId); legend.replaceChildren();
-    const total = items.reduce((sum, item) => sum + (item.value ?? 0), 0);
-    const slices = []; const descriptions = []; let accumulated = 0;
-    items.forEach((item, index) => {
-      const color = `hsl(${(index * 137.508 + 210) % 360} 65% 43%)`;
-      const description = `${item.label}: ${item.value == null ? 'Chưa đủ tiền thực thu' : formatValue(item.value)} (${item.percentage == null ? 'chưa tính được tỷ lệ' : `${number(item.percentage)}%`})`;
-      const entry = document.createElement('li'); const swatch = document.createElement('span');
-      swatch.className = 'legend-color'; swatch.style.backgroundColor = color; swatch.setAttribute('aria-hidden', 'true');
-      const text = document.createElement('span'); text.textContent = description; entry.append(swatch, text); legend.appendChild(entry);
-      descriptions.push(description);
-      if (item.value > 0 && total > 0) {
-        const start = accumulated / total * 100; accumulated += item.value;
-        slices.push(`${color} ${start}% ${accumulated / total * 100}%`);
-      }
-    });
-    const message = unavailableMessage || (total <= 0 ? 'Chưa có dữ liệu' : '');
-    chart.style.background = message ? '#e8eef5' : `conic-gradient(${slices.join(',')})`;
-    chart.textContent = message;
-    chart.setAttribute('aria-label', message || descriptions.join('; '));
-  }
-  function renderOverview(data) {
-    $('overviewMessage').classList.add('hidden');
-    const overview = data?.overview;
-    $('overviewPeriod').textContent = overview ? `Đang hiển thị: ${overview.reportingPeriod}` : 'Chưa có dữ liệu.';
-    $('vehicleChartTotal').textContent = overview ? `Tổng ${number(overview.totalVehicleCount)} lượt xe` : 'Chưa có dữ liệu.';
-    $('revenueChartTotal').textContent = overview ? `Tổng ${overview.totalRevenue == null ? 'chưa xác định' : `${number(overview.totalRevenue)} đ`}` : 'Chưa có dữ liệu.';
-    renderPieChart('vehiclePie', 'vehicleLegend', (overview?.vehicleCounts || []).map(item => ({
-      label:item.vehicleType, value:item.vehicleCount, percentage:item.percentage
-    })), value => `${number(value)} lượt`);
-    const lots = new Map((data?.parkingLots || []).map(lot => [lot.id, [lot.code, lot.name].filter(Boolean).join(' · ') || lot.id]));
-    renderPieChart('revenuePie', 'revenueLegend', (overview?.revenueByParkingLot || []).map(item => ({
-      label:lots.get(item.parkingLotId) || item.parkingLotId, value:item.revenue, percentage:item.percentage
-    })), value => `${number(value)} đ`, overview?.missingAmountCount ? 'Chưa đủ tiền thực thu' : null);
-    const statuses = overview?.statusCounts || [];
-    $('statusChartTotal').textContent = overview ? `Tổng ${number(statuses.reduce((sum, item) => sum + item.bookingCount, 0))} booking` : 'Chưa có dữ liệu.';
-    renderPieChart('statusPie', 'statusLegend', statuses.map(item => ({
-      label:item.status === 'COMPLETED' ? 'Đã hoàn tất' : item.status === 'CHECKED_IN' ? 'Đang trong bãi' : 'Chưa check-in',
-      value:item.bookingCount, percentage:item.percentage
-    })), value => `${number(value)} lượt`);
-    if (overview?.missingAmountCount) notify('overviewMessage', `Có ${number(overview.missingAmountCount)} lượt đã trả xe thiếu tiền thực thu. Chưa thể tính đầy đủ biểu đồ doanh thu.`, 'error');
-  }
-  function overviewFilterParameters() {
-    const day = $('overviewDay').value; const month = $('overviewMonth').value; const year = $('overviewYear').value;
-    if (day && (!month || !year)) throw new Error('Chọn ngày thì phải chọn đủ tháng và năm.');
-    if (month && !year) throw new Error('Bạn chưa chọn năm.');
-    if (year && (!Number.isInteger(Number(year)) || Number(year) < 1 || Number(year) > 9999)) throw new Error('Năm phải là số nguyên từ 1 đến 9999.');
-    if (day) {
-      const leap = Number(year) % 4 === 0 && (Number(year) % 100 !== 0 || Number(year) % 400 === 0);
-      const lastDay = [31,leap ? 29 : 28,31,30,31,30,31,31,30,31,30,31][Number(month)-1];
-      if (Number(day) > lastDay) throw new Error('Ngày không tồn tại trong tháng và năm đã chọn.');
-    }
-    const parameters = new URLSearchParams();
-    if (year) parameters.set('year', year);
-    if (month) parameters.set('month', month);
-    if (day) parameters.set('day', day);
-    return parameters.toString();
-  }
-  async function refreshVisitFilters(parameters = overviewParameters) {
+  async function refreshVisitFilters() {
     try {
-      const {data} = await jsonRequest(`${base}/parkingBooking/filters${parameters ? `?${parameters}` : ''}`);
+      const {data} = await jsonRequest(`${base}/parkingBooking/filters`);
       setOptions('listLot', 'Tất cả bãi', data.parkingLots.map(lot => ({value:lot.id, label:[lot.code, lot.name].filter(Boolean).join(' · ') || lot.id})));
       setOptions('listVehicleType', 'Tất cả loại xe', data.vehicleTypes.map(type => ({value:type, label:type})));
       setOptions('statsVehicleType', 'Tất cả loại xe', data.vehicleTypes.map(type => ({value:type, label:type})));
@@ -250,17 +176,8 @@
         label.append(checkbox, document.createTextNode([lot.code, lot.name].filter(Boolean).join(' · ') || lot.id)); $('statsLots').appendChild(label);
       });
       updateLotLabel();
-      overviewParameters = parameters;
-      renderOverview(data);
-    } catch (error) { notify('listMessage', `Không tải được bộ lọc: ${error.message}`, 'error'); notify('overviewMessage', `Không cập nhật được biểu đồ: ${error.message}`, 'error'); }
+    } catch (error) { notify('listMessage', `Không tải được bộ lọc: ${error.message}`, 'error'); }
   }
-  $('overviewForm').addEventListener('submit', async event => {
-    event.preventDefault();
-    const button = $('refreshOverview'); button.disabled = true;
-    try { await refreshVisitFilters(overviewFilterParameters()); }
-    catch (error) { notify('overviewMessage', error.message, 'error'); }
-    finally { button.disabled = false; }
-  });
   function downloadBlob(blob, name) {
     const url = URL.createObjectURL(blob); const link = document.createElement('a');
     link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -322,6 +239,7 @@
       if (filters.vehicleType) parameters.set('vehicleType', filters.vehicleType);
       const result = await jsonRequest(`${base}/parkingBooking/summary?${parameters}`); const data = result.data; showJson('summaryJson', result);
       $('revenue').textContent = `${number(data.collectedRevenue)} đ`; $('vehicles').textContent = number(data.completedVehicleCount);
+      $('parkedVehicles').textContent = number(data.parkedVehicleCount); $('reservedBookings').textContent = number(data.reservedBookingCount);
       $('stats').classList.remove('hidden'); const body = $('lots'); body.replaceChildren();
       const vehicleBody = $('vehicleStats'); vehicleBody.replaceChildren();
       (data.revenueByVehicleType || []).forEach(item => addRow(vehicleBody,[item.vehicleType,`${number(item.revenue)} đ`,number(item.vehicleCount),item.percentage == null ? '—' : `${number(item.percentage)}%`],[1,2,3]));
@@ -336,7 +254,7 @@
       else {
         const period = filters.fromDate === filters.toDate ? `ngày ${filters.fromDate.split('-').reverse().join('/')}` :
           filters.fromDate.slice(0,7) === filters.toDate.slice(0,7) ? `tháng ${filters.fromDate.slice(5,7)}/${filters.fromDate.slice(0,4)}` : `năm ${filters.fromDate.slice(0,4)}`;
-        notify('statsMessage', `Đã tải thống kê ${period} theo ngày xe ra.`, 'success');
+        notify('statsMessage', `Đã tải thống kê ${period}.`, 'success');
       }
     } catch (error) { notify('statsMessage', error.message, 'error'); }
   });
@@ -400,8 +318,6 @@
   function updatePanels() {
     if (!accountRole) {
       importedRows = []; importPage = 1; renderImportedRows();
-      overviewParameters = ''; $('overviewForm').reset();
-      renderOverview(null);
       $('reserveForm').reset(); cancelEstimate(); $('reserveEstimate').value = 'Chưa tính'; $('reserveEstimateInfo').textContent = 'Chọn bãi, loại xe và khoảng thời gian để xem giá dự kiến.';
       ['myBookingsBody','listBody','lots','vehicleStats','importedRows','importErrors'].forEach(id => $(id).replaceChildren());
       ['reservationJson','summaryJson','listJson','exportJson'].forEach(id => { $(id).textContent = 'Chưa có dữ liệu.'; });
@@ -510,7 +426,6 @@
       const result = await jsonRequest(`${base}/parkingReservation/${encodeURIComponent(id)}/${action}`,options);
       notify('operationMessage',action === 'check-in' ? `Đã check-in lúc ${result.data.startAt.replace('T',' ')}.` : `Đã check-out · ${number(result.data.billableHours)} giờ tính phí · ${number(result.data.amount)} đ.`,'success');
       await loadList();
-      await refreshVisitFilters();
       if (action === 'check-out' && !$('stats').classList.contains('hidden')) $('view').click();
     } catch (error) { notify('operationMessage',error.message,'error'); }
     finally { button.disabled = false; }

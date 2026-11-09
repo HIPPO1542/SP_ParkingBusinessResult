@@ -11,7 +11,8 @@ public sealed record BookingDistrictRevenue(string? District, decimal Revenue, i
 public sealed record BookingSummary(string ReportingPeriod, long CompletedVehicleCount,
     decimal CollectedRevenue, long MissingAmountCount, decimal? PreviousRevenue, decimal? GrowthRate,
     decimal? AverageDailyRevenue, IReadOnlyList<BookingTopLot>? TopRevenueParkingLots,
-    IReadOnlyList<BookingDistrictRevenue>? RevenueByDistrict, IReadOnlyList<BookingVehicleRevenue>? RevenueByVehicleType);
+    IReadOnlyList<BookingDistrictRevenue>? RevenueByDistrict, IReadOnlyList<BookingVehicleRevenue>? RevenueByVehicleType,
+    long ParkedVehicleCount, long ReservedBookingCount);
 
 public sealed class GetBookingSummaryHandler(IBookingSummaryRepository repository)
 {
@@ -21,6 +22,8 @@ public sealed class GetBookingSummaryHandler(IBookingSummaryRepository repositor
             query.FromInclusive, query.ToExclusive, query.Access, query.ParkingLotId, query.ParkingLotIds, query.District));
         CompletedBooking[] permitted = allVehicleTypes.Where(booking => query.VehicleType is null ||
             string.Equals(booking.VehicleType, query.VehicleType, StringComparison.OrdinalIgnoreCase)).ToArray();
+        BookingOpenCounts openCounts = repository.GetOpenCounts(new BookingSummaryFilter(query.FromInclusive, query.ToExclusive,
+            query.Access, query.ParkingLotId, query.ParkingLotIds, query.District, query.VehicleType));
         decimal collected = permitted.Where(booking => booking.CollectedAmount.HasValue).Sum(booking => booking.CollectedAmount!.Value);
         long missing = permitted.LongCount(booking => booking.CollectedAmount is null);
         decimal? previousRevenue = null;
@@ -66,7 +69,8 @@ public sealed class GetBookingSummaryHandler(IBookingSummaryRepository repositor
                 }).OrderByDescending(group => group.Revenue).ThenBy(group => group.District, StringComparer.OrdinalIgnoreCase).ToArray();
         }
         return new(query.PeriodLabel,
-            permitted.LongLength, collected, missing, previousRevenue, growth, averageDailyRevenue, topLots, districts, vehicles);
+            permitted.LongLength, collected, missing, previousRevenue, growth, averageDailyRevenue, topLots, districts, vehicles,
+            openCounts.ParkedVehicleCount, openCounts.ReservedBookingCount);
     }
 
     private static BookingVehicleRevenue[] GroupByVehicleType(IEnumerable<CompletedBooking> bookings, decimal? totalRevenue) =>

@@ -238,7 +238,7 @@
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/filters",
-            "description": "Lấy bãi, loại xe và overview cho 3 biểu đồ trong cùng response. Có thể thêm year, month, day; tháng cần năm, ngày cần tháng và năm. Hoàn tất lọc theo giờ ra; đang gửi theo giờ vào; chưa check-in theo giờ đến dự kiến. Không truyền thời gian thì lấy toàn bộ. Tự điền parkingLotId bằng bãi đầu tiên nếu biến trống."
+            "description": "Tự điền parkingLotId bằng bãi đầu tiên nếu biến trống; có thể chọn ID khác từ response."
           },
           "event": [
             {
@@ -373,7 +373,7 @@
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/summary?reportingPeriod={{reportingPeriod}}",
-            "description": "Tính theo ngày xe ra; missingAmountCount cho biết số lượt hoàn tất chưa có tiền thực thu."
+            "description": "Doanh thu và completedVehicleCount tính theo giờ ra thực tế. parkedVehicleCount đếm xe đang gửi theo giờ vào; reservedBookingCount đếm booking chưa check-in theo giờ đến dự kiến. Các số liệu dùng chung bộ lọc kỳ, bãi và loại xe. missingAmountCount cho biết số lượt hoàn tất chưa có tiền thực thu."
           },
           "event": [
             {

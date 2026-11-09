@@ -49,37 +49,30 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
             .Select(row => EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE")).Distinct().OrderBy(type => type).ToArray();
     }
 
-    public IReadOnlyList<BookingOverviewGroup> GetOverview(BusinessAccess access, int? day, int? month, int? year)
+    public BookingOpenCounts GetOpenCounts(BookingSummaryFilter filter)
     {
         using var db = contextFactory.CreateDbContext();
-        var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), access, null)
-            .Where(row => row.TrangThaiDatCho == Booking.Reserved || row.ThoiGianKetThuc != null ||
-                row.TrangThaiDatCho == Booking.CheckedIn || row.TrangThaiDatCho == "CONFIRMED");
-        if (year.HasValue)
+        var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), filter.Access, filter.ParkingLotId)
+            .Where(row => (row.TrangThaiDatCho == Booking.Reserved ||
+                (row.ThoiGianKetThuc == null && (row.TrangThaiDatCho == Booking.CheckedIn || row.TrangThaiDatCho == "CONFIRMED"))) &&
+                row.ThoiGianBatDau >= filter.FromInclusive && row.ThoiGianBatDau < filter.ToExclusive);
+        if (filter.VehicleType is not null)
+            rows = rows.Where(row => EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE") == filter.VehicleType);
+        if (filter.ParkingLotIds is not null)
         {
-            DateTime from = new(year.Value, month ?? 1, day ?? 1);
-            DateTime lastDate = new(year.Value, month ?? 12, day ?? (month.HasValue ? DateTime.DaysInMonth(year.Value, month.Value) : 31));
-            // Reservations still contain planned times; only completed visits use the actual exit time.
-            rows = rows.Where(row => (row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null
-                ? row.ThoiGianKetThuc.Value : row.ThoiGianBatDau) >= from);
-            if (lastDate < DateTime.MaxValue.Date)
-            {
-                DateTime toExclusive = lastDate.AddDays(1);
-                rows = rows.Where(row => (row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null
-                    ? row.ThoiGianKetThuc.Value : row.ThoiGianBatDau) < toExclusive);
-            }
+            string[] selected = filter.ParkingLotIds.Select(id => id.ToString()).ToArray();
+            rows = rows.Where(row => selected.Contains(row.BaiDoXeId));
         }
-        return rows.GroupBy(row => new { row.BaiDoXeId, VehicleType = EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE") })
-            .Select(group => new
-            {
-                group.Key.BaiDoXeId, group.Key.VehicleType,
-                CompletedCount = group.LongCount(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null),
-                ParkedCount = group.LongCount(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc == null),
-                ReservedCount = group.LongCount(row => row.TrangThaiDatCho == Booking.Reserved),
-                Revenue = group.Sum(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null && row.TongTien != null ? (decimal)row.TongTien.Value : 0m),
-                MissingAmountCount = group.LongCount(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null && row.TongTien == null)
-            }).AsEnumerable().Select(item => new BookingOverviewGroup(Guid.Parse(item.BaiDoXeId), item.VehicleType,
-                item.CompletedCount, item.ParkedCount, item.ReservedCount, item.Revenue, item.MissingAmountCount)).ToArray();
+        var joined = rows.Join(db.DlKthtBaiDoXe, row => row.BaiDoXeId, lot => lot.Id, (row, lot) => new { Row = row, Lot = lot });
+        if (!string.IsNullOrWhiteSpace(filter.District))
+        {
+            string district = filter.District.Trim();
+            joined = joined.Where(item => ParkingDbContext.ContainsIgnoreCase(item.Lot.DiaChi, district));
+        }
+        var counts = joined.GroupBy(item => item.Row.TrangThaiDatCho == Booking.Reserved)
+            .Select(group => new { IsReserved = group.Key, Count = group.LongCount() }).ToArray();
+        return new(counts.FirstOrDefault(item => !item.IsReserved)?.Count ?? 0,
+            counts.FirstOrDefault(item => item.IsReserved)?.Count ?? 0);
     }
 
     public IReadOnlyList<CompletedBooking> ListCompleted(BookingSummaryFilter filter)
