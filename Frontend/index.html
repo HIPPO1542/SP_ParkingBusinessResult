@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kết quả kinh doanh bãi xe</title>
+  <title>Đặt chỗ và quản lý bãi xe</title>
   <style>
     :root{font-family:Segoe UI,Arial,sans-serif;color:#14263e;background:#f2f6fb;font-size:15px}*{box-sizing:border-box}body{margin:0}header{background:#12355b;color:white;padding:24px max(24px,calc((100vw - 1160px)/2))}header h1{font-size:24px;margin:2px 0 6px}header p{margin:0;color:#d0e2f4}main{max-width:1208px;margin:auto;padding:24px;display:grid;gap:16px}.card{background:#fff;border:1px solid #dce5ef;border-radius:12px;padding:22px;box-shadow:0 3px 12px #16385d0a}.card h2{font-size:18px;margin:0 0 8px}.muted{color:#556b81;line-height:1.5;margin:0 0 16px}.row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}.field{display:grid;gap:6px;min-width:180px;flex:1}label{font-size:13px;font-weight:600;color:#3f5266}input,select,button{font:inherit;border-radius:7px;padding:10px 12px}input,select{width:100%;border:1px solid #bccbda;background:white;color:#14263e}input[type=file]{padding:8px}button{border:0;background:#1764a3;color:#fff;font-weight:600;cursor:pointer}button:hover{background:#104d7d}button.secondary{background:#e8f0f7;color:#194d79}button:disabled{opacity:.5;cursor:not-allowed}.status{display:inline-block;font-size:13px;border-radius:20px;padding:5px 10px;background:#eaf2f8;color:#28506f}.status.connected{background:#e5f5ec;color:#1e7042}.notice{background:#f3f8fc;border-left:3px solid #4898c4;padding:11px 14px;line-height:1.5;color:#3c5367;border-radius:3px;margin:14px 0}.error{background:#fff2f0;color:#a22924;border-left-color:#da6257}.success{background:#eaf8ef;color:#226341;border-left-color:#39a965}.hidden{display:none!important}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}.metric{background:#f6f9fc;border:1px solid #e1eaf3;border-radius:9px;padding:15px}.metric span{display:block;font-size:13px;color:#5e7183}.metric strong{display:block;font-size:21px;margin-top:8px}.table-wrap{overflow-x:auto;margin-top:16px}table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:11px;border-bottom:1px solid #e7edf3;font-size:13px}th{color:#586e82;background:#f7f9fc}td.numeric{text-align:right;white-space:nowrap}pre{white-space:pre-wrap;overflow:auto;background:#102b46;color:#e9f4ff;padding:16px;border-radius:8px;max-height:420px;font-size:12px;line-height:1.5}details summary{cursor:pointer;color:#356084;font-weight:600;margin-top:16px}.inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.inline h2{margin:0;flex:1}.file-info{font-size:13px;color:#586e82;margin:8px 0 0}footer{color:#65798c;font-size:12px;text-align:center;padding:0 0 24px}@media(max-width:700px){.metrics{grid-template-columns:repeat(2,1fr)}header{padding:22px 20px}main{padding:16px}.card{padding:17px}.field{min-width:140px}button{flex-grow:1}}
     .lot-picker{position:relative}.lot-toggle{width:100%;text-align:left;background:white;color:#14263e;border:1px solid #bccbda;font-weight:400}.lot-toggle:hover{background:#f2f6fb}.lot-menu{position:absolute;z-index:10;top:calc(100% + 5px);left:0;right:0;min-width:260px;max-height:280px;overflow:auto;border:1px solid #bccbda;border-radius:8px;background:white;box-shadow:0 6px 22px #14263e25;padding:8px}.lot-option{display:flex;align-items:center;gap:9px;padding:9px;cursor:pointer;font-weight:400}.lot-option:hover{background:#f2f6fb}.lot-option input{width:auto;margin:0}.lot-all{border-bottom:1px solid #e1eaf3;font-weight:600}
@@ -14,18 +14,28 @@
 <main>
   <section class="card">
     <div class="inline"><h2>1. Đăng nhập</h2><span id="authStatus" class="status">Chưa đăng nhập</span></div>
-    <p class="muted">Dùng tài khoản quản trị đã tạo khi chạy chương trình.</p>
-    <form id="loginForm" class="row"><div class="field"><label for="username">Tên đăng nhập</label><input id="username" autocomplete="username" required></div><div class="field"><label for="password">Mật khẩu</label><input id="password" type="password" autocomplete="current-password" required></div><button type="submit">Đăng nhập</button><button type="button" class="secondary" id="logout">Đăng xuất</button></form>
+    <p class="muted">Khách hàng đăng ký tài khoản riêng để đặt chỗ. Nhân viên và quản lý dùng tài khoản được cấp để nhận xe, trả xe và xem thống kê.</p>
+    <form id="loginForm" class="row"><div class="field"><label for="username">Tên đăng nhập</label><input id="username" autocomplete="username" required></div><div class="field"><label for="password">Mật khẩu</label><input id="password" type="password" autocomplete="current-password" required></div><button type="submit">Đăng nhập</button><button type="button" class="secondary" id="registerCustomer">Đăng ký khách hàng</button><button type="button" class="secondary" id="logout">Đăng xuất</button></form>
     <p id="loginMessage" class="notice hidden" role="status"></p>
   </section>
-  <section class="card">
+  <section class="card hidden" id="customerBookings">
+    <h2>Đặt chỗ gửi xe</h2><p class="muted">Đặt một chỗ cho một xe. Giờ dự kiến sẽ được thay bằng giờ thực tế khi nhân viên check-in. Tiền được tính khi check-out theo bảng giá của bãi.</p>
+    <form id="reserveForm" class="row"><div class="field"><label for="reserveLot">Bãi xe</label><select id="reserveLot" required></select></div><div class="field"><label for="reserveVehicleType">Loại xe</label><select id="reserveVehicleType" required></select></div><div class="field"><label for="reservePlate">Biển số</label><input id="reservePlate" maxlength="30" required></div><div class="field"><label for="reserveArrival">Giờ đến dự kiến</label><input id="reserveArrival" type="datetime-local" required></div><div class="field"><label for="reserveNote">Ghi chú</label><input id="reserveNote"></div><button type="submit">Đặt chỗ</button></form>
+    <p id="reserveMessage" class="notice hidden" role="status"></p>
+    <div class="inline" style="margin-top:16px"><h3>Booking của tôi</h3><button type="button" class="secondary" id="refreshMyBookings">Tải lại booking</button></div>
+    <p id="myBookingsMessage" class="notice hidden" role="status"></p>
+    <div class="table-wrap"><table><thead><tr><th>Bãi xe</th><th>Biển số</th><th>Loại xe</th><th>Giờ vào / dự kiến</th><th>Giờ ra</th><th>Trạng thái</th><th>Giờ tính phí</th><th>Tổng tiền</th></tr></thead><tbody id="myBookingsBody"></tbody></table></div>
+    <div class="inline" style="margin-top:12px"><button type="button" class="secondary" id="myPrev">Trang trước</button><span id="myPage"></span><button type="button" class="secondary" id="myNext">Trang sau</button></div>
+    <details><summary>Xem JSON booking</summary><pre id="reservationJson">Chưa có dữ liệu.</pre></details>
+  </section>
+  <section class="card hidden" data-staff>
     <h2>2. Nhập file lượt xe</h2><p class="muted">Mỗi dòng là một lượt xe. Chọn file Excel hoặc CSV theo mẫu của dự án.</p>
     <form id="importForm" class="row"><div class="field"><label for="importFile">File dữ liệu</label><input id="importFile" type="file" accept=".xlsx,.xls,.csv" required></div><button type="submit">Nhập dữ liệu</button></form>
     <p class="file-info">Các cột: Mã bãi, Biển số, Loại xe, Giờ vào, Giờ ra, Số tiền đã thu (VND). File mẫu cũ có thêm cột phương thức thanh toán vẫn được đọc, nhưng cột đó không được lưu.</p>
     <div id="importResult" class="notice hidden" role="status"></div><div class="table-wrap hidden" id="importErrorsWrap"><table><thead><tr><th>Dòng</th><th>Mã bãi</th><th>Lỗi</th></tr></thead><tbody id="importErrors"></tbody></table></div>
     <div class="table-wrap hidden" id="importedRowsWrap"><table><thead><tr><th>Dòng</th><th>Mã bãi</th><th>Biển số</th><th>Loại xe</th><th>Giờ vào</th><th>Giờ ra</th><th>Tiền thực thu</th><th>Kết quả</th></tr></thead><tbody id="importedRows"></tbody></table></div>
   </section>
-  <section class="card">
+  <section class="card hidden" data-staff>
     <h2>3. Xem thống kê</h2><p class="muted">Thống kê theo ngày xe ra và số tiền đã thu trong dữ liệu bãi xe.</p>
     <div class="row"><div class="field"><label for="fromDate">Từ ngày</label><input id="fromDate" type="date" required></div><div class="field"><label for="toDate">Đến ngày</label><input id="toDate" type="date" required></div><div class="field"><label id="statsLotsLabel">Bãi xe</label><div class="lot-picker" id="statsLotsPicker"><button type="button" class="lot-toggle" id="statsLotsToggle" aria-expanded="false" aria-controls="statsLotsMenu" aria-labelledby="statsLotsLabel statsLotsToggle">Tất cả bãi ▾</button><div id="statsLotsMenu" class="lot-menu hidden"><label class="lot-option lot-all"><input type="checkbox" id="statsAllLots" checked>Tất cả bãi</label><div id="statsLots"></div></div></div></div><div class="field"><label for="statsVehicleType">Loại xe</label><select id="statsVehicleType"><option value="">Tất cả loại xe</option></select></div><button type="button" id="view">Xem thống kê</button></div>
     <div id="stats" class="metrics hidden"><div class="metric"><span>Doanh thu</span><strong id="revenue">—</strong></div><div class="metric"><span>Lượt xe đã ra</span><strong id="vehicles">—</strong></div><div class="metric"><span>Bình quân / ngày</span><strong id="daily">—</strong></div><div class="metric"><span>Tăng trưởng</span><strong id="growth">—</strong></div></div>
@@ -34,15 +44,15 @@
     <div id="lotsWrap" class="table-wrap hidden"><h3>Thống kê theo bãi xe</h3><table><thead><tr><th>Bãi xe</th><th>Địa chỉ</th><th>Doanh thu</th><th>Lượt xe</th><th>Lượt xe theo loại</th><th>Tỷ lệ loại xe / bãi</th><th>Tỷ lệ</th></tr></thead><tbody id="lots"></tbody></table><p class="file-info">Số lượt theo loại là các lượt đã ra trong thời gian và bộ lọc đang chọn. Tỷ lệ loại xe = doanh thu loại xe / tổng doanh thu mọi loại xe của cùng bãi, cùng kỳ. Cột Tỷ lệ cuối là doanh thu bãi / tổng doanh thu đang xem.</p></div>
     <details><summary>Xem JSON thống kê</summary><pre id="summaryJson">Chưa có dữ liệu.</pre></details>
   </section>
-  <section class="card">
-    <h2>4. Danh sách</h2><p class="muted">Kết hợp các bộ lọc bên dưới để xem lượt xe.</p>
-    <div class="row" id="visitFilters"><div class="field"><label for="listLot">Bãi xe</label><select id="listLot"><option value="">Tất cả bãi</option></select></div><div class="field"><label for="listVehicleType">Loại xe</label><select id="listVehicleType"><option value="">Tất cả loại xe</option></select></div><div class="field"><label for="listStatus">Trạng thái</label><select id="listStatus"><option value="">Tất cả trạng thái</option><option value="PARKED">Đang trong bãi</option><option value="COMPLETED">Đã ra</option></select></div></div>
+  <section class="card hidden" data-staff>
+    <h2>4. Danh sách và nhận/trả xe</h2><p class="muted">Check-in/out ghi giờ máy chủ. Khi trả xe, chọn loại ngày áp dụng cho toàn bộ thời gian gửi liên tục. Phút lẻ dưới 30 làm tròn xuống, từ 30 làm tròn lên; tối thiểu thu giá giờ đầu. Thiếu mức giá phù hợp thì chưa hoàn tất lượt gửi.</p>
+    <div class="row" id="visitFilters"><div class="field"><label for="listLot">Bãi xe</label><select id="listLot"><option value="">Tất cả bãi</option></select></div><div class="field"><label for="listVehicleType">Loại xe</label><select id="listVehicleType"><option value="">Tất cả loại xe</option></select></div><div class="field"><label for="listStatus">Trạng thái</label><select id="listStatus"><option value="">Tất cả trạng thái</option><option value="RESERVED">Đã đặt, chưa check-in</option><option value="PARKED">Đang trong bãi</option><option value="COMPLETED">Đã ra</option></select></div></div>
     <div class="row" style="margin-top:12px"><div class="field"><label for="listDay">Ngày</label><select id="listDay"><option value="">Tất cả ngày</option></select></div><div class="field"><label for="listMonth">Tháng</label><select id="listMonth"><option value="">Tất cả tháng</option></select></div><div class="field"><label for="listYear">Năm</label><input id="listYear" type="number" min="1" max="9999" step="1" placeholder="Tất cả năm"></div></div>
     <div class="inline" style="margin-top:12px"><button type="button" class="secondary" id="list">Xem danh sách</button></div>
-    <p id="listMessage" class="notice hidden" role="status"></p><div id="listWrap" class="table-wrap hidden"><table><thead id="listHead"></thead><tbody id="listBody"></tbody></table></div><details><summary>Xem JSON danh sách</summary><pre id="listJson">Chưa có dữ liệu.</pre></details>
+    <p id="operationMessage" class="notice hidden" role="status"></p><p id="listMessage" class="notice hidden" role="status"></p><div id="listWrap" class="table-wrap hidden"><table><thead id="listHead"></thead><tbody id="listBody"></tbody></table></div><details><summary>Xem JSON danh sách</summary><pre id="listJson">Chưa có dữ liệu.</pre></details>
     <div id="listPaging" class="inline hidden" style="margin-top:12px"><button type="button" class="secondary" id="listPrev">Trang trước</button><span id="listPage"></span><button type="button" class="secondary" id="listNext">Trang sau</button></div>
   </section>
-  <section class="card">
+  <section class="card hidden" data-staff>
     <h2>5. Xuất báo cáo</h2><p class="muted">Báo cáo sử dụng khoảng ngày, bãi và loại xe đang chọn ở bước 3.</p>
     <div class="row"><div class="field"><label for="format">Định dạng</label><select id="format"><option value="EXCEL">Excel (.xlsx)</option><option value="PDF">PDF (.pdf)</option></select></div><button type="button" id="export">Xuất báo cáo</button></div>
     <p id="exportMessage" class="notice hidden" role="status"></p><details><summary>Xem JSON xuất báo cáo</summary><pre id="exportJson">Chưa có dữ liệu.</pre></details>
@@ -55,6 +65,10 @@
   const base = '/gdci/parking/parkingLot';
   const number = value => value == null ? '—' : new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 2}).format(value);
   let token = null;
+  let accountRole = null;
+  let myPage = 1;
+  let myTotalPages = 1;
+  const statusLabel = status => ({RESERVED:'Đã đặt',CHECKED_IN:'Đang gửi',COMPLETED:'Hoàn tất'}[status] || status);
   let listPage = 1;
   const listPageSize = 10;
   const today = new Date();
@@ -88,7 +102,7 @@
     if (numeric) cell.className = 'numeric';
   }
   function addRow(body, values, numericColumns = []) {
-    const row = body.insertRow(); values.forEach((value, i) => textCell(row, value, numericColumns.includes(i)));
+    const row = body.insertRow(); values.forEach((value, i) => textCell(row, value, numericColumns.includes(i))); return row;
   }
   function showJson(id, data) { $(id).textContent = JSON.stringify(data, null, 2); }
   function requireLogin() { if (!token) throw new Error('Vui lòng đăng nhập trước.'); }
@@ -134,16 +148,19 @@
     link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   $('loginForm').addEventListener('submit', async event => {
-    event.preventDefault(); token = null; $('authStatus').textContent = 'Chưa đăng nhập'; $('authStatus').className = 'status';
+    event.preventDefault(); token = null; accountRole = null; updatePanels(); $('authStatus').textContent = 'Chưa đăng nhập'; $('authStatus').className = 'status';
     try {
       const response = await fetch('/auth/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('username').value,password:$('password').value})});
       if (!response.ok) throw new Error(`Không đăng nhập được (HTTP ${response.status}).`);
       const result = await response.json(); if (result.code !== 0 || !result.data?.accessToken) throw new Error(result.message || 'Đăng nhập không thành công.');
       token = result.data.accessToken; $('password').value = ''; $('authStatus').textContent = 'Đã đăng nhập'; $('authStatus').className = 'status connected'; notify('loginMessage', 'Đăng nhập thành công. Phiên có hiệu lực 30 phút.', 'success');
-      await refreshVisitFilters();
+      const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      accountRole = payload.role; updatePanels();
+      if (accountRole === 'ROLE_CUSTOMER') { myPage = 1; await loadReservationOptions(); await loadMyBookings(); }
+      else await refreshVisitFilters();
     } catch (error) { notify('loginMessage', error.message, 'error'); }
   });
-  $('logout').addEventListener('click', () => { token = null; $('authStatus').textContent = 'Chưa đăng nhập'; $('authStatus').className = 'status'; notify('loginMessage', 'Đã đăng xuất.'); });
+  $('logout').addEventListener('click', () => { token = null; accountRole = null; updatePanels(); $('authStatus').textContent = 'Chưa đăng nhập'; $('authStatus').className = 'status'; notify('loginMessage', 'Đã đăng xuất.'); });
   $('importForm').addEventListener('submit', async event => {
     event.preventDefault(); $('importErrorsWrap').classList.add('hidden'); $('importedRowsWrap').classList.add('hidden');
     const button = $('importForm').querySelector('button'); button.disabled = true;
@@ -205,9 +222,21 @@
         parameters.set('year', String(year));
       }
       const result = await jsonRequest(`${base}/parkingBooking?${parameters}`); showJson('listJson', result); const items = result.data.items;
-      const headings = ['Bãi xe','Biển số','Loại xe','Giờ vào','Giờ ra','Tiền đã thu'];
+      const headings = ['Bãi xe','Biển số','Loại xe','Giờ vào / dự kiến','Giờ ra','Tiền đã thu','Trạng thái','Nhận / trả xe'];
       const head = $('listHead'); head.replaceChildren(); const headerRow = head.insertRow(); headings.forEach(value => { const th = document.createElement('th'); th.textContent = value; headerRow.appendChild(th); });
-      const body = $('listBody'); body.replaceChildren(); items.forEach(item => addRow(body, [[item.parkingLotCode,item.parkingLotName].filter(Boolean).join(' · '),item.licensePlate,item.vehicleType,item.enteredAt,item.exitedAt,item.collectedAmount == null ? null : `${number(item.collectedAmount)} đ`], [5]));
+      const body = $('listBody'); body.replaceChildren(); items.forEach(item => {
+        const row = addRow(body, [[item.parkingLotCode,item.parkingLotName].filter(Boolean).join(' · '),item.licensePlate,item.vehicleType,item.enteredAt?.replace('T',' '),item.exitedAt?.replace('T',' '),item.collectedAmount == null ? null : `${number(item.collectedAmount)} đ`,statusLabel(item.status)], [5]);
+        const actions = row.insertCell();
+        if (item.status === 'RESERVED') {
+          const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Check-in'; actions.appendChild(button);
+          button.addEventListener('click', () => changeBookingState(item.id, 'check-in', button));
+        } else if (item.status === 'CHECKED_IN') {
+          const dayType = document.createElement('select'); dayType.setAttribute('aria-label','Loại ngày tính phí');
+          [['','Chọn loại ngày'],['WEEKDAY','Ngày thường'],['WEEKEND','Cuối tuần'],['HOLIDAY','Ngày lễ']].forEach(([value,label]) => dayType.add(new Option(label,value)));
+          const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Check-out'; actions.append(dayType,button);
+          button.addEventListener('click', () => changeBookingState(item.id, 'check-out', button, dayType.value));
+        } else actions.textContent = 'Đã hoàn tất';
+      });
       $('listWrap').classList.toggle('hidden', !items.length); notify('listMessage', `Hiển thị ${items.length} dòng trên tổng ${result.data.totalCount} lượt phù hợp với bộ lọc.`, 'success');
       const totalPages = Math.max(1, Math.ceil(result.data.totalCount / result.data.pageSize));
       $('listPaging').classList.remove('hidden'); $('listPage').textContent = `Trang ${result.data.pageNumber} / ${totalPages} · ${result.data.pageSize} dòng/trang`; $('listPrev').disabled = result.data.pageNumber <= 1;
@@ -234,6 +263,71 @@
     } catch (error) { notify('exportMessage', error.message, 'error'); }
     finally { button.disabled = false; }
   });
+
+  function updatePanels() {
+    if (!accountRole) {
+      $('reserveForm').reset();
+      ['myBookingsBody','listBody','lots','vehicleStats','importedRows','importErrors'].forEach(id => $(id).replaceChildren());
+      ['reservationJson','summaryJson','listJson','exportJson'].forEach(id => { $(id).textContent = 'Chưa có dữ liệu.'; });
+      ['reserveMessage','myBookingsMessage','stats','listWrap','lotsWrap','vehicleStatsWrap','importedRowsWrap','importErrorsWrap','operationMessage'].forEach(id => $(id).classList.add('hidden'));
+    }
+    const staff = ['ROLE_ADMIN','ROLE_DISTRICT_ADMIN','ROLE_PARKING_OPERATOR'].includes(accountRole);
+    document.querySelectorAll('[data-staff]').forEach(section => section.classList.toggle('hidden', !staff));
+    $('customerBookings').classList.toggle('hidden', accountRole !== 'ROLE_CUSTOMER');
+  }
+  $('registerCustomer').addEventListener('click', async () => {
+    if (!$('loginForm').reportValidity()) return;
+    const button = $('registerCustomer'); button.disabled = true;
+    try {
+      const response = await fetch('/auth/register', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('username').value,password:$('password').value})});
+      const result = await response.json(); if (result.code !== 0) throw new Error(result.message || 'Không đăng ký được.');
+      notify('loginMessage','Đăng ký khách hàng thành công. Bấm Đăng nhập để đặt chỗ.','success');
+    } catch (error) { notify('loginMessage',error.message,'error'); }
+    finally { button.disabled = false; }
+  });
+  async function loadReservationOptions() {
+    const {data} = await jsonRequest(`${base}/parkingReservation/options`);
+    setOptions('reserveLot','Chọn bãi xe',data.parkingLots.map(lot => ({value:lot.id,label:[lot.code,lot.name].filter(Boolean).join(' · ')})));
+    setOptions('reserveVehicleType','Chọn loại xe',data.vehicleTypes.map(type => ({value:type,label:type})));
+    const arrival = new Date(Date.now()+60*60*1000);
+    $('reserveArrival').value = `${arrival.getFullYear()}-${String(arrival.getMonth()+1).padStart(2,'0')}-${String(arrival.getDate()).padStart(2,'0')}T${String(arrival.getHours()).padStart(2,'0')}:${String(arrival.getMinutes()).padStart(2,'0')}`;
+  }
+  $('reserveForm').addEventListener('submit', async event => {
+    event.preventDefault(); const button = $('reserveForm').querySelector('button'); button.disabled = true;
+    try {
+      const result = await jsonRequest(`${base}/parkingReservation`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({parkingLotId:$('reserveLot').value,vehicleType:$('reserveVehicleType').value,licensePlate:$('reservePlate').value,expectedArrivalAt:$('reserveArrival').value,note:$('reserveNote').value})});
+      showJson('reservationJson',result); notify('reserveMessage',`Đã đặt chỗ: ${result.data.id}. Chờ nhân viên check-in khi đến bãi.`,'success');
+      myPage = 1; await loadMyBookings();
+    } catch (error) { notify('reserveMessage',error.message,'error'); }
+    finally { button.disabled = false; }
+  });
+  async function loadMyBookings() {
+    $('myPrev').disabled = true; $('myNext').disabled = true;
+    try {
+      const result = await jsonRequest(`${base}/parkingReservation/my?pageNumber=${myPage}&pageSize=10`); const data = result.data;
+      const body = $('myBookingsBody'); body.replaceChildren();
+      data.items.forEach(item => addRow(body, [[item.parkingLot.code,item.parkingLot.name].filter(Boolean).join(' · '),item.licensePlate,item.vehicleType,item.startAt?.replace('T',' '),item.endAt?.replace('T',' '),statusLabel(item.status),item.billableHours,item.amount == null ? null : `${number(item.amount)} đ`],[6,7]));
+      myTotalPages = Math.max(1,Math.ceil(data.totalCount/data.pageSize));
+      $('myPage').textContent = `Trang ${data.pageNumber} / ${myTotalPages} · ${data.totalCount} booking`;
+      $('myPrev').disabled = myPage <= 1; $('myNext').disabled = myPage >= myTotalPages;
+      notify('myBookingsMessage',`Có ${data.totalCount} booking của bạn.`,'success');
+    } catch (error) { notify('myBookingsMessage',error.message,'error'); }
+  }
+  $('refreshMyBookings').addEventListener('click', () => { myPage = 1; loadMyBookings(); });
+  $('myPrev').addEventListener('click', () => { if (myPage > 1) { myPage--; loadMyBookings(); } });
+  $('myNext').addEventListener('click', () => { if (myPage < myTotalPages) { myPage++; loadMyBookings(); } });
+  async function changeBookingState(id, action, button, dayType) {
+    if (action === 'check-out' && !dayType) { notify('operationMessage','Chọn loại ngày trước khi check-out.','error'); return; }
+    button.disabled = true;
+    try {
+      const options = action === 'check-in' ? {method:'POST'} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dayType})};
+      const result = await jsonRequest(`${base}/parkingReservation/${encodeURIComponent(id)}/${action}`,options);
+      notify('operationMessage',action === 'check-in' ? `Đã check-in lúc ${result.data.startAt.replace('T',' ')}.` : `Đã check-out · ${number(result.data.billableHours)} giờ tính phí · ${number(result.data.amount)} đ.`,'success');
+      await loadList();
+      if (action === 'check-out' && !$('stats').classList.contains('hidden')) $('view').click();
+    } catch (error) { notify('operationMessage',error.message,'error'); }
+    finally { button.disabled = false; }
+  }
 })();
 </script>
 </body>

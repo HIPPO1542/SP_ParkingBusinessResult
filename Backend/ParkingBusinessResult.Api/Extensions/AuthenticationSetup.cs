@@ -78,6 +78,15 @@ public static class AuthenticationSetup
             policy.RequireAuthenticatedUser()
                 .RequireAssertion(context => !string.IsNullOrWhiteSpace(context.User.FindFirst("sub")?.Value))
                 .RequireRole("ROLE_ADMIN")));
+        builder.Services.AddAuthorization(options =>
+        {
+            options.AddPolicy("CustomerBookingAccess", policy => policy.RequireAuthenticatedUser()
+                .RequireAssertion(context => !string.IsNullOrWhiteSpace(context.User.FindFirst("sub")?.Value))
+                .RequireRole("ROLE_CUSTOMER"));
+            options.AddPolicy("BookingCatalogAccess", policy => policy.RequireAuthenticatedUser()
+                .RequireAssertion(context => !string.IsNullOrWhiteSpace(context.User.FindFirst("sub")?.Value))
+                .RequireRole("ROLE_CUSTOMER", "ROLE_ADMIN", "ROLE_DISTRICT_ADMIN", "ROLE_PARKING_OPERATOR"));
+        });
         builder.Services.AddRateLimiter(options =>
         {
             options.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(

@@ -5,7 +5,7 @@ namespace ParkingBusinessResult.Application.Features.ParkingBookings.Common;
 
 public sealed record BookingItem(Guid Id, Guid ParkingLotId, string LicensePlate, string VehicleType,
     DateTime EnteredAt, DateTime? ExitedAt, decimal? CollectedAmount,
-    string? ParkingLotCode, string? ParkingLotName);
+    string? ParkingLotCode, string? ParkingLotName, string Status);
 
 public interface IBookingListRepository
 {

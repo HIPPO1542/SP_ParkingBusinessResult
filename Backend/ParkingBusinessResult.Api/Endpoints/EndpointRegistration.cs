@@ -40,11 +40,21 @@ public static class EndpointRegistration
         ExportBookingReportEndpoint.Map(parkingBookings);
         CompareBookingTariffEndpoint.Map(parkingBookings);
 
+        RouteGroupBuilder reservations = app.MapGroup("/gdci/parking/parkingLot/parkingReservation").RequireAuthorization("CustomerBookingAccess");
+        ReserveBookingEndpoint.Map(reservations);
+        GetMyBookingsEndpoint.Map(reservations);
+        RouteGroupBuilder catalog = app.MapGroup("/gdci/parking/parkingLot/parkingReservation").RequireAuthorization("BookingCatalogAccess");
+        GetBookingOptionsEndpoint.Map(catalog);
+        RouteGroupBuilder staffReservations = app.MapGroup("/gdci/parking/parkingLot/parkingReservation").RequireAuthorization("BusinessResultAccess");
+        CheckInEndpoint.Map(staffReservations);
+        CheckOutEndpoint.Map(staffReservations);
+
         if ((app.Configuration["Authentication:Mode"] ?? "Local") == "Local")
         {
             RouteGroupBuilder accounts = app.MapGroup("/auth");
             LoginEndpoint.Map(accounts);
             CreateAccountEndpoint.Map(accounts);
+            RegisterCustomerEndpoint.Map(accounts);
         }
     }
 }

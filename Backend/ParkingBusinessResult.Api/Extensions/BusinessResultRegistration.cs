@@ -16,6 +16,12 @@ using ParkingBusinessResult.Application.Features.BusinessResults.Queries.List;
 using ParkingBusinessResult.Application.Features.LocalAccounts.Commands.Bootstrap;
 using ParkingBusinessResult.Application.Features.LocalAccounts.Commands.Create;
 using ParkingBusinessResult.Application.Features.LocalAccounts.Commands.SignIn;
+using ParkingBusinessResult.Application.Features.LocalAccounts.Commands.Register;
+using ParkingBusinessResult.Application.Features.ParkingBookings.Commands.Reserve;
+using ParkingBusinessResult.Application.Features.ParkingBookings.Commands.CheckIn;
+using ParkingBusinessResult.Application.Features.ParkingBookings.Commands.CheckOut;
+using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.Options;
+using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.MyBookings;
 
 namespace ParkingBusinessResult.Api.Extensions;
 
@@ -23,6 +29,12 @@ public static class BusinessResultRegistration
 {
     public static IServiceCollection AddBusinessResultHandlers(this IServiceCollection services)
     {
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<ReserveBookingHandler>();
+        services.AddScoped<CheckInHandler>();
+        services.AddScoped<CheckOutHandler>();
+        services.AddScoped<GetBookingOptionsHandler>();
+        services.AddScoped<GetMyBookingsHandler>();
         services.AddScoped<CreateBusinessResultHandler>();
         services.AddScoped<UpdateBusinessResultHandler>();
         services.AddScoped<DeleteBusinessResultHandler>();
@@ -42,6 +54,7 @@ public static class BusinessResultRegistration
         services.AddSingleton<BootstrapAdministratorHandler>();
         services.AddSingleton<CreateAccountHandler>();
         services.AddSingleton<SignInHandler>();
+        services.AddSingleton<RegisterCustomerHandler>();
         return services;
     }
 }

@@ -52,6 +52,9 @@ Luồng: `Endpoint → Command/Query → Handler → interface → Infrastructur
 
 ## Các chức năng
 
+- Khách đăng ký/đăng nhập trên cùng giao diện, đặt chỗ và xem booking của mình. Nhân viên lọc trạng thái Đã đặt, bấm Check-in khi xe đến, chọn loại ngày rồi Check-out khi xe ra. Hệ thống dùng giờ máy chủ và ghi vào `SP_datTruocChoDoXe`; các lượt hoàn tất được đọc trực tiếp để thống kê.
+- Phí tính liên tục qua ngày: phần phút dưới 30 làm tròn xuống, từ 30 làm tròn lên; tối thiểu thu mức giá giờ đầu. Dùng `SP_khungGiaThuPhi`, `SP_chiTietMucThuKhungGia`, `SP_apDungKhungGia`; thiếu hoặc trùng mức giá thì từ chối hoàn tất, không tự đặt giá.
+
 - Thêm, sửa, xem, liệt kê và xóa mềm kết quả tổng hợp trong `SP_ketQuaKinhDoanhBaiDoXe`; ghi thông tin người tạo/cập nhật từ token.
 - Import `.xlsx`, `.xls`, `.csv` tối đa 10 MB / 50.000 dòng vào `SP_datTruocChoDoXe` theo sheet `SP_ParkingBooking`. Trùng bãi + biển số + giờ vào là lỗi, không cập nhật. Dòng hợp lệ ghi chung một giao dịch; lỗi lưu trữ hoặc hủy yêu cầu trước commit sẽ rollback batch.
 - Danh sách lượt xe kèm mã/tên bãi, kết hợp lọc bãi, loại xe, đã ra/chưa ra và ngày/tháng/năm theo giờ vào hoặc giờ ra. Lọc quyền và phân trang thực hiện ở SQLite.

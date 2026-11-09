@@ -3,6 +3,7 @@ using ParkingBusinessResult.Api.Contracts;
 using ParkingBusinessResult.Application.Features.BusinessResults.Common;
 using ParkingBusinessResult.Domain;
 using ParkingBusinessResult.Application.Features.BusinessReports.Common;
+using ParkingBusinessResult.Application.Features.ParkingBookings.Common;
 
 namespace ParkingBusinessResult.Api.Endpoints;
 
@@ -36,4 +37,8 @@ internal static class EndpointSupport
 
     public static IResult InvalidBody() =>
         Results.Ok(ApiResponse<object>.BusinessError("Dữ liệu yêu cầu thiếu trường bắt buộc hoặc chứa trường không hỗ trợ."));
+
+    public static IResult Respond(BookingWriteResult result) => result.Error is null
+        ? Results.Ok(ApiResponse<BookingDetails>.Success(result.Booking!))
+        : Results.Ok(ApiResponse<BookingDetails>.BusinessError(result.Error));
 }

@@ -23,6 +23,8 @@ public static class PersistenceRegistration
         services.AddSingleton<IBookingListRepository>(provider => provider.GetRequiredService<BookingQueryRepository>());
         services.AddSingleton<IBookingSummaryRepository>(provider => provider.GetRequiredService<BookingQueryRepository>());
         services.AddSingleton<IBookingTariffRepository, BookingTariffRepository>();
+        services.AddSingleton<IBookingLifecycleRepository, BookingLifecycleRepository>();
+        services.AddSingleton<ICustomerBookingQueries, BookingLifecycleRepository>();
         services.AddSingleton<ILocalAccountRepository, LocalAccountRepository>();
         return services;
     }

@@ -109,6 +109,31 @@
       "key": "fileUrl",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "customerUsername",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "customerPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "customerAccessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reservationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "expectedArrivalAt",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -805,6 +830,261 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Tải file thành công', () => { pm.response.to.have.status(200); pm.expect(pm.response.headers.get('Content-Type')).to.not.include('application/json'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Khách đặt chỗ và nhân viên nhận/trả xe",
+      "item": [
+        {
+          "name": "Đăng ký khách hàng",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "description": "Tài khoản luôn có ROLE_CUSTOMER; mật khẩu từ 12 ký tự. Không nhận quyền/bãi do khách tự gán.",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{customerUsername}}\",\n  \"password\": \"{{customerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200/code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đăng nhập khách hàng",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{customerUsername}}\",\n  \"password\": \"{{customerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.unset('customerAccessToken');",
+                  "const response = pm.response.json();",
+                  "pm.test('Đăng nhập khách thành công', () => pm.expect(response.code).to.eql(0));",
+                  "if (response.code === 0 && response.data.accessToken) pm.collectionVariables.set('customerAccessToken', response.data.accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bãi xe và loại xe đặt chỗ",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingReservation/options",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200/code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
+                  "if (response.code === 0 && response.data.parkingLots.length && !pm.variables.get('parkingLotId')) pm.collectionVariables.set('parkingLotId', response.data.parkingLots[0].id);",
+                  "if (response.code === 0 && response.data.vehicleTypes.length && !response.data.vehicleTypes.includes(pm.variables.get('vehicleType'))) pm.collectionVariables.set('vehicleType', response.data.vehicleTypes[0]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Khách đặt chỗ",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingReservation",
+            "description": "Đặt expectedArrivalAt dạng yyyy-MM-ddTHH:mm ở tương lai. Chưa có giờ ra và tiền; chưa đưa vào thống kê.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parkingLotId\": \"{{parkingLotId}}\",\n  \"vehicleType\": \"{{vehicleType}}\",\n  \"licensePlate\": \"59A-90001\",\n  \"expectedArrivalAt\": \"{{expectedArrivalAt}}\",\n  \"note\": \"Đặt chỗ từ Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('expectedArrivalAt')) { const d = new Date(Date.now()+3600000); const pad = n => String(n).padStart(2,'0'); pm.collectionVariables.set('expectedArrivalAt', `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('Booking được giữ chỗ', () => { pm.expect(response.code).to.eql(0); pm.expect(response.data.status).to.eql('RESERVED'); });",
+                  "if (response.code === 0) pm.collectionVariables.set('reservationId', response.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Booking của khách hiện tại",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingReservation/my?pageNumber=1&pageSize=10",
+            "description": "Chỉ đọc booking thuộc sub của token khách; không nhận customerId từ request.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200/code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nhân viên check-in",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingReservation/{{reservationId}}/check-in",
+            "description": "Dùng accessToken nhân viên/admin đã đăng nhập. API tự lấy giờ vào thực tế; không gửi thời gian hoặc số tiền."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200/code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nhân viên check-out",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingReservation/{{reservationId}}/check-out",
+            "description": "dayType: WEEKDAY/WEEKEND/HOLIDAY. Tính liên tục; phút lẻ <30 xuống, >=30 lên; tối thiểu giá giờ đầu. Không có đúng một giá phù hợp thì trả lỗi, không hoàn tất.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayType\": \"{{dayType}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200/code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
                 ]
               }
             }

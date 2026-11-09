@@ -15,7 +15,7 @@ public static class ListBookingsEndpoint
     {
         string[] allowed = ["parkingLotId", "status", "vehicleType", "pageNumber", "pageSize", "day", "month", "year", "dateField"];
         if (request.Query.Keys.Any(key => !allowed.Contains(key, StringComparer.OrdinalIgnoreCase)) ||
-            (status is not null && status is not ("PARKED" or "COMPLETED")) ||
+            (status is not null && status is not ("RESERVED" or "PARKED" or "COMPLETED")) ||
             (vehicleType is not null && (string.IsNullOrWhiteSpace(vehicleType) || vehicleType.Length > 100)) ||
             !ReadOptional(day, 31, out int? dayNumber) || !ReadOptional(month, 12, out int? monthNumber) ||
             !ReadOptional(year, 9999, out int? yearNumber) ||

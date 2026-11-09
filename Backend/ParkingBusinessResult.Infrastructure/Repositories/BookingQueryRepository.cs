@@ -4,6 +4,7 @@ using ParkingBusinessResult.Infrastructure.Persistence.Models;
 using ParkingBusinessResult.Application.Features.BusinessResults.Common;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Common;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.List;
+using ParkingBusinessResult.Domain;
 
 namespace ParkingBusinessResult.Infrastructure.Repositories;
 
@@ -15,7 +16,9 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
         // COUNT and page are separate EF queries; this short read transaction keeps one database snapshot.
         using var snapshot = db.Database.BeginTransaction();
         var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), query.Access, query.ParkingLotId);
-        if (query.Status is not null) rows = query.Status == "PARKED" ? rows.Where(row => row.ThoiGianKetThuc == null) : rows.Where(row => row.ThoiGianKetThuc != null);
+        if (query.Status == "RESERVED") rows = rows.Where(row => row.TrangThaiDatCho == Booking.Reserved);
+        if (query.Status == "PARKED") rows = rows.Where(row => row.ThoiGianKetThuc == null && row.TrangThaiDatCho != Booking.Reserved);
+        if (query.Status == "COMPLETED") rows = rows.Where(row => row.ThoiGianKetThuc != null && row.TrangThaiDatCho != Booking.Reserved);
         if (query.VehicleType is not null) rows = rows.Where(row => EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE") == query.VehicleType);
         bool useExit = query.DateField == "exitedAt";
         if (query.Day.HasValue) rows = rows.Where(row => (useExit ? row.ThoiGianKetThuc : row.ThoiGianBatDau)!.Value.Day == query.Day);
@@ -28,12 +31,13 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
             .Skip((int)offset).Take(query.PageSize).Select(item => new
             {
                 item.Row.Id, item.Row.BaiDoXeId, item.Row.BienSoXe, item.Row.LoaiXe,
-                item.Row.ThoiGianBatDau, item.Row.ThoiGianKetThuc, item.Row.TongTien,
+                item.Row.ThoiGianBatDau, item.Row.ThoiGianKetThuc, item.Row.TongTien, item.Row.TrangThaiDatCho,
                 Code = item.Lot.Ma, Name = item.Lot.Ten
             }).ToArray();
         var items = page.Select(item => new BookingItem(Guid.Parse(item.Id), Guid.Parse(item.BaiDoXeId),
             item.BienSoXe, item.LoaiXe, item.ThoiGianBatDau, item.ThoiGianKetThuc,
-            item.TongTien.HasValue ? Convert.ToDecimal(item.TongTien.Value) : null, item.Code, item.Name)).ToArray();
+            item.TongTien.HasValue ? Convert.ToDecimal(item.TongTien.Value) : null, item.Code, item.Name,
+            item.TrangThaiDatCho == Booking.Reserved ? Booking.Reserved : item.ThoiGianKetThuc is null ? Booking.CheckedIn : Booking.Completed)).ToArray();
         snapshot.Commit();
         return new(items, total, query.PageNumber, query.PageSize);
     }
@@ -49,7 +53,7 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
     {
         using var db = contextFactory.CreateDbContext();
         var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), filter.Access, filter.ParkingLotId)
-            .Where(row => row.ThoiGianKetThuc >= filter.FromInclusive && row.ThoiGianKetThuc < filter.ToExclusive);
+            .Where(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc >= filter.FromInclusive && row.ThoiGianKetThuc < filter.ToExclusive);
         if (filter.VehicleType is not null)
             rows = rows.Where(row => EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE") == filter.VehicleType);
         if (filter.ParkingLotIds is not null)
