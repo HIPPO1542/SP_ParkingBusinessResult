@@ -134,6 +134,11 @@
       "key": "expectedArrivalAt",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "expectedDepartureAt",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -951,6 +956,46 @@
           ]
         },
         {
+          "name": "Tính tiền dự kiến",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingReservation/estimate?parkingLotId={{parkingLotId}}&vehicleType={{vehicleType}}&expectedArrivalAt={{expectedArrivalAt}}&expectedDepartureAt={{expectedDepartureAt}}",
+            "description": "Giờ bắt đầu/ra do khách chọn. Tự nhận ngày thường/cuối tuần; cùng quy tắc làm tròn với check-out. Không ghi dữ liệu."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('expectedArrivalAt')) { const d = new Date(Date.now()+3600000); const pad = n => String(n).padStart(2,'0'); pm.collectionVariables.set('expectedArrivalAt', `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`); }",
+                  "if (!pm.variables.get('expectedDepartureAt')) { const d = new Date(new Date(pm.variables.get('expectedArrivalAt')).getTime()+3600000); const pad = n => String(n).padStart(2,'0'); pm.collectionVariables.set('expectedDepartureAt', `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('Có tiền dự kiến', () => { pm.expect(response.code).to.eql(0); pm.expect(response.data.amount).to.be.a('number'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Khách đặt chỗ",
           "request": {
             "method": "POST",
@@ -974,7 +1019,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"parkingLotId\": \"{{parkingLotId}}\",\n  \"vehicleType\": \"{{vehicleType}}\",\n  \"licensePlate\": \"59A-90001\",\n  \"expectedArrivalAt\": \"{{expectedArrivalAt}}\",\n  \"note\": \"Đặt chỗ từ Postman\"\n}",
+              "raw": "{\n  \"parkingLotId\": \"{{parkingLotId}}\",\n  \"vehicleType\": \"{{vehicleType}}\",\n  \"licensePlate\": \"59A-90001\",\n  \"expectedArrivalAt\": \"{{expectedArrivalAt}}\",\n  \"note\": \"Đặt chỗ từ Postman\",\n  \"expectedDepartureAt\": \"{{expectedDepartureAt}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -988,7 +1033,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (!pm.variables.get('expectedArrivalAt')) { const d = new Date(Date.now()+3600000); const pad = n => String(n).padStart(2,'0'); pm.collectionVariables.set('expectedArrivalAt', `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`); }"
+                  "if (!pm.variables.get('expectedArrivalAt')) { const d = new Date(Date.now()+3600000); const pad = n => String(n).padStart(2,'0'); pm.collectionVariables.set('expectedArrivalAt', `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`); }",
+                  "if (!pm.variables.get('expectedDepartureAt')) { const d = new Date(new Date(pm.variables.get('expectedArrivalAt')).getTime()+3600000); const pad = n => String(n).padStart(2,'0'); pm.collectionVariables.set('expectedDepartureAt', `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`); }"
                 ]
               }
             },

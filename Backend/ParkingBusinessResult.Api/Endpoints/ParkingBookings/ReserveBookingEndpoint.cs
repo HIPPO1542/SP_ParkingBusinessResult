@@ -10,7 +10,7 @@ namespace ParkingBusinessResult.Api.Endpoints.ParkingBookings;
 
 public static class ReserveBookingEndpoint
 {
-    public sealed record Request(Guid? ParkingLotId, string? VehicleType, string? LicensePlate, string? ExpectedArrivalAt, string? Note)
+    public sealed record Request(Guid? ParkingLotId, string? VehicleType, string? LicensePlate, string? ExpectedArrivalAt, string? ExpectedDepartureAt, string? Note)
     {
         [JsonExtensionData] public Dictionary<string, JsonElement>? ExtraFields { get; init; }
     }
@@ -22,9 +22,10 @@ public static class ReserveBookingEndpoint
         string[] formats = ["yyyy-MM-ddTHH:mm", "yyyy-MM-ddTHH:mm:ss", "yyyy-MM-dd HH:mm:ss"];
         if (request.ParkingLotId is null || request.VehicleType is null || request.LicensePlate is null ||
             request.ExtraFields is { Count: > 0 } || !DateTime.TryParseExact(request.ExpectedArrivalAt, formats,
-                CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime arrival))
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime arrival) ||
+            !DateTime.TryParseExact(request.ExpectedDepartureAt, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime departure))
             return EndpointSupport.InvalidBody();
-        var input = new ReservationInput(request.ParkingLotId.Value, request.LicensePlate, request.VehicleType, arrival, request.Note);
+        var input = new ReservationInput(request.ParkingLotId.Value, request.LicensePlate, request.VehicleType, arrival, departure, request.Note);
         BookingWriteResult result = handler.Handle(new ReserveBookingCommand(input, EndpointSupport.GetAuditActor(user)));
         return EndpointSupport.Respond(result);
     }

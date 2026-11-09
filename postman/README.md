@@ -27,3 +27,5 @@ API JSON dùng HTTP 200; đọc `code` (`0`: thành công, `7`: lỗi) và `mess
 Đăng nhập nhân viên/admin ở nhóm 1, dùng `accessToken` đó để check-in và check-out trong nhóm 6. Check-in/out tự lấy giờ máy chủ; check-out gửi `dayType` (`WEEKDAY`, `WEEKEND`, `HOLIDAY`), không nhận số tiền từ client. Thiếu hoặc trùng giá phù hợp thì trả lỗi và chưa hoàn tất booking. Không có chức năng tự tạo giá ngày lễ.
 
 Trên giao diện web, đăng ký/đăng nhập khách để đặt chỗ; đăng xuất rồi đăng nhập nhân viên, bấm Xem danh sách (có thể lọc Đã đặt), Check-in khi xe đến, chọn loại ngày và Check-out khi xe ra. Khách chỉ thấy booking của mình; nhân viên chỉ thao tác tại bãi được phân quyền.
+
+Khách chọn `expectedArrivalAt` và `expectedDepartureAt`; dùng **Tính tiền dự kiến** để xem giá theo ngày thường/cuối tuần trước khi đặt. Hai mốc dự kiến được lưu khi `RESERVED`; check-in thay bằng giờ vào thực tế và xóa giờ ra dự kiến. `estimatedAmount` tách khỏi `amount` (tiền thực tế); chỉ booking hoàn tất mới vào doanh thu.

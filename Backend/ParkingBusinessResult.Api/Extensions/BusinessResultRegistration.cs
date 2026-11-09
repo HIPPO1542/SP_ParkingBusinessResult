@@ -22,6 +22,7 @@ using ParkingBusinessResult.Application.Features.ParkingBookings.Commands.CheckI
 using ParkingBusinessResult.Application.Features.ParkingBookings.Commands.CheckOut;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.Options;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.MyBookings;
+using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.Estimate;
 
 namespace ParkingBusinessResult.Api.Extensions;
 
@@ -35,6 +36,7 @@ public static class BusinessResultRegistration
         services.AddScoped<CheckOutHandler>();
         services.AddScoped<GetBookingOptionsHandler>();
         services.AddScoped<GetMyBookingsHandler>();
+        services.AddScoped<GetBookingEstimateHandler>();
         services.AddScoped<CreateBusinessResultHandler>();
         services.AddScoped<UpdateBusinessResultHandler>();
         services.AddScoped<DeleteBusinessResultHandler>();

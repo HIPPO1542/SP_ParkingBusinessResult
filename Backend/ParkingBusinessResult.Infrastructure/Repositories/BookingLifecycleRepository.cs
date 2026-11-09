@@ -38,24 +38,47 @@ public sealed class BookingLifecycleRepository(IDbContextFactory<ParkingDbContex
         return new(rows, count, pageNumber, pageSize);
     }
 
+    public BookingEstimateResult Estimate(BookingEstimateInput input)
+    {
+        using var db = contextFactory.CreateDbContext();
+        if (!db.DlKthtBaiDoXe.Any(row => row.Id == input.ParkingLotId.ToString()))
+            return new(null, "Bãi xe không tồn tại.");
+        return Estimate(db, input);
+    }
+
+    private static BookingEstimateResult Estimate(ParkingDbContext db, BookingEstimateInput input)
+    {
+        string dayType = input.ExpectedArrivalAt.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday ? "WEEKEND" : "WEEKDAY";
+        var rules = BookingTariffRepository.ReadRules(db, input.ParkingLotId.ToString(), input.VehicleType,
+            input.ExpectedArrivalAt, input.ExpectedDepartureAt, dayType);
+        if (rules.Count != 1) return new(null, "Không tìm thấy duy nhất một mức giá dự kiến phù hợp với bãi, loại xe và khoảng thời gian đã chọn.");
+        ParkingTariffRule rule = rules[0];
+        try
+        {
+            ParkingFee fee = ParkingFee.Calculate(input.ExpectedArrivalAt, input.ExpectedDepartureAt,
+                rule.InitialHours, rule.InitialPrice, rule.AdditionalHourPrice);
+            return new(new(fee.BillableHours, fee.Amount, dayType), null);
+        }
+        catch (ArgumentException error) { return new(null, error.Message); }
+    }
+
     public BookingWriteResult Reserve(ReservationInput input, AuditActor actor, DateTime now)
     {
         Booking booking;
-        try { booking = Booking.Reserve(input.ParkingLotId, input.LicensePlate, input.VehicleType, input.ExpectedArrivalAt, now); }
+        try { booking = Booking.Reserve(input.ParkingLotId, input.LicensePlate, input.VehicleType, input.ExpectedArrivalAt, input.ExpectedDepartureAt, now); }
         catch (ArgumentException error) { return new(null, error.Message); }
         using var db = contextFactory.CreateDbContext();
         using var transaction = db.Database.BeginTransaction();
         var lot = db.DlKthtBaiDoXe.SingleOrDefault(row => row.Id == input.ParkingLotId.ToString());
         if (lot is null) return new(null, "Bãi xe không tồn tại.");
-        bool supported = db.SpChiTietMucThuKhungGia.Any(row => row.LoaiPhuongTien == booking.VehicleType &&
-            row.IdKhungGiaNavigation.BaiDoXeId == lot.Id && row.IdKhungGiaNavigation.TrangThai == "ACTIVE" &&
-            row.IdKhungGiaNavigation.SpApDungKhungGia.Any(applied => applied.BaiDoXeId == lot.Id && applied.TrangThaiApDung == "APPLIED"));
-        if (!supported) return new(null, "Bãi xe chưa có bảng giá đang áp dụng cho loại xe này.");
+        BookingEstimateResult estimate = Estimate(db, new(input.ParkingLotId, booking.VehicleType, booking.StartAt, booking.EndAt!.Value));
+        if (estimate.Error is not null) return new(null, estimate.Error);
         string stamp = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
         var row = new SpDatTruocChoDoXe
         {
             Id = booking.Id.ToString(), BaiDoXeId = lot.Id, BaiDoXe = lot, BienSoXe = booking.LicensePlate,
-            LoaiXe = booking.VehicleType, ThoiGianBatDau = booking.StartAt, TrangThaiDatCho = Booking.Reserved,
+            LoaiXe = booking.VehicleType, ThoiGianBatDau = booking.StartAt, ThoiGianKetThuc = booking.EndAt,
+            TrangThaiDatCho = Booking.Reserved, TongTien = (double)estimate.Estimate!.Amount,
             SoLuongChoDat = 1, GhiChu = input.Note?.Trim(), IdNguoiTao = actor.Id, NguoiTao = actor.Name,
             IdNguoiCapNhat = actor.Id, NguoiCapNhat = actor.Name, NgayTao = stamp, NgayCapNhat = stamp
         };
@@ -134,7 +157,9 @@ public sealed class BookingLifecycleRepository(IDbContextFactory<ParkingDbContex
         long? hours = booking.Status == Booking.Completed && booking.EndAt > booking.StartAt
             ? ParkingFee.RoundHours(booking.StartAt, booking.EndAt.Value) : null;
         return new(booking.Id, new(booking.ParkingLotId, row.BaiDoXe.Ma, row.BaiDoXe.Ten, row.BaiDoXe.DiaChi),
-            booking.LicensePlate, booking.VehicleType, booking.StartAt, booking.EndAt, booking.Status, booking.Amount, hours, row.GhiChu,
-            row.NgayTao, row.NguoiTao, row.IdNguoiTao, row.NgayCapNhat, row.NguoiCapNhat, row.IdNguoiCapNhat);
+            booking.LicensePlate, booking.VehicleType, booking.StartAt, booking.EndAt, booking.Status,
+            row.TrangThaiDatCho is Booking.Reserved or Booking.CheckedIn ? null : booking.Amount, hours, row.GhiChu,
+            row.NgayTao, row.NguoiTao, row.IdNguoiTao, row.NgayCapNhat, row.NguoiCapNhat, row.IdNguoiCapNhat,
+            row.TrangThaiDatCho is Booking.Reserved or Booking.CheckedIn ? booking.Amount : null);
     }
 }

@@ -36,7 +36,7 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
             }).ToArray();
         var items = page.Select(item => new BookingItem(Guid.Parse(item.Id), Guid.Parse(item.BaiDoXeId),
             item.BienSoXe, item.LoaiXe, item.ThoiGianBatDau, item.ThoiGianKetThuc,
-            item.TongTien.HasValue ? Convert.ToDecimal(item.TongTien.Value) : null, item.Code, item.Name,
+            item.TrangThaiDatCho is Booking.Reserved or Booking.CheckedIn ? null : item.TongTien.HasValue ? Convert.ToDecimal(item.TongTien.Value) : null, item.Code, item.Name,
             item.TrangThaiDatCho == Booking.Reserved ? Booking.Reserved : item.ThoiGianKetThuc is null ? Booking.CheckedIn : Booking.Completed)).ToArray();
         snapshot.Commit();
         return new(items, total, query.PageNumber, query.PageSize);
