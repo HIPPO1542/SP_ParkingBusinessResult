@@ -39,6 +39,7 @@
     <p class="file-info">Các cột: Mã bãi, Biển số, Loại xe, Giờ vào, Giờ ra, Số tiền đã thu (VND). File mẫu cũ có thêm cột phương thức thanh toán vẫn được đọc, nhưng cột đó không được lưu.</p>
     <div id="importResult" class="notice hidden" role="status"></div><div class="table-wrap hidden" id="importErrorsWrap"><table><thead><tr><th>Dòng</th><th>Mã bãi</th><th>Lỗi</th></tr></thead><tbody id="importErrors"></tbody></table></div>
     <div class="table-wrap hidden" id="importedRowsWrap"><table><thead><tr><th>Dòng</th><th>Mã bãi</th><th>Biển số</th><th>Loại xe</th><th>Giờ vào</th><th>Giờ ra</th><th>Tiền thực thu</th><th>Kết quả</th></tr></thead><tbody id="importedRows"></tbody></table></div>
+    <div id="importPaging" class="inline hidden" style="margin-top:12px"><button type="button" class="secondary" id="importPrev">Trang trước</button><span id="importPage" role="status"></span><button type="button" class="secondary" id="importNext">Trang sau</button></div>
   </section>
   <section class="card hidden" data-staff>
     <h2>3. Xem thống kê</h2><p class="muted">Thống kê theo ngày xe ra và số tiền đã thu trong dữ liệu bãi xe.</p>
@@ -81,6 +82,9 @@
   const statusLabel = status => ({RESERVED:'Đã đặt',CHECKED_IN:'Đang gửi',COMPLETED:'Hoàn tất'}[status] || status);
   let listPage = 1;
   const listPageSize = 10;
+  let importedRows = [];
+  let importPage = 1;
+  const importPageSize = 10;
   const today = new Date();
   $('statsYear').value = String(today.getFullYear());
   for (let day = 1; day <= 31; day++) {
@@ -188,8 +192,28 @@
     } catch (error) { notify('loginMessage', error.message, 'error'); }
   });
   $('logout').addEventListener('click', () => { token = null; accountRole = null; updatePanels(); $('authStatus').textContent = 'Chưa đăng nhập'; $('authStatus').className = 'status'; notify('loginMessage', 'Đã đăng xuất.'); });
+  function renderImportedRows() {
+    const totalPages = Math.max(1, Math.ceil(importedRows.length / importPageSize));
+    importPage = Math.max(1, Math.min(importPage, totalPages));
+    const start = (importPage - 1) * importPageSize;
+    const body = $('importedRows'); body.replaceChildren();
+    importedRows.slice(start, start + importPageSize).forEach(item => {
+      const booking = item.booking;
+      addRow(body, [item.rowNumber, item.parkingLotCode, booking.licensePlate, booking.vehicleType,
+        booking.enteredAt?.replace('T', ' '), booking.exitedAt?.replace('T', ' '),
+        booking.collectedAmount == null ? null : `${number(booking.collectedAmount)} đ`, 'Đã thêm mới'], [6]);
+    });
+    $('importedRowsWrap').classList.toggle('hidden', !importedRows.length);
+    $('importPaging').classList.toggle('hidden', !importedRows.length);
+    $('importPage').textContent = `Trang ${importPage} / ${totalPages} · ${importPageSize} dòng/trang · Tổng ${importedRows.length} dòng đã thêm`;
+    $('importPrev').disabled = importPage <= 1;
+    $('importNext').disabled = importPage >= totalPages;
+  }
+  $('importPrev').addEventListener('click', () => { importPage--; renderImportedRows(); });
+  $('importNext').addEventListener('click', () => { importPage++; renderImportedRows(); });
   $('importForm').addEventListener('submit', async event => {
-    event.preventDefault(); $('importErrorsWrap').classList.add('hidden'); $('importedRowsWrap').classList.add('hidden');
+    event.preventDefault(); $('importErrorsWrap').classList.add('hidden');
+    importedRows = []; importPage = 1; renderImportedRows();
     const button = $('importForm').querySelector('button'); button.disabled = true;
     try {
       const file = $('importFile').files[0]; if (!file) throw new Error('Vui lòng chọn file.');
@@ -197,15 +221,7 @@
       notify('importResult', `Tổng ${result.data.totalRows} dòng · Thành công ${result.data.successRows} · Trùng ${result.data.duplicateRows} · Lỗi ${result.data.errorRows}`, result.data.errorRows ? 'error' : 'success');
       const body = $('importErrors'); body.replaceChildren(); (result.data.errors || []).forEach(error => addRow(body,[error.rowNumber,error.parkingLotCode,error.errorMessage]));
       $('importErrorsWrap').classList.toggle('hidden', !result.data.errors?.length);
-      const imported = $('importedRows'); imported.replaceChildren();
-      (result.data.importedRows || []).forEach(item => {
-        const booking = item.booking;
-        addRow(imported, [item.rowNumber, item.parkingLotCode, booking.licensePlate, booking.vehicleType,
-          booking.enteredAt?.replace('T', ' '), booking.exitedAt?.replace('T', ' '),
-          booking.collectedAmount == null ? null : `${number(booking.collectedAmount)} đ`,
-          'Đã thêm mới'], [6]);
-      });
-      $('importedRowsWrap').classList.toggle('hidden', !result.data.importedRows?.length);
+      importedRows = result.data.importedRows || []; renderImportedRows();
       $('importFile').value = '';
       const knownTypes = new Set([...$('listVehicleType').options].map(option => option.value));
       const filtersChanged = (result.data.importedRows || []).some(item => !knownTypes.has(item.booking.vehicleType) || !filterParkingLotCodes.has(item.parkingLotCode));
@@ -298,6 +314,7 @@
 
   function updatePanels() {
     if (!accountRole) {
+      importedRows = []; importPage = 1; renderImportedRows();
       $('reserveForm').reset(); cancelEstimate(); $('reserveEstimate').value = 'Chưa tính'; $('reserveEstimateInfo').textContent = 'Chọn bãi, loại xe và khoảng thời gian để xem giá dự kiến.';
       ['myBookingsBody','listBody','lots','vehicleStats','importedRows','importErrors'].forEach(id => $(id).replaceChildren());
       ['reservationJson','summaryJson','listJson','exportJson'].forEach(id => { $(id).textContent = 'Chưa có dữ liệu.'; });
