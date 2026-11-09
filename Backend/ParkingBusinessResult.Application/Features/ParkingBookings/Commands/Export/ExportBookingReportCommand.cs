@@ -5,4 +5,4 @@ namespace ParkingBusinessResult.Application.Features.ParkingBookings.Commands.Ex
 
 public sealed record ExportBookingReportCommand(DateTime FromInclusive, DateTime ToExclusive, string PeriodLabel,
     Guid? ParkingLotId, BusinessAccess Access, ReportActor Actor, string? District, IReadOnlySet<Guid>? ParkingLotIds = null,
-    string FileFormat = "EXCEL", string ReportTitle = "Báo cáo từ lượt xe");
+    string FileFormat = "EXCEL", string ReportTitle = "Báo cáo từ lượt xe", string? VehicleType = null);

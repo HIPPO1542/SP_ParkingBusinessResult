@@ -50,6 +50,8 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
         using var db = contextFactory.CreateDbContext();
         var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), filter.Access, filter.ParkingLotId)
             .Where(row => row.ThoiGianKetThuc >= filter.FromInclusive && row.ThoiGianKetThuc < filter.ToExclusive);
+        if (filter.VehicleType is not null)
+            rows = rows.Where(row => EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE") == filter.VehicleType);
         if (filter.ParkingLotIds is not null)
         {
             string[] selected = filter.ParkingLotIds.Select(id => id.ToString()).ToArray();
@@ -61,9 +63,9 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
             string district = filter.District.Trim();
             joined = joined.Where(item => ParkingDbContext.ContainsIgnoreCase(item.Lot.DiaChi, district));
         }
-        return joined.Select(item => new { item.Row.BaiDoXeId, item.Row.TongTien, item.Lot.Ma, item.Lot.Ten, item.Lot.DiaChi })
+        return joined.Select(item => new { item.Row.BaiDoXeId, item.Row.TongTien, item.Row.LoaiXe, item.Lot.Ma, item.Lot.Ten, item.Lot.DiaChi })
             .AsEnumerable().Select(item => new CompletedBooking(Guid.Parse(item.BaiDoXeId),
-                item.TongTien.HasValue ? Convert.ToDecimal(item.TongTien.Value) : null, item.Ma, item.Ten, item.DiaChi)).ToArray();
+                item.TongTien.HasValue ? Convert.ToDecimal(item.TongTien.Value) : null, item.Ma, item.Ten, item.DiaChi, item.LoaiXe)).ToArray();
     }
 
     private static IQueryable<SpDatTruocChoDoXe> Scope(IQueryable<SpDatTruocChoDoXe> rows, BusinessAccess access, Guid? lot)

@@ -11,7 +11,7 @@ public sealed class ExportBookingReportHandler(IBookingSummaryRepository reposit
     public BookingExportResult Handle(ExportBookingReportCommand command)
     {
         IReadOnlyList<CompletedBooking> bookings = repository.ListCompleted(new BookingSummaryFilter(
-            command.FromInclusive, command.ToExclusive, command.Access, command.ParkingLotId, command.ParkingLotIds, command.District));
+            command.FromInclusive, command.ToExclusive, command.Access, command.ParkingLotId, command.ParkingLotIds, command.District, command.VehicleType));
         int missing = bookings.Count(booking => booking.CollectedAmount is null);
         if (missing > 0) return new(null, missing);
         ReportRow[] rows = bookings.GroupBy(booking => booking.ParkingLotId).OrderBy(group => group.Key)

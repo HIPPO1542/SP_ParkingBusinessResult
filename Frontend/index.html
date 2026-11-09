@@ -27,10 +27,11 @@
   </section>
   <section class="card">
     <h2>3. Xem thống kê</h2><p class="muted">Thống kê theo ngày xe ra và số tiền đã thu trong dữ liệu bãi xe.</p>
-    <div class="row"><div class="field"><label for="fromDate">Từ ngày</label><input id="fromDate" type="date" required></div><div class="field"><label for="toDate">Đến ngày</label><input id="toDate" type="date" required></div><div class="field"><label id="statsLotsLabel">Bãi xe</label><div class="lot-picker" id="statsLotsPicker"><button type="button" class="lot-toggle" id="statsLotsToggle" aria-expanded="false" aria-controls="statsLotsMenu" aria-labelledby="statsLotsLabel statsLotsToggle">Tất cả bãi ▾</button><div id="statsLotsMenu" class="lot-menu hidden"><label class="lot-option lot-all"><input type="checkbox" id="statsAllLots" checked>Tất cả bãi</label><div id="statsLots"></div></div></div></div><button type="button" id="view">Xem thống kê</button></div>
+    <div class="row"><div class="field"><label for="fromDate">Từ ngày</label><input id="fromDate" type="date" required></div><div class="field"><label for="toDate">Đến ngày</label><input id="toDate" type="date" required></div><div class="field"><label id="statsLotsLabel">Bãi xe</label><div class="lot-picker" id="statsLotsPicker"><button type="button" class="lot-toggle" id="statsLotsToggle" aria-expanded="false" aria-controls="statsLotsMenu" aria-labelledby="statsLotsLabel statsLotsToggle">Tất cả bãi ▾</button><div id="statsLotsMenu" class="lot-menu hidden"><label class="lot-option lot-all"><input type="checkbox" id="statsAllLots" checked>Tất cả bãi</label><div id="statsLots"></div></div></div></div><div class="field"><label for="statsVehicleType">Loại xe</label><select id="statsVehicleType"><option value="">Tất cả loại xe</option></select></div><button type="button" id="view">Xem thống kê</button></div>
     <div id="stats" class="metrics hidden"><div class="metric"><span>Doanh thu</span><strong id="revenue">—</strong></div><div class="metric"><span>Lượt xe đã ra</span><strong id="vehicles">—</strong></div><div class="metric"><span>Bình quân / ngày</span><strong id="daily">—</strong></div><div class="metric"><span>Tăng trưởng</span><strong id="growth">—</strong></div></div>
     <p id="statsMessage" class="notice hidden" role="status"></p>
-    <div id="lotsWrap" class="table-wrap hidden"><table><thead><tr><th>Bãi xe</th><th>Địa chỉ</th><th>Doanh thu</th><th>Lượt xe</th><th>Tỷ lệ</th></tr></thead><tbody id="lots"></tbody></table></div>
+    <div id="vehicleStatsWrap" class="table-wrap hidden"><h3>Thống kê theo loại xe</h3><table><thead><tr><th>Loại xe</th><th>Doanh thu</th><th>Lượt xe</th><th>Tỷ trọng doanh thu mọi loại xe</th></tr></thead><tbody id="vehicleStats"></tbody></table></div>
+    <div id="lotsWrap" class="table-wrap hidden"><h3>Thống kê theo bãi xe</h3><table><thead><tr><th>Bãi xe</th><th>Địa chỉ</th><th>Doanh thu</th><th>Lượt xe</th><th>Tỷ lệ loại xe / bãi</th><th>Tỷ lệ</th></tr></thead><tbody id="lots"></tbody></table><p class="file-info">Tỷ lệ loại xe = doanh thu loại xe / tổng doanh thu mọi loại xe của cùng bãi, cùng kỳ. Cột Tỷ lệ cuối là doanh thu bãi / tổng doanh thu đang xem.</p></div>
     <details><summary>Xem JSON thống kê</summary><pre id="summaryJson">Chưa có dữ liệu.</pre></details>
   </section>
   <section class="card">
@@ -42,7 +43,7 @@
     <div id="listPaging" class="inline hidden" style="margin-top:12px"><button type="button" class="secondary" id="listPrev">Trang trước</button><span id="listPage"></span><button type="button" class="secondary" id="listNext">Trang sau</button></div>
   </section>
   <section class="card">
-    <h2>5. Xuất báo cáo</h2><p class="muted">Báo cáo sử dụng khoảng ngày và các bãi đang chọn ở bước 3.</p>
+    <h2>5. Xuất báo cáo</h2><p class="muted">Báo cáo sử dụng khoảng ngày, bãi và loại xe đang chọn ở bước 3.</p>
     <div class="row"><div class="field"><label for="format">Định dạng</label><select id="format"><option value="EXCEL">Excel (.xlsx)</option><option value="PDF">PDF (.pdf)</option></select></div><button type="button" id="export">Xuất báo cáo</button></div>
     <p id="exportMessage" class="notice hidden" role="status"></p><details><summary>Xem JSON xuất báo cáo</summary><pre id="exportJson">Chưa có dữ liệu.</pre></details>
   </section>
@@ -94,7 +95,8 @@
   function reportFilters() {
     const fromDate = $('fromDate').value; const toDate = $('toDate').value;
     if (!fromDate || !toDate || fromDate > toDate) throw new Error('Vui lòng chọn khoảng ngày hợp lệ.');
-    return {fromDate, toDate, parkingLotIds:selectedStatsLots()};
+    const vehicleType = $('statsVehicleType').value;
+    return {fromDate, toDate, parkingLotIds:selectedStatsLots(), ...(vehicleType ? {vehicleType} : {})};
   }
   async function request(path, options = {}) {
     requireLogin();
@@ -116,6 +118,7 @@
       const {data} = await jsonRequest(`${base}/parkingBooking/filters`);
       setOptions('listLot', 'Tất cả bãi', data.parkingLots.map(lot => ({value:lot.id, label:[lot.code, lot.name].filter(Boolean).join(' · ') || lot.id})));
       setOptions('listVehicleType', 'Tất cả loại xe', data.vehicleTypes.map(type => ({value:type, label:type})));
+      setOptions('statsVehicleType', 'Tất cả loại xe', data.vehicleTypes.map(type => ({value:type, label:type})));
       const selected = new Set(selectedStatsLots());
       $('statsLots').replaceChildren();
       data.parkingLots.forEach(lot => {
@@ -165,15 +168,22 @@
     finally { button.disabled = false; }
   });
   $('view').addEventListener('click', async () => {
-    $('stats').classList.add('hidden'); $('lotsWrap').classList.add('hidden'); $('statsMessage').classList.add('hidden');
+    $('stats').classList.add('hidden'); $('lotsWrap').classList.add('hidden'); $('vehicleStatsWrap').classList.add('hidden'); $('statsMessage').classList.add('hidden');
     try {
       const filters = reportFilters(); const parameters = new URLSearchParams({fromDate:filters.fromDate, toDate:filters.toDate});
       filters.parkingLotIds.forEach(id => parameters.append('parkingLotIds', id));
+      if (filters.vehicleType) parameters.set('vehicleType', filters.vehicleType);
       const result = await jsonRequest(`${base}/parkingBooking/summary?${parameters}`); const data = result.data; showJson('summaryJson', result);
       $('revenue').textContent = `${number(data.collectedRevenue)} đ`; $('vehicles').textContent = number(data.completedVehicleCount);
       $('daily').textContent = data.averageDailyRevenue == null ? '—' : `${number(data.averageDailyRevenue)} đ`; $('growth').textContent = data.growthRate == null ? '—' : `${number(data.growthRate)}%`;
       $('stats').classList.remove('hidden'); const body = $('lots'); body.replaceChildren();
-      (data.topRevenueParkingLots || []).forEach(item => addRow(body,[`${item.parkingLot?.code || ''} · ${item.parkingLot?.name || ''}`,item.parkingLot?.address,`${number(item.revenue)} đ`,number(item.vehicleCount),`${number(item.percentage)}%`],[2,3,4]));
+      const vehicleBody = $('vehicleStats'); vehicleBody.replaceChildren();
+      (data.revenueByVehicleType || []).forEach(item => addRow(vehicleBody,[item.vehicleType,`${number(item.revenue)} đ`,number(item.vehicleCount),item.percentage == null ? '—' : `${number(item.percentage)}%`],[1,2,3]));
+      $('vehicleStatsWrap').classList.toggle('hidden', !data.revenueByVehicleType?.length);
+      (data.topRevenueParkingLots || []).forEach(item => {
+        const shares = (item.revenueByVehicleType || []).map(vehicle => `${vehicle.vehicleType}: ${vehicle.percentage == null ? '—' : `${number(vehicle.percentage)}%`}`).join('; ');
+        addRow(body,[`${item.parkingLot?.code || ''} · ${item.parkingLot?.name || ''}`,item.parkingLot?.address,`${number(item.revenue)} đ`,number(item.vehicleCount),shares,`${number(item.percentage)}%`],[2,3,5]);
+      });
       $('lotsWrap').classList.toggle('hidden', !data.topRevenueParkingLots?.length);
       if (data.missingAmountCount > 0) notify('statsMessage', `Có ${data.missingAmountCount} lượt đã ra chưa có số tiền thực thu. Doanh thu hiện chỉ cộng các khoản đã có.`, 'error');
       else notify('statsMessage', `Đã tải thống kê từ ${filters.fromDate.split('-').reverse().join('/')} đến ${filters.toDate.split('-').reverse().join('/')} theo ngày xe ra.`, 'success');

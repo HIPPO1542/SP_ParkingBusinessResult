@@ -359,6 +359,26 @@
           ]
         },
         {
+          "name": "Thống kê theo loại xe",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/summary?reportingPeriod={{reportingPeriod}}&vehicleType={{vehicleType}}",
+            "description": "Lọc số liệu theo vehicleType. revenueByVehicleType chứa doanh thu, lượt và tỷ trọng; trong từng bãi, percentage của từng loại xe luôn chia cho tổng doanh thu mọi loại xe của bãi cùng kỳ."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Thống kê theo khoảng ngày",
           "request": {
             "method": "GET",
