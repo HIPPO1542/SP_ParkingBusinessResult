@@ -42,6 +42,7 @@ public sealed class ExcelBookingReader : IBookingSpreadsheetReader
                 {
                     null => null,
                     DateTime date => date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                    DateTimeOffset date => date.DateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
                     IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
                     _ => value.ToString()
                 };
