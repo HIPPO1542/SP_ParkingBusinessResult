@@ -49,6 +49,39 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
             .Select(row => EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE")).Distinct().OrderBy(type => type).ToArray();
     }
 
+    public IReadOnlyList<BookingOverviewGroup> GetOverview(BusinessAccess access, int? day, int? month, int? year)
+    {
+        using var db = contextFactory.CreateDbContext();
+        var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), access, null)
+            .Where(row => row.TrangThaiDatCho == Booking.Reserved || row.ThoiGianKetThuc != null ||
+                row.TrangThaiDatCho == Booking.CheckedIn || row.TrangThaiDatCho == "CONFIRMED");
+        if (year.HasValue)
+        {
+            DateTime from = new(year.Value, month ?? 1, day ?? 1);
+            DateTime lastDate = new(year.Value, month ?? 12, day ?? (month.HasValue ? DateTime.DaysInMonth(year.Value, month.Value) : 31));
+            // Reservations still contain planned times; only completed visits use the actual exit time.
+            rows = rows.Where(row => (row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null
+                ? row.ThoiGianKetThuc.Value : row.ThoiGianBatDau) >= from);
+            if (lastDate < DateTime.MaxValue.Date)
+            {
+                DateTime toExclusive = lastDate.AddDays(1);
+                rows = rows.Where(row => (row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null
+                    ? row.ThoiGianKetThuc.Value : row.ThoiGianBatDau) < toExclusive);
+            }
+        }
+        return rows.GroupBy(row => new { row.BaiDoXeId, VehicleType = EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE") })
+            .Select(group => new
+            {
+                group.Key.BaiDoXeId, group.Key.VehicleType,
+                CompletedCount = group.LongCount(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null),
+                ParkedCount = group.LongCount(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc == null),
+                ReservedCount = group.LongCount(row => row.TrangThaiDatCho == Booking.Reserved),
+                Revenue = group.Sum(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null && row.TongTien != null ? (decimal)row.TongTien.Value : 0m),
+                MissingAmountCount = group.LongCount(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null && row.TongTien == null)
+            }).AsEnumerable().Select(item => new BookingOverviewGroup(Guid.Parse(item.BaiDoXeId), item.VehicleType,
+                item.CompletedCount, item.ParkedCount, item.ReservedCount, item.Revenue, item.MissingAmountCount)).ToArray();
+    }
+
     public IReadOnlyList<CompletedBooking> ListCompleted(BookingSummaryFilter filter)
     {
         using var db = contextFactory.CreateDbContext();
