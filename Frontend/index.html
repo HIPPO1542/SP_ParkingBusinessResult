@@ -13,7 +13,7 @@
     #importedRowsWrap :is(th,td):nth-child(7),
     #listWrap :is(th,td):nth-child(6),#listWrap :is(th,td):nth-child(7),
     #customerBookings :is(th,td):nth-child(n+8){text-align:center;vertical-align:middle}
-    #stats{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:800px){#stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    main{grid-template-columns:minmax(0,1fr)}#overviewMetrics{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:800px){#overviewMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
   </style>
 </head>
 <body>
@@ -40,6 +40,11 @@
     <details><summary>Xem JSON booking</summary><pre id="reservationJson">Chưa có dữ liệu.</pre></details>
   </section>
   <section class="card hidden" data-staff>
+    <h2>Tổng quan</h2><p class="muted">Toàn bộ thời gian tại các bãi tài khoản được phép xem. Không phụ thuộc bộ lọc thống kê hoặc danh sách; tự cập nhật khi tải lại danh sách hay nhập dữ liệu thành công.</p>
+    <div id="overviewMetrics" class="metrics"><div class="metric"><span>Tổng doanh thu</span><strong id="overviewRevenue">—</strong></div><div class="metric"><span>Đã hoàn tất</span><strong id="overviewCompleted">—</strong></div><div class="metric"><span>Đang trong bãi</span><strong id="overviewParked">—</strong></div><div class="metric"><span>Chưa check-in</span><strong id="overviewReserved">—</strong></div></div>
+    <p id="overviewMessage" class="notice hidden" role="status"></p>
+  </section>
+  <section class="card hidden" data-staff>
     <h2>2. Nhập file lượt xe</h2><p class="muted">Mỗi dòng là một lượt xe. Chọn file Excel hoặc CSV theo mẫu của dự án.</p>
     <form id="importForm" class="row"><div class="field"><label for="importFile">File dữ liệu</label><input id="importFile" type="file" accept=".xlsx,.xls,.csv" required></div><button type="submit">Nhập dữ liệu</button></form>
     <p class="file-info">Các cột: Mã bãi, Biển số, Loại xe, Giờ vào, Giờ ra, Số tiền đã thu (VND). File mẫu cũ có thêm cột phương thức thanh toán vẫn được đọc, nhưng cột đó không được lưu.</p>
@@ -48,9 +53,9 @@
     <div id="importPaging" class="inline hidden" style="margin-top:12px"><button type="button" class="secondary" id="importPrev">Trang trước</button><span id="importPage" role="status"></span><button type="button" class="secondary" id="importNext">Trang sau</button></div>
   </section>
   <section class="card hidden" data-staff>
-    <h2>3. Xem thống kê</h2><p class="muted">Doanh thu và lượt hoàn tất theo giờ ra; xe đang gửi theo giờ vào; booking chưa check-in theo giờ đến dự kiến.</p>
+    <h2>3. Xem thống kê</h2><p class="muted">Doanh thu và lượt hoàn tất trong kỳ, theo giờ ra thực tế và các bộ lọc bên dưới.</p>
     <div class="row"><div class="field"><label for="statsDay">Ngày</label><select id="statsDay"><option value="">Tất cả ngày</option></select></div><div class="field"><label for="statsMonth">Tháng</label><select id="statsMonth"><option value="">Tất cả tháng</option></select></div><div class="field"><label for="statsYear">Năm</label><input id="statsYear" type="number" min="1" max="9999" step="1" placeholder="Chọn năm" required></div><div class="field"><label id="statsLotsLabel">Bãi xe</label><div class="lot-picker" id="statsLotsPicker"><button type="button" class="lot-toggle" id="statsLotsToggle" aria-expanded="false" aria-controls="statsLotsMenu" aria-labelledby="statsLotsLabel statsLotsToggle">Tất cả bãi ▾</button><div id="statsLotsMenu" class="lot-menu hidden"><label class="lot-option lot-all"><input type="checkbox" id="statsAllLots" checked>Tất cả bãi</label><div id="statsLots"></div></div></div></div><div class="field"><label for="statsVehicleType">Loại xe</label><select id="statsVehicleType"><option value="">Tất cả loại xe</option></select></div><button type="button" id="view">Xem thống kê</button></div>
-    <div id="stats" class="metrics hidden"><div class="metric"><span>Doanh thu</span><strong id="revenue">—</strong></div><div class="metric"><span>Đã hoàn tất</span><strong id="vehicles">—</strong></div><div class="metric"><span>Đang trong bãi</span><strong id="parkedVehicles">—</strong></div><div class="metric"><span>Chưa check-in</span><strong id="reservedBookings">—</strong></div></div>
+    <div id="stats" class="metrics hidden"><div class="metric"><span>Doanh thu trong kỳ</span><strong id="revenue">—</strong></div><div class="metric"><span>Lượt hoàn tất trong kỳ</span><strong id="vehicles">—</strong></div></div>
     <p id="statsMessage" class="notice hidden" role="status"></p>
     <div id="vehicleStatsWrap" class="table-wrap hidden"><h3>Thống kê theo loại xe</h3><table><thead><tr><th>Loại xe</th><th>Doanh thu</th><th>Lượt xe</th><th>Tỷ trọng doanh thu mọi loại xe</th></tr></thead><tbody id="vehicleStats"></tbody></table></div>
     <div id="lotsWrap" class="table-wrap hidden"><h3>Thống kê theo bãi xe</h3><table><thead><tr><th>Bãi xe</th><th>Địa chỉ</th><th>Doanh thu</th><th>Lượt xe</th><th>Lượt xe theo loại</th><th>Tỷ lệ loại xe / bãi</th><th>Tỷ lệ</th></tr></thead><tbody id="lots"></tbody></table><p class="file-info">Số lượt theo loại là các lượt đã ra trong thời gian và bộ lọc đang chọn. Tỷ lệ loại xe = doanh thu loại xe / tổng doanh thu mọi loại xe của cùng bãi, cùng kỳ. Cột Tỷ lệ cuối là doanh thu bãi / tổng doanh thu đang xem.</p></div>
@@ -162,6 +167,14 @@
     options.forEach(({value, label}) => select.add(new Option(label, value)));
     if ([...select.options].some(option => option.value === previous)) select.value = previous;
   }
+  function renderOverview(overview) {
+    $('overviewRevenue').textContent = overview ? `${number(overview.collectedRevenue)} đ` : '—';
+    $('overviewCompleted').textContent = number(overview?.completedVehicleCount);
+    $('overviewParked').textContent = number(overview?.parkedVehicleCount);
+    $('overviewReserved').textContent = number(overview?.reservedBookingCount);
+    if (overview?.missingAmountCount > 0) notify('overviewMessage', `Có ${number(overview.missingAmountCount)} lượt hoàn tất thiếu tiền thực thu. Tổng doanh thu chỉ cộng các khoản đã có.`, 'error');
+    else $('overviewMessage').classList.add('hidden');
+  }
   async function refreshVisitFilters() {
     try {
       const {data} = await jsonRequest(`${base}/parkingBooking/filters`);
@@ -176,7 +189,8 @@
         label.append(checkbox, document.createTextNode([lot.code, lot.name].filter(Boolean).join(' · ') || lot.id)); $('statsLots').appendChild(label);
       });
       updateLotLabel();
-    } catch (error) { notify('listMessage', `Không tải được bộ lọc: ${error.message}`, 'error'); }
+      renderOverview(data.overview);
+    } catch (error) { notify('listMessage', `Không tải được bộ lọc: ${error.message}`, 'error'); notify('overviewMessage', `Không tải được tổng quan: ${error.message}`, 'error'); }
   }
   function downloadBlob(blob, name) {
     const url = URL.createObjectURL(blob); const link = document.createElement('a');
@@ -239,7 +253,6 @@
       if (filters.vehicleType) parameters.set('vehicleType', filters.vehicleType);
       const result = await jsonRequest(`${base}/parkingBooking/summary?${parameters}`); const data = result.data; showJson('summaryJson', result);
       $('revenue').textContent = `${number(data.collectedRevenue)} đ`; $('vehicles').textContent = number(data.completedVehicleCount);
-      $('parkedVehicles').textContent = number(data.parkedVehicleCount); $('reservedBookings').textContent = number(data.reservedBookingCount);
       $('stats').classList.remove('hidden'); const body = $('lots'); body.replaceChildren();
       const vehicleBody = $('vehicleStats'); vehicleBody.replaceChildren();
       (data.revenueByVehicleType || []).forEach(item => addRow(vehicleBody,[item.vehicleType,`${number(item.revenue)} đ`,number(item.vehicleCount),item.percentage == null ? '—' : `${number(item.percentage)}%`],[1,2,3]));
@@ -273,6 +286,7 @@
         parameters.set('year', String(year));
       }
       const result = await jsonRequest(`${base}/parkingBooking?${parameters}`); showJson('listJson', result); const items = result.data.items;
+      renderOverview(result.data.overview);
       const headings = ['Bãi xe','Biển số','Loại xe','Giờ vào / dự kiến','Giờ ra / dự kiến','Tiền đã thu','Trạng thái','Nhận / trả xe'];
       const head = $('listHead'); head.replaceChildren(); const headerRow = head.insertRow(); headings.forEach(value => { const th = document.createElement('th'); th.textContent = value; headerRow.appendChild(th); });
       const body = $('listBody'); body.replaceChildren(); items.forEach(item => {
@@ -292,7 +306,7 @@
       const totalPages = Math.max(1, Math.ceil(result.data.totalCount / result.data.pageSize));
       $('listPaging').classList.remove('hidden'); $('listPage').textContent = `Trang ${result.data.pageNumber} / ${totalPages} · ${result.data.pageSize} dòng/trang`; $('listPrev').disabled = result.data.pageNumber <= 1;
       $('listNext').disabled = result.data.pageNumber >= totalPages;
-    } catch (error) { $('listPaging').classList.add('hidden'); notify('listMessage', error.message, 'error'); }
+    } catch (error) { $('listPaging').classList.add('hidden'); notify('listMessage', error.message, 'error'); notify('overviewMessage', 'Chưa cập nhật được tổng quan do tải danh sách thất bại.', 'error'); }
   }
   $('list').addEventListener('click', () => { listPage = 1; loadList(); });
   $('listPrev').addEventListener('click', () => { if (listPage > 1) { listPage--; loadList(); } });
@@ -318,6 +332,7 @@
   function updatePanels() {
     if (!accountRole) {
       importedRows = []; importPage = 1; renderImportedRows();
+      renderOverview(null);
       $('reserveForm').reset(); cancelEstimate(); $('reserveEstimate').value = 'Chưa tính'; $('reserveEstimateInfo').textContent = 'Chọn bãi, loại xe và khoảng thời gian để xem giá dự kiến.';
       ['myBookingsBody','listBody','lots','vehicleStats','importedRows','importErrors'].forEach(id => $(id).replaceChildren());
       ['reservationJson','summaryJson','listJson','exportJson'].forEach(id => { $(id).textContent = 'Chưa có dữ liệu.'; });

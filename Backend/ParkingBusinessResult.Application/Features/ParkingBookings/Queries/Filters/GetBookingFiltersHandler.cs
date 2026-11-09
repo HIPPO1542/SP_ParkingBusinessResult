@@ -5,7 +5,7 @@ using ParkingBusinessResult.Application.Features.ParkingBookings.Common;
 namespace ParkingBusinessResult.Application.Features.ParkingBookings.Queries.Filters;
 
 public sealed record GetBookingFiltersQuery(BusinessAccess Access);
-public sealed record BookingFilters(IReadOnlyList<ReportParkingLot> ParkingLots, IReadOnlyList<string> VehicleTypes);
+public sealed record BookingFilters(IReadOnlyList<ReportParkingLot> ParkingLots, IReadOnlyList<string> VehicleTypes, BookingOverview Overview);
 
 public sealed class GetBookingFiltersHandler(IBookingListRepository bookings, IReportParkingLotSearch parkingLots)
 {
@@ -15,6 +15,6 @@ public sealed class GetBookingFiltersHandler(IBookingListRepository bookings, IR
         ReportParkingLot[] lots = parkingLots.GetParkingLots(permittedIds).Values
             .OrderBy(lot => lot.Code, StringComparer.OrdinalIgnoreCase).ThenBy(lot => lot.Name, StringComparer.OrdinalIgnoreCase).ToArray();
         IReadOnlyList<string> vehicleTypes = bookings.GetVehicleTypes(query.Access);
-        return new(lots, vehicleTypes);
+        return new(lots, vehicleTypes, bookings.GetOverview(query.Access));
     }
 }

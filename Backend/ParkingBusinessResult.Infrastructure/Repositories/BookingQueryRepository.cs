@@ -13,7 +13,7 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
     public BookingPage GetPage(ListBookingsQuery query)
     {
         using var db = contextFactory.CreateDbContext();
-        // COUNT and page are separate EF queries; this short read transaction keeps one database snapshot.
+        // Count, page and overview share one database snapshot.
         using var snapshot = db.Database.BeginTransaction();
         var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), query.Access, query.ParkingLotId);
         if (query.Status == "RESERVED") rows = rows.Where(row => row.TrangThaiDatCho == Booking.Reserved);
@@ -38,8 +38,9 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
             item.BienSoXe, item.LoaiXe, item.ThoiGianBatDau, item.ThoiGianKetThuc,
             item.TrangThaiDatCho is Booking.Reserved or Booking.CheckedIn ? null : item.TongTien.HasValue ? Convert.ToDecimal(item.TongTien.Value) : null, item.Code, item.Name,
             item.TrangThaiDatCho == Booking.Reserved ? Booking.Reserved : item.ThoiGianKetThuc is null ? Booking.CheckedIn : Booking.Completed)).ToArray();
+        BookingOverview overview = GetOverview(db, query.Access);
         snapshot.Commit();
-        return new(items, total, query.PageNumber, query.PageSize);
+        return new(items, total, query.PageNumber, query.PageSize, overview);
     }
 
     public IReadOnlyList<string> GetVehicleTypes(BusinessAccess access)
@@ -47,6 +48,30 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
         using var db = contextFactory.CreateDbContext();
         return Scope(db.SpDatTruocChoDoXe.AsNoTracking(), access, null)
             .Select(row => EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE")).Distinct().OrderBy(type => type).ToArray();
+    }
+
+    public BookingOverview GetOverview(BusinessAccess access)
+    {
+        using var db = contextFactory.CreateDbContext();
+        return GetOverview(db, access);
+    }
+
+    private static BookingOverview GetOverview(ParkingDbContext db, BusinessAccess access)
+    {
+        // Overview covers all time and permitted lots, independently of list/statistics filters.
+        var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), access, null)
+            .Join(db.DlKthtBaiDoXe, row => row.BaiDoXeId, lot => lot.Id, (row, lot) => row);
+        var totals = rows.GroupBy(row => 1).Select(group => new
+        {
+            Revenue = group.Sum(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null && row.TongTien != null
+                ? (decimal)row.TongTien.Value : 0m),
+            Completed = group.LongCount(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null),
+            Parked = group.LongCount(row => row.ThoiGianKetThuc == null &&
+                (row.TrangThaiDatCho == Booking.CheckedIn || row.TrangThaiDatCho == "CONFIRMED")),
+            Reserved = group.LongCount(row => row.TrangThaiDatCho == Booking.Reserved),
+            Missing = group.LongCount(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null && row.TongTien == null)
+        }).SingleOrDefault();
+        return totals is null ? new(0, 0, 0, 0, 0) : new(totals.Revenue, totals.Completed, totals.Parked, totals.Reserved, totals.Missing);
     }
 
     public BookingOpenCounts GetOpenCounts(BookingSummaryFilter filter)

@@ -238,7 +238,7 @@
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking/filters",
-            "description": "Tự điền parkingLotId bằng bãi đầu tiên nếu biến trống; có thể chọn ID khác từ response."
+            "description": "Trả bãi, loại xe và overview để hiển thị Tổng quan ngay sau đăng nhập. overview gồm doanh thu, số lượt hoàn tất/đang gửi/chưa check-in toàn bộ thời gian trong phạm vi bãi được phép. Tự điền parkingLotId bằng bãi đầu tiên nếu biến trống; có thể chọn ID khác từ response."
           },
           "event": [
             {
@@ -291,7 +291,7 @@
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking?pageNumber=1&pageSize=10",
-            "description": "Mặc định 10 dòng/trang. Xem totalCount; tăng pageNumber hoặc pageSize (tối đa 100). Tự lưu bookingId từ dòng đầu."
+            "description": "Mặc định 10 dòng/trang. Xem totalCount; tăng pageNumber hoặc pageSize (tối đa 100). overview đi kèm là Tổng quan toàn bộ thời gian tại các bãi được phép, độc lập bộ lọc và phân trang danh sách. Tự lưu bookingId từ dòng đầu."
           },
           "event": [
             {
