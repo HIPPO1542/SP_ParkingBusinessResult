@@ -6,11 +6,10 @@ using ParkingBusinessResult.Application.Features.ParkingBookings.Common;
 
 namespace ParkingBusinessResult.Infrastructure.Repositories;
 
-public sealed class BookingTariffRepository(IDbContextFactory<ParkingDbContext> contextFactory) : IBookingTariffRepository
+public sealed class BookingTariffRepository(ParkingDbContext db) : IBookingTariffRepository
 {
     public BookingTariffData? Find(Guid bookingId, string dayType, BusinessAccess access)
     {
-        using var db = contextFactory.CreateDbContext();
         var booking = db.SpDatTruocChoDoXe.AsNoTracking().SingleOrDefault(row => row.Id == bookingId.ToString());
         if (booking is null || !access.CanAccess(Guid.Parse(booking.BaiDoXeId))) return null;
         decimal? amount = booking.TongTien.HasValue ? Convert.ToDecimal(booking.TongTien.Value) : null;

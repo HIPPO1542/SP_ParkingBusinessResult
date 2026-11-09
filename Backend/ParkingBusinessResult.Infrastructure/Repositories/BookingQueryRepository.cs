@@ -8,11 +8,10 @@ using ParkingBusinessResult.Domain;
 
 namespace ParkingBusinessResult.Infrastructure.Repositories;
 
-public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> contextFactory) : IBookingListRepository, IBookingSummaryRepository
+public sealed class BookingQueryRepository(ParkingDbContext db) : IBookingListRepository, IBookingSummaryRepository
 {
     public BookingPage GetPage(ListBookingsQuery query)
     {
-        using var db = contextFactory.CreateDbContext();
         // Count, page and overview share one database snapshot.
         using var snapshot = db.Database.BeginTransaction();
         var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), query.Access, query.ParkingLotId);
@@ -45,14 +44,12 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
 
     public IReadOnlyList<string> GetVehicleTypes(BusinessAccess access)
     {
-        using var db = contextFactory.CreateDbContext();
         return Scope(db.SpDatTruocChoDoXe.AsNoTracking(), access, null)
             .Select(row => EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE")).Distinct().OrderBy(type => type).ToArray();
     }
 
     public BookingOverview GetOverview(BusinessAccess access)
     {
-        using var db = contextFactory.CreateDbContext();
         return GetOverview(db, access);
     }
 
@@ -76,7 +73,6 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
 
     public BookingOpenCounts GetOpenCounts(BookingSummaryFilter filter)
     {
-        using var db = contextFactory.CreateDbContext();
         var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), filter.Access, filter.ParkingLotId)
             .Where(row => (row.TrangThaiDatCho == Booking.Reserved ||
                 (row.ThoiGianKetThuc == null && (row.TrangThaiDatCho == Booking.CheckedIn || row.TrangThaiDatCho == "CONFIRMED"))) &&
@@ -102,13 +98,11 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
 
     public IReadOnlyList<CompletedBooking> ListCompleted(BookingSummaryFilter filter)
     {
-        using var db = contextFactory.CreateDbContext();
         return ListCompleted(db, filter);
     }
 
     public BookingExportData ReadForExport(BookingSummaryFilter filter)
     {
-        using var db = contextFactory.CreateDbContext();
         using var snapshot = db.Database.BeginTransaction();
         var completed = ListCompleted(db, filter);
         var unfinished = ListUnfinishedCounts(db, filter);

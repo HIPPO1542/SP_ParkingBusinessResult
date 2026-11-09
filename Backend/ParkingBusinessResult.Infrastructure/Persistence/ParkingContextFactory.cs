@@ -6,12 +6,19 @@ public sealed class ParkingContextFactory(string databasePath) : IDbContextFacto
 {
     public ParkingDbContext CreateDbContext()
     {
+        var options = new DbContextOptionsBuilder<ParkingDbContext>();
+        ConfigureOptions(options, databasePath);
+        return new(options.Options);
+    }
+
+    internal static void ConfigureOptions(DbContextOptionsBuilder options, string databasePath)
+    {
         var connection = new Microsoft.Data.Sqlite.SqliteConnection(new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
         {
             DataSource = databasePath, ForeignKeys = true, DefaultTimeout = 15
         }.ToString());
         connection.CreateCollation("ORDINAL_NOCASE", StringComparer.OrdinalIgnoreCase.Compare);
         connection.CreateFunction<string?, string, bool>("contains_ignore_case", (value, keyword) => value?.Contains(keyword, StringComparison.OrdinalIgnoreCase) == true, isDeterministic: true);
-        return new(new DbContextOptionsBuilder<ParkingDbContext>().UseSqlite(connection, contextOwnsConnection: true).Options);
+        options.UseSqlite(connection, contextOwnsConnection: true);
     }
 }

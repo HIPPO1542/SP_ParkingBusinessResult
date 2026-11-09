@@ -57,7 +57,8 @@ public static class ApplicationSetup
         if ((app.Configuration["Authentication:Mode"] ?? "Local") == "Local")
         {
             var command = new BootstrapAdministratorCommand(app.Configuration["Authentication:BootstrapUsername"], app.Configuration["Authentication:BootstrapPassword"]);
-            app.Services.GetRequiredService<BootstrapAdministratorHandler>().Handle(command);
+            using var scope = app.Services.CreateScope();
+            scope.ServiceProvider.GetRequiredService<BootstrapAdministratorHandler>().Handle(command);
         }
         app.MapGet("/health/live", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();
         app.MapHealthChecks("/health/ready").AllowAnonymous();

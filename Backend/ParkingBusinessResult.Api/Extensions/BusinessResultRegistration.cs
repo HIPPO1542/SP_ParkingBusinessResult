@@ -53,10 +53,10 @@ public static class BusinessResultRegistration
         services.AddScoped<CompareBookingTariffHandler>();
         services.AddScoped<ListBookingsHandler>();
         services.AddScoped<GetBookingFiltersHandler>();
-        services.AddSingleton<BootstrapAdministratorHandler>();
-        services.AddSingleton<CreateAccountHandler>();
-        services.AddSingleton<SignInHandler>();
-        services.AddSingleton<RegisterCustomerHandler>();
+        services.AddScoped<BootstrapAdministratorHandler>();
+        services.AddScoped<CreateAccountHandler>();
+        services.AddScoped<SignInHandler>();
+        services.AddScoped<RegisterCustomerHandler>();
         return services;
     }
 }

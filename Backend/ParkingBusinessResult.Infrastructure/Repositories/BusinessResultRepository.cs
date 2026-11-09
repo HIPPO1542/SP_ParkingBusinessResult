@@ -7,11 +7,10 @@ using ParkingBusinessResult.Infrastructure.Persistence.Models;
 
 namespace ParkingBusinessResult.Infrastructure;
 
-public sealed class BusinessResultRepository(IDbContextFactory<ParkingDbContext> contextFactory) : IBusinessResultRepository
+public sealed class BusinessResultRepository(ParkingDbContext db) : IBusinessResultRepository
 {
     public bool TryAdd(BusinessResultRecord record, AuditActor? actor = null)
     {
-        using var db = contextFactory.CreateDbContext();
         string now = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
         db.SpKetQuaKinhDoanhBaiDoXe.Add(new()
         {
@@ -27,7 +26,6 @@ public sealed class BusinessResultRepository(IDbContextFactory<ParkingDbContext>
 
     public BusinessResultRecord? FindById(Guid id)
     {
-        using var db = contextFactory.CreateDbContext();
         var row = db.SpKetQuaKinhDoanhBaiDoXe.AsNoTracking().SingleOrDefault(row => row.Id == id.ToString() && row.DaXoa == 0);
         return row is null ? null : Map(row);
     }
@@ -35,7 +33,6 @@ public sealed class BusinessResultRepository(IDbContextFactory<ParkingDbContext>
     public IReadOnlyList<BusinessResultRecord> List(IReadOnlySet<Guid>? parkingLotIds = null)
     {
         if (parkingLotIds is { Count: 0 }) return [];
-        using var db = contextFactory.CreateDbContext();
         var records = db.SpKetQuaKinhDoanhBaiDoXe.AsNoTracking().Where(row => row.DaXoa == 0);
         if (parkingLotIds is not null)
         {
@@ -49,7 +46,6 @@ public sealed class BusinessResultRepository(IDbContextFactory<ParkingDbContext>
     {
         ArgumentOutOfRangeException.ThrowIfNegative(revenue);
         ArgumentOutOfRangeException.ThrowIfNegative(completedVehicleCount);
-        using var db = contextFactory.CreateDbContext();
         string now = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
         return db.SpKetQuaKinhDoanhBaiDoXe.Where(row => row.Id == id.ToString() && row.DaXoa == 0)
             .ExecuteUpdate(setters => setters.SetProperty(row => row.DoanhThu, (double)revenue)
@@ -60,7 +56,6 @@ public sealed class BusinessResultRepository(IDbContextFactory<ParkingDbContext>
 
     public bool TrySoftDelete(Guid id, AuditActor? actor = null)
     {
-        using var db = contextFactory.CreateDbContext();
         string now = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
         return db.SpKetQuaKinhDoanhBaiDoXe.Where(row => row.Id == id.ToString() && row.DaXoa == 0)
             .ExecuteUpdate(setters => setters.SetProperty(row => row.DaXoa, 1)

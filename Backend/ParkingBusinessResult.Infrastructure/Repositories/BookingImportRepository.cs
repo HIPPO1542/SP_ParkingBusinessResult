@@ -7,20 +7,19 @@ using ParkingBusinessResult.Application.Features.ParkingBookings.Common;
 
 namespace ParkingBusinessResult.Infrastructure.Repositories;
 
-public sealed class BookingImportRepository(IDbContextFactory<ParkingDbContext> contextFactory) : IBookingImportRepository
+public sealed class BookingImportRepository(ParkingDbContext db) : IBookingImportRepository
 {
-    public IBookingImportSession BeginImport() => new ImportSession(contextFactory);
+    public IBookingImportSession BeginImport() => new ImportSession(db);
 
     private sealed class ImportSession : IBookingImportSession
     {
         private readonly ParkingDbContext db;
         private readonly IDbContextTransaction transaction;
 
-        public ImportSession(IDbContextFactory<ParkingDbContext> contextFactory)
+        public ImportSession(ParkingDbContext db)
         {
-            db = contextFactory.CreateDbContext();
-            try { transaction = db.Database.BeginTransaction(); }
-            catch { db.Dispose(); throw; }
+            this.db = db;
+            transaction = db.Database.BeginTransaction();
         }
 
         public Guid? FindAccessibleParkingLot(string code, BusinessAccess access)
@@ -51,6 +50,6 @@ public sealed class BookingImportRepository(IDbContextFactory<ParkingDbContext> 
         }
 
         public void Commit() => transaction.Commit();
-        public void Dispose() { transaction.Dispose(); db.Dispose(); }
+        public void Dispose() => transaction.Dispose();
     }
 }

@@ -6,11 +6,10 @@ using ParkingBusinessResult.Application.Features.BusinessReports.Queries.List;
 
 namespace ParkingBusinessResult.Infrastructure.Repositories;
 
-public sealed class ReportQueryRepository(IDbContextFactory<ParkingDbContext> contextFactory) : IReportQueryRepository
+public sealed class ReportQueryRepository(ParkingDbContext db) : IReportQueryRepository
 {
     public IReadOnlyList<BusinessResultRecord> List(ListReportsQuery query)
     {
-        using var db = contextFactory.CreateDbContext();
         var records = db.SpKetQuaKinhDoanhBaiDoXe.AsNoTracking().Where(row => row.DaXoa == 0);
         if (!query.Access.IsAdministrator)
         {

@@ -11,12 +11,11 @@ using ParkingBusinessResult.Infrastructure.Persistence.Models;
 
 namespace ParkingBusinessResult.Infrastructure.Repositories;
 
-public sealed class BookingLifecycleRepository(IDbContextFactory<ParkingDbContext> contextFactory)
+public sealed class BookingLifecycleRepository(ParkingDbContext db)
     : IBookingLifecycleRepository, ICustomerBookingQueries
 {
     public BookingOptions GetOptions()
     {
-        using var db = contextFactory.CreateDbContext();
         var lots = db.DlKthtBaiDoXe.AsNoTracking().OrderBy(row => row.Ma)
             .Select(row => new { row.Id, row.Ma, row.Ten, row.DiaChi }).ToArray();
         string[] types = db.SpChiTietMucThuKhungGia.AsNoTracking().Where(row => row.LoaiPhuongTien != null)
@@ -26,7 +25,6 @@ public sealed class BookingLifecycleRepository(IDbContextFactory<ParkingDbContex
 
     public CustomerBookingPage GetMyBookings(string customerId, int pageNumber, int pageSize)
     {
-        using var db = contextFactory.CreateDbContext();
         using var snapshot = db.Database.BeginTransaction();
         var query = db.SpDatTruocChoDoXe.AsNoTracking().Where(row => row.IdNguoiTao == customerId);
         int count = query.Count();
@@ -40,7 +38,6 @@ public sealed class BookingLifecycleRepository(IDbContextFactory<ParkingDbContex
 
     public BookingEstimateResult Estimate(BookingEstimateInput input)
     {
-        using var db = contextFactory.CreateDbContext();
         if (!db.DlKthtBaiDoXe.Any(row => row.Id == input.ParkingLotId.ToString()))
             return new(null, "Bãi xe không tồn tại.");
         return Estimate(db, input);
@@ -67,7 +64,6 @@ public sealed class BookingLifecycleRepository(IDbContextFactory<ParkingDbContex
         Booking booking;
         try { booking = Booking.Reserve(input.ParkingLotId, input.LicensePlate, input.VehicleType, input.ExpectedArrivalAt, input.ExpectedDepartureAt, now); }
         catch (ArgumentException error) { return new(null, error.Message); }
-        using var db = contextFactory.CreateDbContext();
         using var transaction = db.Database.BeginTransaction();
         var lot = db.DlKthtBaiDoXe.SingleOrDefault(row => row.Id == input.ParkingLotId.ToString());
         if (lot is null) return new(null, "Bãi xe không tồn tại.");
@@ -92,7 +88,6 @@ public sealed class BookingLifecycleRepository(IDbContextFactory<ParkingDbContex
 
     public BookingWriteResult CheckIn(Guid id, BusinessAccess access, AuditActor actor, DateTime now)
     {
-        using var db = contextFactory.CreateDbContext();
         using var transaction = db.Database.BeginTransaction();
         var row = db.SpDatTruocChoDoXe.Include(item => item.BaiDoXe).SingleOrDefault(item => item.Id == id.ToString());
         if (row is null || !access.CanAccess(Guid.Parse(row.BaiDoXeId))) return new(null, "Không tìm thấy booking hoặc không có quyền với bãi xe.");
@@ -110,7 +105,6 @@ public sealed class BookingLifecycleRepository(IDbContextFactory<ParkingDbContex
 
     public BookingWriteResult CheckOut(Guid id, string dayType, BusinessAccess access, AuditActor actor, DateTime now)
     {
-        using var db = contextFactory.CreateDbContext();
         using var transaction = db.Database.BeginTransaction();
         var row = db.SpDatTruocChoDoXe.Include(item => item.BaiDoXe).SingleOrDefault(item => item.Id == id.ToString());
         if (row is null || !access.CanAccess(Guid.Parse(row.BaiDoXeId))) return new(null, "Không tìm thấy booking hoặc không có quyền với bãi xe.");
