@@ -55,6 +55,7 @@
   const number = value => value == null ? '—' : new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 2}).format(value);
   let token = null;
   let listPage = 1;
+  const listPageSize = 10;
   const today = new Date();
   const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   $('fromDate').value = `${currentMonth}-01`;
@@ -175,13 +176,13 @@
       (data.topRevenueParkingLots || []).forEach(item => addRow(body,[`${item.parkingLot?.code || ''} · ${item.parkingLot?.name || ''}`,item.parkingLot?.address,`${number(item.revenue)} đ`,number(item.vehicleCount),`${number(item.percentage)}%`],[2,3,4]));
       $('lotsWrap').classList.toggle('hidden', !data.topRevenueParkingLots?.length);
       if (data.missingAmountCount > 0) notify('statsMessage', `Có ${data.missingAmountCount} lượt đã ra chưa có số tiền thực thu. Doanh thu hiện chỉ cộng các khoản đã có.`, 'error');
-      else notify('statsMessage', 'Đã tải thống kê.', 'success');
+      else notify('statsMessage', `Đã tải thống kê từ ${filters.fromDate.split('-').reverse().join('/')} đến ${filters.toDate.split('-').reverse().join('/')} theo ngày xe ra.`, 'success');
     } catch (error) { notify('statsMessage', error.message, 'error'); }
   });
   async function loadList() {
     $('listWrap').classList.add('hidden');
     try {
-      const parameters = new URLSearchParams({pageSize:'100', pageNumber:String(listPage)});
+      const parameters = new URLSearchParams({pageSize:String(listPageSize), pageNumber:String(listPage)});
       if ($('listLot').value) parameters.set('parkingLotId', $('listLot').value);
       if ($('listVehicleType').value) parameters.set('vehicleType', $('listVehicleType').value);
       if ($('listStatus').value) parameters.set('status', $('listStatus').value);
@@ -197,9 +198,10 @@
       const head = $('listHead'); head.replaceChildren(); const headerRow = head.insertRow(); headings.forEach(value => { const th = document.createElement('th'); th.textContent = value; headerRow.appendChild(th); });
       const body = $('listBody'); body.replaceChildren(); items.forEach(item => addRow(body, [[item.parkingLotCode,item.parkingLotName].filter(Boolean).join(' · '),item.licensePlate,item.vehicleType,item.enteredAt,item.exitedAt,item.collectedAmount == null ? null : `${number(item.collectedAmount)} đ`], [5]));
       $('listWrap').classList.toggle('hidden', !items.length); notify('listMessage', `Hiển thị ${items.length} dòng trên tổng ${result.data.totalCount} lượt phù hợp với bộ lọc.`, 'success');
-      $('listPaging').classList.remove('hidden'); $('listPage').textContent = `Trang ${listPage}`; $('listPrev').disabled = listPage <= 1;
-      $('listNext').disabled = listPage * 100 >= result.data.totalCount;
-    } catch (error) { notify('listMessage', error.message, 'error'); }
+      const totalPages = Math.max(1, Math.ceil(result.data.totalCount / result.data.pageSize));
+      $('listPaging').classList.remove('hidden'); $('listPage').textContent = `Trang ${result.data.pageNumber} / ${totalPages} · ${result.data.pageSize} dòng/trang`; $('listPrev').disabled = result.data.pageNumber <= 1;
+      $('listNext').disabled = result.data.pageNumber >= totalPages;
+    } catch (error) { $('listPaging').classList.add('hidden'); notify('listMessage', error.message, 'error'); }
   }
   $('list').addEventListener('click', () => { listPage = 1; loadList(); });
   $('listPrev').addEventListener('click', () => { if (listPage > 1) { listPage--; loadList(); } });
