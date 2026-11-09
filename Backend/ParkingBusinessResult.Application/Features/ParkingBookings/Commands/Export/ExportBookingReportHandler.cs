@@ -10,15 +10,31 @@ public sealed class ExportBookingReportHandler(IBookingSummaryRepository reposit
 {
     public BookingExportResult Handle(ExportBookingReportCommand command)
     {
-        IReadOnlyList<CompletedBooking> bookings = repository.ListCompleted(new BookingSummaryFilter(
-            command.FromInclusive, command.ToExclusive, command.Access, command.ParkingLotId, command.ParkingLotIds, command.District, command.VehicleType));
+        var filter = new BookingSummaryFilter(command.FromInclusive, command.ToExclusive, command.Access,
+            command.ParkingLotId, command.ParkingLotIds, command.District, command.VehicleType);
+        BookingExportData exportData = repository.ReadForExport(filter);
+        IReadOnlyList<CompletedBooking> bookings = exportData.Completed;
         int missing = bookings.Count(booking => booking.CollectedAmount is null);
         if (missing > 0) return new(null, missing);
-        ReportRow[] rows = bookings.GroupBy(booking => booking.ParkingLotId).OrderBy(group => group.Key)
-            .Select(group => new ReportRow(group.Key, command.PeriodLabel,
-                group.Where(booking => booking.CollectedAmount.HasValue).Sum(booking => booking.CollectedAmount!.Value), group.Count(),
-                group.First().ParkingLotCode, group.First().ParkingLotName)).ToArray();
-        ReportDocument document = writer.Write(command.FileFormat, command.ReportTitle, command.PeriodLabel, rows);
+        IReadOnlyList<UnfinishedBookingCount> unfinished = exportData.Unfinished;
+        var completedByLot = bookings.ToLookup(booking => booking.ParkingLotId);
+        var unfinishedByLot = unfinished.ToLookup(booking => booking.ParkingLotId);
+        Guid[] lotIds = bookings.Select(booking => booking.ParkingLotId).Concat(unfinished.Select(booking => booking.ParkingLotId)).Distinct().Order().ToArray();
+        ReportRow[] rows = lotIds.Select(id =>
+        {
+            var completed = completedByLot[id];
+            CompletedBooking? first = completed.FirstOrDefault();
+            UnfinishedBookingCount? firstUnfinished = unfinishedByLot[id].FirstOrDefault();
+            var counts = completed.GroupBy(booking => booking.VehicleType, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+            return new ReportRow(id, command.PeriodLabel, completed.Sum(booking => booking.CollectedAmount!.Value), completed.Count(),
+                first?.ParkingLotCode ?? firstUnfinished?.ParkingLotCode, first?.ParkingLotName ?? firstUnfinished?.ParkingLotName,
+                unfinishedByLot[id].Sum(booking => booking.Count), counts);
+        }).ToArray();
+        string[] vehicleTypes = bookings.Select(booking => booking.VehicleType).Concat(unfinished.Select(booking => booking.VehicleType))
+            .Concat(command.VehicleType is null ? [] : new[] { command.VehicleType })
+            .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(type => type, StringComparer.OrdinalIgnoreCase).ToArray();
+        ReportDocument document = writer.Write(command.FileFormat, command.ReportTitle, command.PeriodLabel, rows, vehicleTypes);
         SavedBusinessReport report = store.Save(command.Actor, command.FileFormat, document, rows.Length);
         return new(report, 0);
     }

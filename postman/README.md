@@ -29,3 +29,5 @@ API JSON dùng HTTP 200; đọc `code` (`0`: thành công, `7`: lỗi) và `mess
 Trên giao diện web, đăng ký/đăng nhập khách để đặt chỗ; đăng xuất rồi đăng nhập nhân viên, bấm Xem danh sách (có thể lọc Đã đặt), Check-in khi xe đến, chọn loại ngày và Check-out khi xe ra. Khách chỉ thấy booking của mình; nhân viên chỉ thao tác tại bãi được phân quyền.
 
 Khách chọn `expectedArrivalAt` và `expectedDepartureAt`; dùng **Tính tiền dự kiến** để xem giá theo ngày thường/cuối tuần trước khi đặt. Hai mốc dự kiến được lưu khi `RESERVED`; check-in thay bằng giờ vào thực tế và xóa giờ ra dự kiến. `estimatedAmount` tách khỏi `amount` (tiền thực tế); chỉ booking hoàn tất mới vào doanh thu.
+
+File xuất booking có lượt hoàn tất (theo giờ ra), lượt chưa hoàn tất (đã check-in/chưa check-out, theo giờ vào trong kỳ), và mỗi loại xe một cột đếm riêng lượt hoàn tất. Booking chưa check-in không được đếm. Bỏ cột bình quân mỗi lượt; hàng Tổng cộng riêng từng cột. Bãi chỉ có xe đang gửi vẫn xuất với doanh thu/lượt hoàn tất bằng 0.

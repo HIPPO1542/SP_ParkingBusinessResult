@@ -52,6 +52,21 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
     public IReadOnlyList<CompletedBooking> ListCompleted(BookingSummaryFilter filter)
     {
         using var db = contextFactory.CreateDbContext();
+        return ListCompleted(db, filter);
+    }
+
+    public BookingExportData ReadForExport(BookingSummaryFilter filter)
+    {
+        using var db = contextFactory.CreateDbContext();
+        using var snapshot = db.Database.BeginTransaction();
+        var completed = ListCompleted(db, filter);
+        var unfinished = ListUnfinishedCounts(db, filter);
+        snapshot.Commit();
+        return new(completed, unfinished);
+    }
+
+    private static IReadOnlyList<CompletedBooking> ListCompleted(ParkingDbContext db, BookingSummaryFilter filter)
+    {
         var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), filter.Access, filter.ParkingLotId)
             .Where(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc >= filter.FromInclusive && row.ThoiGianKetThuc < filter.ToExclusive);
         if (filter.VehicleType is not null)
@@ -70,6 +85,30 @@ public sealed class BookingQueryRepository(IDbContextFactory<ParkingDbContext> c
         return joined.Select(item => new { item.Row.BaiDoXeId, item.Row.TongTien, item.Row.LoaiXe, item.Lot.Ma, item.Lot.Ten, item.Lot.DiaChi })
             .AsEnumerable().Select(item => new CompletedBooking(Guid.Parse(item.BaiDoXeId),
                 item.TongTien.HasValue ? Convert.ToDecimal(item.TongTien.Value) : null, item.Ma, item.Ten, item.DiaChi, item.LoaiXe)).ToArray();
+    }
+
+    private static IReadOnlyList<UnfinishedBookingCount> ListUnfinishedCounts(ParkingDbContext db, BookingSummaryFilter filter)
+    {
+        var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), filter.Access, filter.ParkingLotId)
+            .Where(row => row.ThoiGianKetThuc == null &&
+                (row.TrangThaiDatCho == Booking.CheckedIn || row.TrangThaiDatCho == "CONFIRMED") &&
+                row.ThoiGianBatDau >= filter.FromInclusive && row.ThoiGianBatDau < filter.ToExclusive);
+        if (filter.VehicleType is not null)
+            rows = rows.Where(row => EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE") == filter.VehicleType);
+        if (filter.ParkingLotIds is not null)
+        {
+            string[] selected = filter.ParkingLotIds.Select(id => id.ToString()).ToArray();
+            rows = rows.Where(row => selected.Contains(row.BaiDoXeId));
+        }
+        var joined = rows.Join(db.DlKthtBaiDoXe, row => row.BaiDoXeId, lot => lot.Id, (row, lot) => new { Row = row, Lot = lot });
+        if (!string.IsNullOrWhiteSpace(filter.District))
+        {
+            string district = filter.District.Trim();
+            joined = joined.Where(item => ParkingDbContext.ContainsIgnoreCase(item.Lot.DiaChi, district));
+        }
+        return joined.GroupBy(item => new { item.Row.BaiDoXeId, VehicleType = EF.Functions.Collate(item.Row.LoaiXe, "ORDINAL_NOCASE"), item.Lot.Ma, item.Lot.Ten })
+            .Select(group => new { group.Key.BaiDoXeId, group.Key.VehicleType, group.Key.Ma, group.Key.Ten, Count = group.Count() })
+            .AsEnumerable().Select(item => new UnfinishedBookingCount(Guid.Parse(item.BaiDoXeId), item.VehicleType, item.Count, item.Ma, item.Ten)).ToArray();
     }
 
     private static IQueryable<SpDatTruocChoDoXe> Scope(IQueryable<SpDatTruocChoDoXe> rows, BusinessAccess access, Guid? lot)

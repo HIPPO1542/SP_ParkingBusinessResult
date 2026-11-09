@@ -9,7 +9,8 @@ public sealed record SavedBusinessReport(Guid Id, string FileUrl, string FileNam
 
 public interface IReportDocumentWriter
 {
-    ReportDocument Write(string format, string title, string period, IReadOnlyList<ReportRow> rows);
+    ReportDocument Write(string format, string title, string period, IReadOnlyList<ReportRow> rows,
+        IReadOnlyList<string>? vehicleTypes = null);
 }
 
 public interface IReportExportStore

@@ -2,7 +2,6 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Xml.Linq;
 using ParkingBusinessResult.Application.Features.BusinessReports.Common;
-using ParkingBusinessResult.Domain;
 
 namespace ParkingBusinessResult.Infrastructure.Reports;
 
@@ -11,26 +10,43 @@ public static class ReportExcelWriter
     private static readonly XNamespace Main = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
     private static readonly XNamespace Relationships = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
-    public static byte[] Write(string title, string period, IReadOnlyList<ReportRow> records)
+    public static byte[] Write(string title, string period, IReadOnlyList<ReportRow> records, IReadOnlyList<string>? vehicleTypes = null)
     {
+        string[] headers = ReportColumns.Headers(vehicleTypes);
         var rows = new List<XElement>
         {
             Row(Text(title)),
             Row(Text("Kỳ báo cáo"), Text(period)),
-            Row(Text("Mã bãi đỗ xe"), Text("Tên bãi đỗ xe"), Text("Kỳ báo cáo"), Text("Doanh thu (VND)"), Text("Lượt xe hoàn tất"), Text("Bình quân mỗi lượt (VND)"))
+            Row(headers.Select(Text).ToArray())
         };
         foreach (ReportRow record in records)
         {
-            rows.Add(Row(Text(record.ParkingLotCode ?? ""), Text(record.ParkingLotName ?? ""), Text(record.ReportingPeriod), Number(record.Revenue),
-                Number(record.CompletedVehicleCount), Number(RevenueMetrics.AverageRevenuePerVehicle(record.Revenue, record.CompletedVehicleCount))));
+            var cells = new List<XElement>
+            {
+                Text(record.ParkingLotCode ?? ""), Text(record.ParkingLotName ?? ""), Text(record.ReportingPeriod),
+                Number(record.Revenue), Number(record.CompletedVehicleCount)
+            };
+            if (vehicleTypes is not null)
+            {
+                cells.Add(Number(record.UnfinishedVehicleCount ?? 0));
+                cells.AddRange(vehicleTypes.Select(type => Number(ReportColumns.VehicleCount(record, type))));
+            }
+            rows.Add(Row(cells.ToArray()));
         }
-
-        BusinessSummary summary = BusinessSummaryCalculator.Calculate(records.Select(record =>
-            new BusinessSummaryEntry(record.Revenue, record.CompletedVehicleCount)));
-        rows.Add(Row(Text("Tổng"), Text(""), Text(period), Number(summary.TotalRevenue), Number(summary.TotalVehicleCount), Number(summary.AverageRevenuePerVehicle)));
+        var totals = new List<XElement>
+        {
+            Text("Tổng"), Text(""), Text(period), Number(records.Sum(record => record.Revenue)),
+            Number(records.Sum(record => (long)record.CompletedVehicleCount))
+        };
+        if (vehicleTypes is not null)
+        {
+            totals.Add(Number(records.Sum(record => (long)(record.UnfinishedVehicleCount ?? 0))));
+            totals.AddRange(vehicleTypes.Select(type => Number(records.Sum(record => (long)ReportColumns.VehicleCount(record, type)))));
+        }
+        rows.Add(Row(totals.ToArray()));
         var sheet = new XDocument(new XElement(Main + "worksheet",
             new XElement(Main + "cols", new XElement(Main + "col", new XAttribute("min", 1), new XAttribute("max", 1), new XAttribute("width", 40), new XAttribute("customWidth", 1)),
-                new XElement(Main + "col", new XAttribute("min", 2), new XAttribute("max", 6), new XAttribute("width", 27), new XAttribute("customWidth", 1))),
+                new XElement(Main + "col", new XAttribute("min", 2), new XAttribute("max", headers.Length), new XAttribute("width", 27), new XAttribute("customWidth", 1))),
             new XElement(Main + "sheetData", rows)));
 
         using var stream = new MemoryStream();
