@@ -31,7 +31,7 @@
     <div id="stats" class="metrics hidden"><div class="metric"><span>Doanh thu</span><strong id="revenue">—</strong></div><div class="metric"><span>Lượt xe đã ra</span><strong id="vehicles">—</strong></div><div class="metric"><span>Bình quân / ngày</span><strong id="daily">—</strong></div><div class="metric"><span>Tăng trưởng</span><strong id="growth">—</strong></div></div>
     <p id="statsMessage" class="notice hidden" role="status"></p>
     <div id="vehicleStatsWrap" class="table-wrap hidden"><h3>Thống kê theo loại xe</h3><table><thead><tr><th>Loại xe</th><th>Doanh thu</th><th>Lượt xe</th><th>Tỷ trọng doanh thu mọi loại xe</th></tr></thead><tbody id="vehicleStats"></tbody></table></div>
-    <div id="lotsWrap" class="table-wrap hidden"><h3>Thống kê theo bãi xe</h3><table><thead><tr><th>Bãi xe</th><th>Địa chỉ</th><th>Doanh thu</th><th>Lượt xe</th><th>Tỷ lệ loại xe / bãi</th><th>Tỷ lệ</th></tr></thead><tbody id="lots"></tbody></table><p class="file-info">Tỷ lệ loại xe = doanh thu loại xe / tổng doanh thu mọi loại xe của cùng bãi, cùng kỳ. Cột Tỷ lệ cuối là doanh thu bãi / tổng doanh thu đang xem.</p></div>
+    <div id="lotsWrap" class="table-wrap hidden"><h3>Thống kê theo bãi xe</h3><table><thead><tr><th>Bãi xe</th><th>Địa chỉ</th><th>Doanh thu</th><th>Lượt xe</th><th>Lượt xe theo loại</th><th>Tỷ lệ loại xe / bãi</th><th>Tỷ lệ</th></tr></thead><tbody id="lots"></tbody></table><p class="file-info">Số lượt theo loại là các lượt đã ra trong thời gian và bộ lọc đang chọn. Tỷ lệ loại xe = doanh thu loại xe / tổng doanh thu mọi loại xe của cùng bãi, cùng kỳ. Cột Tỷ lệ cuối là doanh thu bãi / tổng doanh thu đang xem.</p></div>
     <details><summary>Xem JSON thống kê</summary><pre id="summaryJson">Chưa có dữ liệu.</pre></details>
   </section>
   <section class="card">
@@ -181,8 +181,9 @@
       (data.revenueByVehicleType || []).forEach(item => addRow(vehicleBody,[item.vehicleType,`${number(item.revenue)} đ`,number(item.vehicleCount),item.percentage == null ? '—' : `${number(item.percentage)}%`],[1,2,3]));
       $('vehicleStatsWrap').classList.toggle('hidden', !data.revenueByVehicleType?.length);
       (data.topRevenueParkingLots || []).forEach(item => {
+        const counts = (item.revenueByVehicleType || []).map(vehicle => `${vehicle.vehicleType}: ${number(vehicle.vehicleCount)} lượt`).join('; ');
         const shares = (item.revenueByVehicleType || []).map(vehicle => `${vehicle.vehicleType}: ${vehicle.percentage == null ? '—' : `${number(vehicle.percentage)}%`}`).join('; ');
-        addRow(body,[`${item.parkingLot?.code || ''} · ${item.parkingLot?.name || ''}`,item.parkingLot?.address,`${number(item.revenue)} đ`,number(item.vehicleCount),shares,`${number(item.percentage)}%`],[2,3,5]);
+        addRow(body,[`${item.parkingLot?.code || ''} · ${item.parkingLot?.name || ''}`,item.parkingLot?.address,`${number(item.revenue)} đ`,number(item.vehicleCount),counts,shares,`${number(item.percentage)}%`],[2,3,6]);
       });
       $('lotsWrap').classList.toggle('hidden', !data.topRevenueParkingLots?.length);
       if (data.missingAmountCount > 0) notify('statsMessage', `Có ${data.missingAmountCount} lượt đã ra chưa có số tiền thực thu. Doanh thu hiện chỉ cộng các khoản đã có.`, 'error');
