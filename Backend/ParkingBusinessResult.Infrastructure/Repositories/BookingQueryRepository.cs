@@ -13,7 +13,7 @@ public sealed class BookingQueryRepository(ParkingDbContext db) : IBookingListRe
     public BookingPage GetPage(ListBookingsQuery query)
     {
         // Count, page and overview share one database snapshot.
-        using var snapshot = db.Database.BeginTransaction();
+        using var snapshot = db.BeginReadTransaction();
         var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), query.Access, query.ParkingLotId);
         if (query.Status == "RESERVED") rows = rows.Where(row => row.TrangThaiDatCho == Booking.Reserved);
         if (query.Status == "PARKED") rows = rows.Where(row => row.ThoiGianKetThuc == null && row.TrangThaiDatCho != Booking.Reserved);
@@ -101,9 +101,19 @@ public sealed class BookingQueryRepository(ParkingDbContext db) : IBookingListRe
         return ListCompleted(db, filter);
     }
 
+    public BookingSummaryData ReadSummary(BookingSummaryFilter filter, BookingSummaryFilter? previousPeriodFilter)
+    {
+        using var snapshot = db.BeginReadTransaction();
+        var completed = ListCompleted(db, filter with { VehicleType = null });
+        var openCounts = GetOpenCounts(filter);
+        IReadOnlyList<CompletedBooking> previous = previousPeriodFilter is null ? [] : ListCompleted(db, previousPeriodFilter);
+        snapshot.Commit();
+        return new(completed, openCounts, previous);
+    }
+
     public BookingExportData ReadForExport(BookingSummaryFilter filter)
     {
-        using var snapshot = db.Database.BeginTransaction();
+        using var snapshot = db.BeginReadTransaction();
         var completed = ListCompleted(db, filter);
         var unfinished = ListUnfinishedCounts(db, filter);
         snapshot.Commit();

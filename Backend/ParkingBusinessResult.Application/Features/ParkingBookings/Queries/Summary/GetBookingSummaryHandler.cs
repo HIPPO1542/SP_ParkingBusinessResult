@@ -18,21 +18,24 @@ public sealed class GetBookingSummaryHandler(IBookingSummaryRepository repositor
 {
     public BookingSummary Handle(GetBookingSummaryQuery query)
     {
-        IReadOnlyList<CompletedBooking> allVehicleTypes = repository.ListCompleted(new BookingSummaryFilter(
-            query.FromInclusive, query.ToExclusive, query.Access, query.ParkingLotId, query.ParkingLotIds, query.District));
+        var filter = new BookingSummaryFilter(query.FromInclusive, query.ToExclusive, query.Access,
+            query.ParkingLotId, query.ParkingLotIds, query.District, query.VehicleType);
+        BookingSummaryFilter? previousFilter = query.IsMonthly && query.FromInclusive > DateTime.MinValue
+            ? filter with { FromInclusive = query.FromInclusive.AddMonths(-1), ToExclusive = query.FromInclusive }
+            : null;
+        BookingSummaryData data = repository.ReadSummary(filter, previousFilter);
+        IReadOnlyList<CompletedBooking> allVehicleTypes = data.Completed;
         CompletedBooking[] permitted = allVehicleTypes.Where(booking => query.VehicleType is null ||
             string.Equals(booking.VehicleType, query.VehicleType, StringComparison.OrdinalIgnoreCase)).ToArray();
-        BookingOpenCounts openCounts = repository.GetOpenCounts(new BookingSummaryFilter(query.FromInclusive, query.ToExclusive,
-            query.Access, query.ParkingLotId, query.ParkingLotIds, query.District, query.VehicleType));
+        BookingOpenCounts openCounts = data.OpenCounts;
         decimal collected = permitted.Where(booking => booking.CollectedAmount.HasValue).Sum(booking => booking.CollectedAmount!.Value);
         long missing = permitted.LongCount(booking => booking.CollectedAmount is null);
         decimal? previousRevenue = null;
         decimal? growth = null;
-        if (query.IsMonthly && query.FromInclusive > DateTime.MinValue)
+        if (previousFilter is not null)
         {
-            CompletedBooking[] previous = repository.ListCompleted(new BookingSummaryFilter(
-                query.FromInclusive.AddMonths(-1), query.FromInclusive, query.Access, query.ParkingLotId, query.ParkingLotIds, query.District, query.VehicleType)).ToArray();
-            if (previous.Length > 0 && previous.All(booking => booking.CollectedAmount.HasValue))
+            IReadOnlyList<CompletedBooking> previous = data.Previous;
+            if (previous.Count > 0 && previous.All(booking => booking.CollectedAmount.HasValue))
             {
                 previousRevenue = previous.Sum(booking => booking.CollectedAmount!.Value);
                 if (missing == 0 && previousRevenue > 0)

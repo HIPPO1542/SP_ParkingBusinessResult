@@ -25,7 +25,7 @@ public sealed class BookingLifecycleRepository(ParkingDbContext db)
 
     public CustomerBookingPage GetMyBookings(string customerId, int pageNumber, int pageSize)
     {
-        using var snapshot = db.Database.BeginTransaction();
+        using var snapshot = db.BeginReadTransaction();
         var query = db.SpDatTruocChoDoXe.AsNoTracking().Where(row => row.IdNguoiTao == customerId);
         int count = query.Count();
         long offset = ((long)pageNumber - 1) * pageSize;
