@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ParkingBusinessResult.Infrastructure.Persistence;
 using ParkingBusinessResult.Application.Features.BusinessResults.Common;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Common;
+using ParkingBusinessResult.Domain;
 
 namespace ParkingBusinessResult.Infrastructure.Repositories;
 
@@ -11,7 +12,7 @@ public sealed class BookingTariffRepository(ParkingDbContext db) : IBookingTarif
     public BookingTariffData? Find(Guid bookingId, string dayType, BusinessAccess access)
     {
         var booking = db.SpDatTruocChoDoXe.AsNoTracking().SingleOrDefault(row => row.Id == bookingId.ToString());
-        if (booking is null || !access.CanAccess(Guid.Parse(booking.BaiDoXeId))) return null;
+        if (booking is null || booking.TrangThaiDatCho == Booking.Cancelled || !access.CanAccess(Guid.Parse(booking.BaiDoXeId))) return null;
         decimal? amount = booking.TongTien.HasValue ? Convert.ToDecimal(booking.TongTien.Value) : null;
         IReadOnlyList<ParkingTariffRule> rules = booking.ThoiGianKetThuc is null ? [] :
             ReadRules(db, booking.BaiDoXeId, booking.LoaiXe, booking.ThoiGianBatDau, booking.ThoiGianKetThuc.Value, dayType);

@@ -22,6 +22,7 @@ public interface IBookingLifecycleRepository
     BookingWriteResult Reserve(ReservationInput input, AuditActor actor, DateTime now);
     BookingWriteResult CheckIn(Guid id, BusinessAccess access, AuditActor actor, DateTime now);
     BookingWriteResult CheckOut(Guid id, string dayType, BusinessAccess access, AuditActor actor, DateTime now);
+    BookingWriteResult Cancel(Guid id, string? note, string? customerId, BusinessAccess access, AuditActor actor);
 }
 
 public interface ICustomerBookingQueries

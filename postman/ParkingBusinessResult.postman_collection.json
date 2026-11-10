@@ -1137,6 +1137,101 @@
           ]
         }
       ]
+    },
+    {
+      "name": "7. Hủy booking (tùy chọn, cần booking chưa check-in)",
+      "item": [
+        {
+          "name": "Khách hủy booking của mình",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingReservation/{{reservationId}}/cancel",
+            "description": "Chỉ gửi cho booking chưa check-in; note không bắt buộc, dùng ghiChu hiện có và giữ ghi chú đặt chỗ. Khách chỉ hủy booking của chính mình.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
+                  "pm.test('Booking đã hủy', () => pm.expect(response.data.status).to.eql('CANCELLED')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nhân viên hủy booking chưa check-in",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingReservation/{{reservationId}}/cancel",
+            "description": "Chỉ gửi cho booking chưa check-in; note không bắt buộc, dùng ghiChu hiện có và giữ ghi chú đặt chỗ. Nhân viên/quản lý chỉ hủy booking thuộc bãi được phân quyền, kể cả khách không đến."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.test('HTTP 200 và code 0', () => { pm.response.to.have.status(200); pm.expect(response.code).to.eql(0); });",
+                  "pm.test('Booking đã hủy', () => pm.expect(response.data.status).to.eql('CANCELLED')); "
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Danh sách booking đã hủy",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gdci/parking/parkingLot/parkingBooking?status=CANCELLED&pageNumber=1&pageSize=10",
+            "description": "Giữ lịch sử booking đã hủy và note; không tính vào doanh thu, lượt hoàn tất hoặc số booking đang chờ."
+          }
+        }
+      ]
     }
   ]
 }

@@ -5,7 +5,7 @@ namespace ParkingBusinessResult.Application.Features.ParkingBookings.Common;
 
 public sealed record BookingItem(Guid Id, Guid ParkingLotId, string LicensePlate, string VehicleType,
     DateTime EnteredAt, DateTime? ExitedAt, decimal? CollectedAmount,
-    string? ParkingLotCode, string? ParkingLotName, string Status);
+    string? ParkingLotCode, string? ParkingLotName, string Status, string? Note);
 
 public sealed record BookingOverview(decimal CollectedRevenue, long CompletedVehicleCount,
     long ParkedVehicleCount, long ReservedBookingCount, long MissingAmountCount);

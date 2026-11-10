@@ -95,7 +95,8 @@ public sealed class BookingLifecycleRepository(ParkingDbContext db)
         try { booking.CheckIn(now); }
         catch (InvalidOperationException error) { return new(null, error.Message); }
         bool alreadyParked = db.SpDatTruocChoDoXe.Any(other => other.Id != row.Id && other.BaiDoXeId == row.BaiDoXeId &&
-            other.BienSoXe == row.BienSoXe && other.ThoiGianKetThuc == null && other.TrangThaiDatCho != Booking.Reserved);
+            other.BienSoXe == row.BienSoXe && other.ThoiGianKetThuc == null &&
+            other.TrangThaiDatCho != Booking.Reserved && other.TrangThaiDatCho != Booking.Cancelled);
         if (alreadyParked) return new(null, "Xe đang có một lượt gửi chưa hoàn tất tại bãi này.");
         Apply(row, booking, actor);
         db.SaveChanges();
@@ -120,6 +121,26 @@ public sealed class BookingLifecycleRepository(ParkingDbContext db)
         }
         catch (ArgumentException error) { return new(null, error.Message); }
         Apply(row, booking, actor);
+        db.SaveChanges();
+        transaction.Commit();
+        return new(Details(row), null);
+    }
+
+    public BookingWriteResult Cancel(Guid id, string? note, string? customerId, BusinessAccess access, AuditActor actor)
+    {
+        using var transaction = db.Database.BeginTransaction();
+        var row = db.SpDatTruocChoDoXe.Include(item => item.BaiDoXe).SingleOrDefault(item => item.Id == id.ToString());
+        if (row is null || (customerId is not null ? row.IdNguoiTao != customerId : !access.CanAccess(Guid.Parse(row.BaiDoXeId))))
+            return new(null, "Không tìm thấy booking hoặc không có quyền hủy booking này.");
+        Booking booking = ToDomain(row);
+        try { booking.Cancel(); }
+        catch (InvalidOperationException error) { return new(null, error.Message); }
+        Apply(row, booking, actor);
+        if (!string.IsNullOrWhiteSpace(note))
+        {
+            string cancellationNote = $"Ghi chú hủy: {note.Trim()}";
+            row.GhiChu = string.IsNullOrWhiteSpace(row.GhiChu) ? cancellationNote : $"{row.GhiChu}\n{cancellationNote}";
+        }
         db.SaveChanges();
         transaction.Commit();
         return new(Details(row), null);
@@ -152,8 +173,8 @@ public sealed class BookingLifecycleRepository(ParkingDbContext db)
             ? ParkingFee.RoundHours(booking.StartAt, booking.EndAt.Value) : null;
         return new(booking.Id, new(booking.ParkingLotId, row.BaiDoXe.Ma, row.BaiDoXe.Ten, row.BaiDoXe.DiaChi),
             booking.LicensePlate, booking.VehicleType, booking.StartAt, booking.EndAt, booking.Status,
-            row.TrangThaiDatCho is Booking.Reserved or Booking.CheckedIn ? null : booking.Amount, hours, row.GhiChu,
+            row.TrangThaiDatCho is Booking.Reserved or Booking.CheckedIn or Booking.Cancelled ? null : booking.Amount, hours, row.GhiChu,
             row.NgayTao, row.NguoiTao, row.IdNguoiTao, row.NgayCapNhat, row.NguoiCapNhat, row.IdNguoiCapNhat,
-            row.TrangThaiDatCho is Booking.Reserved or Booking.CheckedIn ? booking.Amount : null);
+            row.TrangThaiDatCho is Booking.Reserved or Booking.CheckedIn or Booking.Cancelled ? booking.Amount : null);
     }
 }

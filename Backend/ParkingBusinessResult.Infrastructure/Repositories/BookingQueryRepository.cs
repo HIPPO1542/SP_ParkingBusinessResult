@@ -16,8 +16,9 @@ public sealed class BookingQueryRepository(ParkingDbContext db) : IBookingListRe
         using var snapshot = db.BeginReadTransaction();
         var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), query.Access, query.ParkingLotId);
         if (query.Status == "RESERVED") rows = rows.Where(row => row.TrangThaiDatCho == Booking.Reserved);
-        if (query.Status == "PARKED") rows = rows.Where(row => row.ThoiGianKetThuc == null && row.TrangThaiDatCho != Booking.Reserved);
-        if (query.Status == "COMPLETED") rows = rows.Where(row => row.ThoiGianKetThuc != null && row.TrangThaiDatCho != Booking.Reserved);
+        if (query.Status == "PARKED") rows = rows.Where(row => row.ThoiGianKetThuc == null && row.TrangThaiDatCho != Booking.Reserved && row.TrangThaiDatCho != Booking.Cancelled);
+        if (query.Status == "COMPLETED") rows = rows.Where(row => row.ThoiGianKetThuc != null && row.TrangThaiDatCho != Booking.Reserved && row.TrangThaiDatCho != Booking.Cancelled);
+        if (query.Status == "CANCELLED") rows = rows.Where(row => row.TrangThaiDatCho == Booking.Cancelled);
         if (query.VehicleType is not null) rows = rows.Where(row => EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE") == query.VehicleType);
         bool useExit = query.DateField == "exitedAt";
         if (query.Day.HasValue) rows = rows.Where(row => (useExit ? row.ThoiGianKetThuc : row.ThoiGianBatDau)!.Value.Day == query.Day);
@@ -30,13 +31,14 @@ public sealed class BookingQueryRepository(ParkingDbContext db) : IBookingListRe
             .Skip((int)offset).Take(query.PageSize).Select(item => new
             {
                 item.Row.Id, item.Row.BaiDoXeId, item.Row.BienSoXe, item.Row.LoaiXe,
-                item.Row.ThoiGianBatDau, item.Row.ThoiGianKetThuc, item.Row.TongTien, item.Row.TrangThaiDatCho,
+                item.Row.ThoiGianBatDau, item.Row.ThoiGianKetThuc, item.Row.TongTien, item.Row.TrangThaiDatCho, item.Row.GhiChu,
                 Code = item.Lot.Ma, Name = item.Lot.Ten
             }).ToArray();
         var items = page.Select(item => new BookingItem(Guid.Parse(item.Id), Guid.Parse(item.BaiDoXeId),
             item.BienSoXe, item.LoaiXe, item.ThoiGianBatDau, item.ThoiGianKetThuc,
-            item.TrangThaiDatCho is Booking.Reserved or Booking.CheckedIn ? null : item.TongTien.HasValue ? Convert.ToDecimal(item.TongTien.Value) : null, item.Code, item.Name,
-            item.TrangThaiDatCho == Booking.Reserved ? Booking.Reserved : item.ThoiGianKetThuc is null ? Booking.CheckedIn : Booking.Completed)).ToArray();
+            item.TrangThaiDatCho is Booking.Reserved or Booking.CheckedIn or Booking.Cancelled ? null : item.TongTien.HasValue ? Convert.ToDecimal(item.TongTien.Value) : null, item.Code, item.Name,
+            item.TrangThaiDatCho is Booking.Reserved or Booking.Cancelled ? item.TrangThaiDatCho : item.ThoiGianKetThuc is null ? Booking.CheckedIn : Booking.Completed,
+            item.GhiChu)).ToArray();
         BookingOverview overview = GetOverview(db, query.Access);
         snapshot.Commit();
         return new(items, total, query.PageNumber, query.PageSize, overview);
@@ -60,13 +62,13 @@ public sealed class BookingQueryRepository(ParkingDbContext db) : IBookingListRe
             .Join(db.DlKthtBaiDoXe, row => row.BaiDoXeId, lot => lot.Id, (row, lot) => row);
         var totals = rows.GroupBy(row => 1).Select(group => new
         {
-            Revenue = group.Sum(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null && row.TongTien != null
+            Revenue = group.Sum(row => row.TrangThaiDatCho != Booking.Reserved && row.TrangThaiDatCho != Booking.Cancelled && row.ThoiGianKetThuc != null && row.TongTien != null
                 ? (decimal)row.TongTien.Value : 0m),
-            Completed = group.LongCount(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null),
+            Completed = group.LongCount(row => row.TrangThaiDatCho != Booking.Reserved && row.TrangThaiDatCho != Booking.Cancelled && row.ThoiGianKetThuc != null),
             Parked = group.LongCount(row => row.ThoiGianKetThuc == null &&
                 (row.TrangThaiDatCho == Booking.CheckedIn || row.TrangThaiDatCho == "CONFIRMED")),
             Reserved = group.LongCount(row => row.TrangThaiDatCho == Booking.Reserved),
-            Missing = group.LongCount(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc != null && row.TongTien == null)
+            Missing = group.LongCount(row => row.TrangThaiDatCho != Booking.Reserved && row.TrangThaiDatCho != Booking.Cancelled && row.ThoiGianKetThuc != null && row.TongTien == null)
         }).SingleOrDefault();
         return totals is null ? new(0, 0, 0, 0, 0) : new(totals.Revenue, totals.Completed, totals.Parked, totals.Reserved, totals.Missing);
     }
@@ -123,7 +125,8 @@ public sealed class BookingQueryRepository(ParkingDbContext db) : IBookingListRe
     private static IReadOnlyList<CompletedBooking> ListCompleted(ParkingDbContext db, BookingSummaryFilter filter)
     {
         var rows = Scope(db.SpDatTruocChoDoXe.AsNoTracking(), filter.Access, filter.ParkingLotId)
-            .Where(row => row.TrangThaiDatCho != Booking.Reserved && row.ThoiGianKetThuc >= filter.FromInclusive && row.ThoiGianKetThuc < filter.ToExclusive);
+            .Where(row => row.TrangThaiDatCho != Booking.Reserved && row.TrangThaiDatCho != Booking.Cancelled &&
+                row.ThoiGianKetThuc >= filter.FromInclusive && row.ThoiGianKetThuc < filter.ToExclusive);
         if (filter.VehicleType is not null)
             rows = rows.Where(row => EF.Functions.Collate(row.LoaiXe, "ORDINAL_NOCASE") == filter.VehicleType);
         if (filter.ParkingLotIds is not null)

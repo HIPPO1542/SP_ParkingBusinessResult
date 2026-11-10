@@ -46,6 +46,7 @@ public static class EndpointRegistration
         GetBookingEstimateEndpoint.Map(reservations);
         RouteGroupBuilder catalog = app.MapGroup("/gdci/parking/parkingLot/parkingReservation").RequireAuthorization("BookingCatalogAccess");
         GetBookingOptionsEndpoint.Map(catalog);
+        CancelBookingEndpoint.Map(catalog);
         RouteGroupBuilder staffReservations = app.MapGroup("/gdci/parking/parkingLot/parkingReservation").RequireAuthorization("BusinessResultAccess");
         CheckInEndpoint.Map(staffReservations);
         CheckOutEndpoint.Map(staffReservations);

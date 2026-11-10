@@ -20,6 +20,7 @@ using ParkingBusinessResult.Application.Features.LocalAccounts.Commands.Register
 using ParkingBusinessResult.Application.Features.ParkingBookings.Commands.Reserve;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Commands.CheckIn;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Commands.CheckOut;
+using ParkingBusinessResult.Application.Features.ParkingBookings.Commands.Cancel;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.Options;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.MyBookings;
 using ParkingBusinessResult.Application.Features.ParkingBookings.Queries.Estimate;
@@ -34,6 +35,7 @@ public static class BusinessResultRegistration
         services.AddScoped<ReserveBookingHandler>();
         services.AddScoped<CheckInHandler>();
         services.AddScoped<CheckOutHandler>();
+        services.AddScoped<CancelBookingHandler>();
         services.AddScoped<GetBookingOptionsHandler>();
         services.AddScoped<GetMyBookingsHandler>();
         services.AddScoped<GetBookingEstimateHandler>();

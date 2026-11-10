@@ -6,6 +6,7 @@ public sealed class Booking(Guid id, Guid parkingLotId, string licensePlate, str
     public const string Reserved = "RESERVED";
     public const string CheckedIn = "CHECKED_IN";
     public const string Completed = "COMPLETED";
+    public const string Cancelled = "CANCELLED";
 
     public Guid Id { get; } = id;
     public Guid ParkingLotId { get; } = parkingLotId;
@@ -34,6 +35,12 @@ public sealed class Booking(Guid id, Guid parkingLotId, string licensePlate, str
         StartAt = now;
         EndAt = null;
         Status = CheckedIn;
+    }
+
+    public void Cancel()
+    {
+        if (Status != Reserved) throw new InvalidOperationException("Chỉ booking chưa check-in mới được hủy.");
+        Status = Cancelled;
     }
 
     public void CheckOut(DateTime now, decimal amount)
